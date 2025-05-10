@@ -17,6 +17,8 @@ type CustomHandler struct {
 	requestsInWindow atomic.Uint32
 	avgMSPerRequest  float64
 
+	certifcates *Certificates
+
 	// fc is a score determining for priority of requests.
 	fc float64
 }
@@ -34,7 +36,7 @@ func (c *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	if r.Method == http.MethodConnect { // we're handling an HTTPS connection here
-		err = handleHTTPS()
+		err = handleHTTPS(c.config, conn, c.certifcates, r)
 	} else {
 		// we're handling an HTTP connection here
 		err = handleHTTP(c.config, conn, r)
@@ -47,6 +49,11 @@ func (c *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	ch := new(CustomHandler)
+	ch.config = new(Config)
+	ch.certifcates = new(Certificates)
+	if err := ch.certifcates.Init(); err != nil {
+		slog.Error("fatal certificates init", "err", err.Error())
+	}
 
 	http.ListenAndServe(":8000", ch)
 }
