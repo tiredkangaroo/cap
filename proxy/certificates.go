@@ -12,12 +12,24 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 type Certificates struct {
+	// caCert is the CA certificate used to sign the certificates for the hosts.
 	caCert *x509.Certificate
-	caKey  any
+	// caKey is the CA private key used to sign the certificates for the hosts.
+	caKey any
+
+	// cache is a map of hostnames to TLS certificates. A sync.Map is used over
+	// a regular map plus a lock because it is more performant for the specific
+	// use case of this proxy and reduces lock contention.
+	//
+	// From the docs of sync.Map: "The Map type is optimized for two common use cases:
+	// (1) when the entry for a given key is only ever written once but read many times,
+	// as in caches that only grow [...]."
+	cache sync.Map
 }
 
 func (c *Certificates) Init() error {
@@ -46,7 +58,13 @@ func (c *Certificates) Init() error {
 	return nil
 }
 
-func (c *Certificates) getTLSCert(host string) (tls.Certificate, error) {
+func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, error) {
+	// check if the certificate is already in the cache
+	cachedCertificate, ok := c.cache.Load(host)
+	if ok {
+		return cachedCertificate.(tls.Certificate), nil
+	}
+
 	// generate a new private key for the new certificate
 	pk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -68,7 +86,7 @@ func (c *Certificates) getTLSCert(host string) (tls.Certificate, error) {
 		},
 		DNSNames:              []string{host},
 		NotBefore:             time.Now().Add(-(time.Hour * 7200)),
-		NotAfter:              time.Now().Add(time.Hour * 7200),
+		NotAfter:              time.Now().Add(time.Hour * time.Duration(cf.CertificateLifetime)),
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -80,11 +98,13 @@ func (c *Certificates) getTLSCert(host string) (tls.Certificate, error) {
 		return tls.Certificate{}, fmt.Errorf("creating the x509 certificate: %w", err)
 	}
 
-	// encode certificate and private key
+	// encode certificate
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
 	if pemCert == nil {
 		return tls.Certificate{}, fmt.Errorf("encode the cert with pe (unknown error)")
 	}
+
+	// encode the private key
 	privBytes, err := x509.MarshalPKCS8PrivateKey(pk)
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("marshal private key: %w", err)
@@ -94,11 +114,19 @@ func (c *Certificates) getTLSCert(host string) (tls.Certificate, error) {
 		return tls.Certificate{}, fmt.Errorf("encode the private key with pem (unknown error)")
 	}
 
-	return tls.X509KeyPair(pemCert, pemKey)
+	// create the certificate
+	tlscert, err := tls.X509KeyPair(pemCert, pemKey)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("create x509 key pair: %w", err)
+	}
+
+	// store the certificate in the cache
+	c.cache.Store(host, tlscert)
+	return tlscert, nil
 }
 
-func (c *Certificates) TLSConn(conn net.Conn, host string) (*tls.Conn, error) {
-	cert, err := c.getTLSCert(host)
+func (c *Certificates) TLSConn(config *Config, conn net.Conn, host string) (*tls.Conn, error) {
+	cert, err := c.getTLSCert(config, host)
 	if err != nil {
 		return nil, err
 	}

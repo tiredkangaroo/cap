@@ -21,7 +21,7 @@ func perform(config *Config, req *http.Request, https bool) ([]byte, error) {
 	req.Header.Del("Proxy-Authorization")
 	req.Header.Del("Proxy-Connection")
 
-	if config.IncludeRealIPHeader {
+	if config.RealIPHeader {
 		req.Header.Set("X-Forwarded-For", req.RemoteAddr)
 	}
 

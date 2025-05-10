@@ -9,11 +9,14 @@ import (
 )
 
 var (
+	// ErrResponseWriterNoHijack is returned when the ResponseWriter does not implement the Hijacker interface.
 	ErrResponseWriterNoHijack = errors.New("response writer cannot be hijacked: does not implement Hijacker interface")
 )
 var (
+	// ResponseHijackingError is the response sent to the client when the proxy cannot hijack the connection.
 	ResponseHijackingError []byte = []byte("hijacking error")
-	ResponseRawSuccess     []byte = []byte("HTTP/1.1 200 OK\r\n" +
+	// ResponseRawSuccess is the response sent to the client when the HTTPS proxy successfully hijacks the connection.
+	ResponseRawSuccess []byte = []byte("HTTP/1.1 200 OK\r\n" +
 		"Connection: close\r\n" +
 		"Content-Length: 0\r\n" +
 		"\r\n")
@@ -23,9 +26,10 @@ var (
 
 // handleHTTP handles a HTTP request to the proxy.
 //
-// HTTP request:
-// client (regular http request + proxy headers) -> proxy (sending the client's request stripped of proxy headers) -> host
-// and then backwards
+// HTTP requests do not create secure tunnels, therefore the original request to the
+// proxy is the one meant for the host. The only prep we need to do is strip proxy
+// headers. The proxy will then perform the request to the host and send the response
+// back to the client.
 func handleHTTP(config *Config, conn net.Conn, r *http.Request) error {
 	// perform the request
 	resp, err := perform(config, r, false)
@@ -37,12 +41,15 @@ func handleHTTP(config *Config, conn net.Conn, r *http.Request) error {
 	return err
 }
 
-// handleHTTPS handles a HTTPS request.
+// handleHTTPS handles a HTTPS request. This proxy is a MITM proxy, so it will
+// use a self-signed certificate for the requested host and send it to the client.
 //
-// client (request to proxy, includes host) -> proxy -> host
-// proxy tunnels this but can't see any information like path
-//
-// THIS proxy however will use MITM to intercept the request
+// Steps:
+// (1) It writes a success response to the client. The client believes it is no longer speaking to the proxy now.
+// (2) A TLS handshake (using the self-signed) occurs between the client and the proxy. The client believes it is speaking to the host.
+// (3) The proxy reads the actual request from the client that it meant to send the host.
+// (4) The proxy performs the request to the real host.
+// (5) The proxy sends the response back to the client.
 func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request) error {
 	_, err := conn.Write(ResponseRawSuccess)
 	if err != nil {
@@ -53,7 +60,7 @@ func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request
 	// send the ACTUAL request
 
 	// NOTE: consider IPV6 square brackets and support for it
-	tlsconn, err := c.TLSConn(conn, r.URL.Hostname())
+	tlsconn, err := c.TLSConn(config, conn, r.URL.Hostname())
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
@@ -72,6 +79,7 @@ func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request
 	return err
 }
 
+// hijack hijacks the ResponseWriter connection to the client.
 func hijack(w http.ResponseWriter) (net.Conn, error) {
 	h, ok := w.(http.Hijacker)
 	if !ok {
