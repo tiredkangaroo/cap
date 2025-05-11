@@ -9,9 +9,9 @@ import (
 
 const window = time.Second * 20
 
-// CustomHandler is being used here because CONNECT requests are automatically
+// ProxyHandler is being used here because CONNECT requests are automatically
 // rejected by net/http's default handler on ListenAndServe.
-type CustomHandler struct {
+type ProxyHandler struct {
 	config           *Config
 	working          atomic.Int32
 	requestsInWindow atomic.Uint32
@@ -23,7 +23,7 @@ type CustomHandler struct {
 	fc float64
 }
 
-func (c *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.working.Add(1)
 	defer c.working.Add(-1)
 
@@ -48,12 +48,18 @@ func (c *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	ch := new(CustomHandler)
-	ch.config = new(Config)
-	ch.certifcates = new(Certificates)
-	if err := ch.certifcates.Init(); err != nil {
+	config := new(Config)
+	go startControlServer(config)
+
+	// -log([H+]) im so funny
+	ph := new(ProxyHandler)
+	ph.config = config
+	ph.certifcates = new(Certificates)
+	if err := ph.certifcates.Init(); err != nil {
 		slog.Error("fatal certificates init", "err", err.Error())
 	}
 
-	http.ListenAndServe(":8000", ch)
+	if err := http.ListenAndServe(":8000", ph); err != nil {
+		slog.Error("fatal proxy server", "err", err.Error())
+	}
 }
