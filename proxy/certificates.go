@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// Certificates is a struct that provides services for making TLS connections.
 type Certificates struct {
 	// caCert is the CA certificate used to sign the certificates for the hosts.
 	caCert *x509.Certificate
@@ -32,6 +33,10 @@ type Certificates struct {
 	cache sync.Map
 }
 
+// Init initializes the Certificates struct by reading the CA certificate from the
+// environment variable PROXY_CACERT and the CA private key from the environment
+// variable PROXY_CAKEY. It parses the certificate and key and stores them in
+// the caCert and caKey fields respectively.
 func (c *Certificates) Init() error {
 	rawproxyCACert, err := os.ReadFile(os.Getenv("PROXY_CACERT"))
 	if err != nil {
@@ -58,6 +63,12 @@ func (c *Certificates) Init() error {
 	return nil
 }
 
+// getTLSCert generates a new TLS certificate for the given host. It first checks if
+// the certificate is already in the cache. If it is, it returns the cached
+// certificate. If it is not, it generates a new certificate and stores it in the
+// cache.
+//
+// The certificate is valid for the lifetime specified in the config (CertificateLifetime).
 func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, error) {
 	// check if the certificate is already in the cache
 	cachedCertificate, ok := c.cache.Load(host)
@@ -125,6 +136,7 @@ func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, err
 	return tlscert, nil
 }
 
+// TLSConn creates a new TLS connection using the given config and connection signed for the specified host.
 func (c *Certificates) TLSConn(config *Config, conn net.Conn, host string) (*tls.Conn, error) {
 	cert, err := c.getTLSCert(config, host)
 	if err != nil {

@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"net"
 	"net/http"
 )
@@ -51,15 +54,20 @@ func handleHTTP(config *Config, conn net.Conn, r *http.Request) error {
 // (4) The proxy performs the request to the real host.
 // (5) The proxy sends the response back to the client.
 func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request) error {
+	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
 	_, err := conn.Write(ResponseRawSuccess)
 	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
 	}
 
+	if !config.MITM {
+		return handleNoMITM(config, conn, r)
+	}
+
 	// after the success response, a handshake will occur and the user will
 	// send the ACTUAL request
 
-	// NOTE: consider IPV6 square brackets and support for it
+	// NOTE: consider IPV6 square bracket and how that affects the hostname
 	tlsconn, err := c.TLSConn(config, conn, r.URL.Hostname())
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
@@ -77,6 +85,38 @@ func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request
 
 	_, err = tlsconn.Write(resp)
 	return err
+}
+
+// handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
+// tunnel.
+func handleNoMITM(config *Config, conn net.Conn, r *http.Request) error {
+	hconn, err := net.Dial("tcp", r.Host)
+	if err != nil {
+		return fmt.Errorf("non-MITM dial host: %w", err)
+	}
+
+	// me gusta context :)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		defer cancel()
+		_, err = io.Copy(hconn, conn)
+		if err != nil {
+			slog.Warn("io.Copy error (conn -> hostconn)", "err", err)
+		}
+	}()
+
+	go func() {
+		defer cancel()
+		_, err = io.Copy(conn, hconn)
+		if err != nil {
+			slog.Warn("io.Copy error (hconn -> conn)", "err", err)
+		}
+	}()
+
+	<-ctx.Done()
+
+	return nil
 }
 
 // hijack hijacks the ResponseWriter connection to the client.
