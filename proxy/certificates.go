@@ -73,7 +73,11 @@ func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, err
 	// check if the certificate is already in the cache
 	cachedCertificate, ok := c.cache.Load(host)
 	if ok {
-		return cachedCertificate.(tls.Certificate), nil
+		if time.Until(cachedCertificate.(tls.Certificate).Leaf.NotAfter) < time.Minute {
+			c.cache.Delete(host) // delete the certificate if it is expired or about to expire
+		} else {
+			return cachedCertificate.(tls.Certificate), nil
+		}
 	}
 
 	// generate a new private key for the new certificate
