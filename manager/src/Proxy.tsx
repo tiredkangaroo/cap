@@ -9,7 +9,7 @@ import {
 } from "./components/ui/hover-card";
 
 export function ProxyView() {
-    const [proxy, setProxy] = useState<Proxy | null>(
+    const [proxy, _] = useState<Proxy | null>(
         new Proxy("Proxy 1", "http://localhost:8001"),
     );
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);

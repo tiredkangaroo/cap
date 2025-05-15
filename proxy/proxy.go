@@ -73,8 +73,8 @@ func main() {
 	}
 
 	if err := http.ListenAndServe(":8000", ph); err != nil {
-		os.Exit(1)
 		slog.Error("fatal proxy server", "err", err.Error())
+		os.Exit(1)
 	} else {
 		os.Exit(0)
 	}
