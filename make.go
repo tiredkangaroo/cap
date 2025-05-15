@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -63,6 +64,13 @@ func main() {
 	}
 }
 
+// ProcessGroup manages multiple child processes
+type ProcessGroup struct {
+	cleanupOnce sync.Once
+	processes   []*ProcessHandle
+	mx          sync.Mutex
+}
+
 // ProcessHandle holds a started process with its control functions
 type ProcessHandle struct {
 	cmd    *exec.Cmd
@@ -71,31 +79,44 @@ type ProcessHandle struct {
 	kill   func() error
 }
 
-// ProcessGroup manages multiple child processes
-type ProcessGroup struct {
-	mu          sync.Mutex
-	cleanupOnce sync.Once
-	processes   []*ProcessHandle
-}
-
 func (pg *ProcessGroup) Add(p *ProcessHandle) {
-	pg.mu.Lock()
-	defer pg.mu.Unlock()
+	pg.mx.Lock()
+	defer pg.mx.Unlock()
 	pg.processes = append(pg.processes, p)
 }
 
 func (pg *ProcessGroup) Cleanup() {
 	pg.cleanupOnce.Do(func() {
-		fmt.Println("cleaning up processes...")
-		pg.mu.Lock()
-		defer pg.mu.Unlock()
 		for _, p := range pg.processes {
 			p.cancel()
-			if err := p.kill(); err != nil {
-				fmt.Printf("failed to kill process (pid=%d): %v\n", p.cmd.Process.Pid, err)
-			}
 		}
 	})
+}
+
+func (pg *ProcessGroup) Wait() {
+	wg := &sync.WaitGroup{}
+	for i, p := range pg.processes {
+		wg.Add(1)
+		go func(proc *ProcessHandle) {
+			defer wg.Done()
+			if err := proc.wait(); err != nil {
+				pg.mx.Lock()
+				pg.processes = slices.DeleteFunc(pg.processes, func(e *ProcessHandle) bool {
+					return e.cmd.Process.Pid == proc.cmd.Process.Pid
+				})
+				pg.mx.Unlock()
+				fmt.Printf("Process (pid=%d) exited with error: %v\n", proc.cmd.Process.Pid, err)
+			} else {
+				pg.mx.Lock()
+				pg.processes = slices.Delete(pg.processes, i, i)
+				pg.mx.Unlock()
+				fmt.Printf("Process (pid=%d) exited.\n", proc.cmd.Process.Pid)
+			}
+			// trigger cleanup
+			pg.Cleanup()
+		}(p)
+	}
+	wg.Wait()
 }
 
 func handleSignals(cleanup func()) {
@@ -110,11 +131,19 @@ func handleSignals(cleanup func()) {
 }
 
 func startProcess(id, command string) (*ProcessHandle, error) {
-	fmt.Printf("Starting (%s): %s\n", id, command)
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+
 	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("stdout pipe failed: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("stdout pipe failed: %w", err)
@@ -122,19 +151,27 @@ func startProcess(id, command string) (*ProcessHandle, error) {
 	go func() {
 		defer stdout.Close()
 		io.Copy(os.Stdout, stdout)
+		io.Copy(os.Stderr, stderr)
 	}()
 
 	if err := cmd.Start(); err != nil {
 		cancel()
 		return nil, fmt.Errorf("command start failed: %w", err)
 	}
+	fmt.Printf("Started %d: %s\n", cmd.Process.Pid, command)
 
 	return &ProcessHandle{
-		cmd:    cmd,
-		wait:   cmd.Wait,
-		cancel: cancel,
-		kill: func() error {
-			return cmd.Process.Kill()
+		cmd:  cmd,
+		wait: cmd.Wait,
+		cancel: func() {
+			fmt.Printf("cancelling cmd pid: %d\n", cmd.Process.Pid)
+			pgid, err := syscall.Getpgid(cmd.Process.Pid)
+			if err != nil {
+			}
+			if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
+				fmt.Printf("kill failed (%d): %s\n", cmd.Process.Pid, err.Error())
+			}
+			cancel()
 		},
 	}, nil
 }
@@ -154,7 +191,6 @@ func waitForVite() bool {
 func runDebug() {
 	fmt.Println("Running in debug mode...")
 
-	var wg sync.WaitGroup
 	group := &ProcessGroup{}
 	handleSignals(group.Cleanup)
 
@@ -188,26 +224,31 @@ func runDebug() {
 	}
 	group.Add(electron)
 
-	// Wait for any to finish, then cleanup all
-	for _, p := range []*ProcessHandle{proxy, vite, electron} {
-		wg.Add(1)
-		go func(proc *ProcessHandle) {
-			defer wg.Done()
-			if err := proc.wait(); err != nil {
-				fmt.Printf("Process (pid=%d) exited with error: %v\n", proc.cmd.Process.Pid, err)
-			} else {
-				fmt.Printf("Process (pid=%d) exited.\n", proc.cmd.Process.Pid)
-			}
-			group.Cleanup() // First one to exit triggers cleanup
-		}(p)
-	}
-
-	wg.Wait()
+	group.Wait()
 }
 
 func run() {
-	fmt.Println("Running in production mode...")
-	// Add your production run logic here
+	// run requires compilation.
+	compile()
+
+	pg := new(ProcessGroup)
+
+	proxyApp, err := startProcess("06", "DEBUG=false ./proxy/proxy-app")
+	if err != nil {
+		fmt.Println("error starting proxy app:", err)
+		return
+	}
+	pg.Add(proxyApp)
+	defer pg.Cleanup()
+
+	electron, err := startProcess("07", "DEBUG=false electron ./manager/dist")
+	if err != nil {
+		fmt.Println("error starting proxy app:", err)
+		return
+	}
+
+	pg.Add(electron)
+	pg.Wait()
 }
 
 func compile() {
