@@ -38,10 +38,10 @@ export function ProxyView() {
                 <h1 className="text-4xl font-bold mb-1">{proxy.name}</h1>
                 <p className="text-md">URL: {proxy.url}</p>
             </div>
-            <div className="flex flex-col w-full h-full justify-center items-center">
+            <div className="flex flex-col w-[50%] min-w-fit h-full justify-center">
                 <div className="flex flex-row text-3xl">
                     <HoverCard>
-                        <HoverCardTrigger>
+                        <HoverCardTrigger className="self-start">
                             <p className="text-3xl mt-auto mb-auto">
                                 MITM {proxyConfig.mitm}
                             </p>
@@ -53,7 +53,7 @@ export function ProxyView() {
                         </HoverCardContent>
                     </HoverCard>
                     <Switch
-                        className="mt-auto mb-auto ml-4"
+                        className="mt-auto mb-auto ml-auto mr-2"
                         checked={proxyConfig?.mitm}
                         onCheckedChange={(checked: boolean) => {
                             proxyConfig.mitm = checked;
@@ -77,7 +77,7 @@ export function ProxyView() {
                         </HoverCardContent>
                     </HoverCard>
                     <Switch
-                        className="mt-auto mb-auto ml-4"
+                        className="mt-auto mb-auto ml-auto mr-2"
                         checked={proxyConfig?.real_ip_header}
                         onCheckedChange={(checked: boolean) => {
                             proxyConfig.real_ip_header = checked;
@@ -100,6 +100,19 @@ export function ProxyView() {
                             certificates generated will not be valid.
                         </HoverCardContent>
                     </HoverCard>
+                    <input
+                        defaultValue={proxyConfig.certificate_lifetime}
+                        type="number"
+                        className="ml-auto mr-2 min-w-fit text-md border-2 border-black text-center"
+                        onBlur={(e) => {
+                            proxyConfig.certificate_lifetime = parseInt(
+                                e.target.value,
+                            );
+                            proxy.setConfig(proxyConfig);
+                            const newObj = Object.assign({}, proxyConfig);
+                            setProxyConfig(newObj);
+                        }}
+                    ></input>
                 </div>
             </div>
         </div>

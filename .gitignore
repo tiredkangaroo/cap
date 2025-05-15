@@ -1,3 +1,4 @@
 certs
 proxy/tmp
 proxy/proxy-app
+proxy/config.json

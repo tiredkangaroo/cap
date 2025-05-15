@@ -53,13 +53,30 @@ func init() {
 func main() {
 	switch command {
 	case CommandRunDebug:
+		enforceEnv()
 		runDebug()
 	case CommandRun:
+		enforceEnv()
 		run()
 	case CommandCompile:
 		compile()
 	default:
 		fmt.Println("Invalid command. Use -debug, -run, or -compile.")
+	}
+}
+
+func enforceEnv() {
+	if os.Getenv("PROXY_CACERT") == "" {
+		fmt.Println("PROXY_CACERT environment variable is not set.")
+		os.Exit(1)
+	}
+	if os.Getenv("PROXY_CAKEY") == "" {
+		fmt.Println("PROXY_CAKEY environment variable is not set.")
+		os.Exit(1)
+	}
+	if os.Getenv("PROXY_CONFIG_FILE") == "" {
+		fmt.Println("PROXY_CONFIG_FILE environment variable is not set.")
+		os.Exit(1)
 	}
 }
 
