@@ -60,7 +60,7 @@ func main() {
 	}
 	// manageConfigFile is on the main thread to stop the program from terminating
 	// before the signal handler catches the signal.
-	manageConfigFile(config, os.Getenv("CONFIG_SAVEFILE"))
+	manageConfigFile(config, os.Getenv("PROXY_CONFIG_FILE"))
 
 	go startControlServer(config)
 
@@ -84,7 +84,7 @@ func main() {
 func manageConfigFile(config *Config, filename string) {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		slog.Error("creating/opening file specified in CONFIG_SAVEFILE", "err", err.Error())
+		slog.Error("creating/opening file specified in PROXY_CONFIG_FILE", "err", err.Error())
 		return
 	}
 
