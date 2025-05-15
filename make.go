@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -121,6 +120,21 @@ func (pg *ProcessGroup) Wait() {
 	wg.Wait()
 }
 
+func cmd(id, command string) {
+	fmt.Printf("Running (%s): %s\n", id, command)
+	c := exec.Command("bash", "-c", command)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+
+	if err := c.Start(); err != nil {
+		fmt.Printf("cmd (%s) command failed: %s\n", id, err.Error())
+		runtime.Goexit()
+	}
+	if err := c.Wait(); err != nil {
+		fmt.Printf("cmd (%s) wait failed: %s\n", id, err.Error())
+	}
+}
+
 func startProcess(command string) (*ProcessHandle, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
@@ -128,22 +142,8 @@ func startProcess(command string) (*ProcessHandle, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("stdout pipe failed: %w", err)
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("stdout pipe failed: %w", err)
-	}
-	go func() {
-		defer stdout.Close()
-		io.Copy(os.Stdout, stdout)
-		io.Copy(os.Stderr, stderr)
-	}()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
 		cancel()
@@ -166,16 +166,9 @@ func startProcess(command string) (*ProcessHandle, error) {
 	}, nil
 }
 
-func waitForVite() bool {
-	for range CheckViteRetries {
-		conn, err := net.DialTimeout("tcp", ViteAddress, CheckViteTimeout)
-		if err == nil {
-			conn.Close()
-			return true
-		}
-		time.Sleep(CheckViteInterval)
-	}
-	return false
+func compile() {
+	cmd("04", "npm run build --prefix ./manager")
+	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
 }
 
 func handleSignals(cleanup func()) {
@@ -187,6 +180,43 @@ func handleSignals(cleanup func()) {
 		cleanup()
 		os.Exit(1)
 	}()
+}
+
+func run() {
+	// run requires compilation.
+	compile()
+
+	pg := new(ProcessGroup)
+	handleSignals(pg.Cleanup)
+
+	proxyApp, err := startProcess("DEBUG=false ./proxy/proxy-app")
+	if err != nil {
+		fmt.Println("error starting proxy app:", err)
+		return
+	}
+	pg.Add(proxyApp)
+	defer pg.Cleanup()
+
+	electron, err := startProcess("DEBUG=false electron ./manager")
+	if err != nil {
+		fmt.Println("error starting proxy app:", err)
+		return
+	}
+
+	pg.Add(electron)
+	pg.Wait()
+}
+
+func waitForVite() bool {
+	for range CheckViteRetries {
+		conn, err := net.DialTimeout("tcp", ViteAddress, CheckViteTimeout)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		time.Sleep(CheckViteInterval)
+	}
+	return false
 }
 
 func runDebug() {
@@ -226,51 +256,4 @@ func runDebug() {
 	group.Add(electron)
 
 	group.Wait()
-}
-
-func run() {
-	// run requires compilation.
-	compile()
-
-	pg := new(ProcessGroup)
-
-	proxyApp, err := startProcess("DEBUG=false ./proxy/proxy-app")
-	if err != nil {
-		fmt.Println("error starting proxy app:", err)
-		return
-	}
-	pg.Add(proxyApp)
-	defer pg.Cleanup()
-
-	electron, err := startProcess("DEBUG=false electron ./manager/dist")
-	if err != nil {
-		fmt.Println("error starting proxy app:", err)
-		return
-	}
-
-	pg.Add(electron)
-	pg.Wait()
-}
-
-func compile() {
-	cmd("04", "npm run build --prefix ./manager")
-	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
-}
-
-func cmd(id, command string) {
-	fmt.Printf("Running (%s): %s\n", id, command)
-	c := exec.Command("bash", "-c", command)
-	out, err := c.StdoutPipe()
-	if err != nil {
-		fmt.Printf("cmd (%s) stdout pipe failed: %s\n", id, err.Error())
-	}
-	defer out.Close()
-	if err := c.Start(); err != nil {
-		fmt.Printf("cmd (%s) command failed: %s\n", id, err.Error())
-		runtime.Goexit()
-	}
-	go io.Copy(os.Stdout, out)
-	if err := c.Wait(); err != nil {
-		fmt.Printf("cmd (%s) wait failed: %s\n", id, err.Error())
-	}
 }

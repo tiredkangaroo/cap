@@ -44,7 +44,7 @@ async function createWindow() {
         win.loadURL("http://localhost:5173");
     } else {
         // this is the url for the production build
-        win.loadFile("index.html");
+        win.loadFile("dist/index.html");
     }
 }
 
