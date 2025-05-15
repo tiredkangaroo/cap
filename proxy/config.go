@@ -2,6 +2,8 @@ package main
 
 // Config is the configuration for the proxy.
 type Config struct {
+	// Debug is a boolean that determines whether the proxy should run in debug mode.
+	Debug bool `json:"debug"`
 	// RealIPHeader is a boolean that determines whether the proxy should add the IP
 	// address of the client in the X-Forwarded-For header.
 	RealIPHeader bool `json:"real_ip_header"`

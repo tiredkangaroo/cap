@@ -54,6 +54,10 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	config := new(Config)
+	config.Debug = os.Getenv("DEBUG") == "true"
+	if config.Debug {
+		slog.Info("debug mode")
+	}
 	// manageConfigFile is on the main thread to stop the program from terminating
 	// before the signal handler catches the signal.
 	manageConfigFile(config, os.Getenv("CONFIG_SAVEFILE"))

@@ -1,1 +1,1 @@
-{"real_ip_header":true,"certificate_lifetime":7200,"mitm":true}
+{"debug":true,"real_ip_header":true,"certificate_lifetime":7200,"mitm":false}

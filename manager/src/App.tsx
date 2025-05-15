@@ -1,7 +1,12 @@
 import "./App.css";
+import { ProxyView } from "./Proxy";
 
 function App() {
-    return <h1 className="text-xl">hello my name is slim shady</h1>;
+    return (
+        <div className="flex flex-row w-full h-full">
+            <ProxyView></ProxyView>
+        </div>
+    );
 }
 
 export default App;
