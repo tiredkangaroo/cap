@@ -16,13 +16,6 @@ import (
 	"time"
 )
 
-const (
-	ViteAddress       = "localhost:5173"
-	CheckViteTimeout  = 1 * time.Second
-	CheckViteInterval = 500 * time.Millisecond
-	CheckViteRetries  = 5
-)
-
 type Command int
 
 const (
@@ -33,6 +26,13 @@ const (
 )
 
 var command Command
+
+const (
+	ViteAddress       = "localhost:5173"
+	CheckViteTimeout  = 1 * time.Second
+	CheckViteInterval = 500 * time.Millisecond
+	CheckViteRetries  = 5
+)
 
 func init() {
 	runDebug := flag.Bool("debug", false, "Run the program (debug mode)")
@@ -64,27 +64,27 @@ func main() {
 	}
 }
 
-// ProcessGroup manages multiple child processes
+// ProcessGroup manages multiple child processes.
 type ProcessGroup struct {
 	cleanupOnce sync.Once
 	processes   []*ProcessHandle
 	mx          sync.Mutex
 }
 
-// ProcessHandle holds a started process with its control functions
+// ProcessHandle holds a started process with its control functions.
 type ProcessHandle struct {
 	cmd    *exec.Cmd
-	wait   func() error
 	cancel context.CancelFunc
-	kill   func() error
 }
 
+// Add adds a new process to the group.
 func (pg *ProcessGroup) Add(p *ProcessHandle) {
 	pg.mx.Lock()
 	defer pg.mx.Unlock()
 	pg.processes = append(pg.processes, p)
 }
 
+// Cleanup cancels all processes in the group. It will only run once.
 func (pg *ProcessGroup) Cleanup() {
 	pg.cleanupOnce.Do(func() {
 		for _, p := range pg.processes {
@@ -99,8 +99,9 @@ func (pg *ProcessGroup) Wait() {
 		wg.Add(1)
 		go func(proc *ProcessHandle) {
 			defer wg.Done()
-			if err := proc.wait(); err != nil {
+			if err := proc.cmd.Wait(); err != nil {
 				pg.mx.Lock()
+				// remove the process from the list
 				pg.processes = slices.DeleteFunc(pg.processes, func(e *ProcessHandle) bool {
 					return e.cmd.Process.Pid == proc.cmd.Process.Pid
 				})
@@ -108,6 +109,7 @@ func (pg *ProcessGroup) Wait() {
 				fmt.Printf("Process (pid=%d) exited with error: %v\n", proc.cmd.Process.Pid, err)
 			} else {
 				pg.mx.Lock()
+				// remove the process from the list
 				pg.processes = slices.Delete(pg.processes, i, i)
 				pg.mx.Unlock()
 				fmt.Printf("Process (pid=%d) exited.\n", proc.cmd.Process.Pid)
@@ -119,18 +121,7 @@ func (pg *ProcessGroup) Wait() {
 	wg.Wait()
 }
 
-func handleSignals(cleanup func()) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		fmt.Println("\nSignal received. Cleaning up...")
-		cleanup()
-		os.Exit(1)
-	}()
-}
-
-func startProcess(id, command string) (*ProcessHandle, error) {
+func startProcess(command string) (*ProcessHandle, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 
@@ -161,8 +152,7 @@ func startProcess(id, command string) (*ProcessHandle, error) {
 	fmt.Printf("Started %d: %s\n", cmd.Process.Pid, command)
 
 	return &ProcessHandle{
-		cmd:  cmd,
-		wait: cmd.Wait,
+		cmd: cmd,
 		cancel: func() {
 			fmt.Printf("cancelling cmd pid: %d\n", cmd.Process.Pid)
 			pgid, err := syscall.Getpgid(cmd.Process.Pid)
@@ -177,7 +167,7 @@ func startProcess(id, command string) (*ProcessHandle, error) {
 }
 
 func waitForVite() bool {
-	for i := 0; i < CheckViteRetries; i++ {
+	for range CheckViteRetries {
 		conn, err := net.DialTimeout("tcp", ViteAddress, CheckViteTimeout)
 		if err == nil {
 			conn.Close()
@@ -188,6 +178,17 @@ func waitForVite() bool {
 	return false
 }
 
+func handleSignals(cleanup func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Println("\nSignal received. Cleaning up...")
+		cleanup()
+		os.Exit(1)
+	}()
+}
+
 func runDebug() {
 	fmt.Println("Running in debug mode...")
 
@@ -195,7 +196,7 @@ func runDebug() {
 	handleSignals(group.Cleanup)
 
 	// Start proxy
-	proxy, err := startProcess("01", "DEBUG=true go run ./proxy")
+	proxy, err := startProcess("DEBUG=true go run ./proxy")
 	if err != nil {
 		fmt.Println("Error starting proxy:", err)
 		return
@@ -204,7 +205,7 @@ func runDebug() {
 	defer group.Cleanup()
 
 	// Start Vite
-	vite, err := startProcess("02", "DEBUG=true npm run dev --prefix ./manager")
+	vite, err := startProcess("DEBUG=true npm run dev --prefix ./manager")
 	if err != nil {
 		fmt.Println("Error starting Vite:", err)
 		return
@@ -217,7 +218,7 @@ func runDebug() {
 	}
 
 	// Start Electron
-	electron, err := startProcess("03", "DEBUG=true electron ./manager")
+	electron, err := startProcess("DEBUG=true electron ./manager")
 	if err != nil {
 		fmt.Println("Error starting Electron:", err)
 		return
@@ -233,7 +234,7 @@ func run() {
 
 	pg := new(ProcessGroup)
 
-	proxyApp, err := startProcess("06", "DEBUG=false ./proxy/proxy-app")
+	proxyApp, err := startProcess("DEBUG=false ./proxy/proxy-app")
 	if err != nil {
 		fmt.Println("error starting proxy app:", err)
 		return
@@ -241,7 +242,7 @@ func run() {
 	pg.Add(proxyApp)
 	defer pg.Cleanup()
 
-	electron, err := startProcess("07", "DEBUG=false electron ./manager/dist")
+	electron, err := startProcess("DEBUG=false electron ./manager/dist")
 	if err != nil {
 		fmt.Println("error starting proxy app:", err)
 		return
