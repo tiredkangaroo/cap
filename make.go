@@ -1,21 +1,26 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 )
 
-const ViteAddress = "localhost:5173"
-const CheckViteTimeout = 1 * time.Second
-const CheckViteInterval = 500 * time.Millisecond
-const CheckViteRetries = 5
+const (
+	ViteAddress       = "localhost:5173"
+	CheckViteTimeout  = 1 * time.Second
+	CheckViteInterval = 500 * time.Millisecond
+	CheckViteRetries  = 5
+)
 
 type Command int
 
@@ -54,39 +59,164 @@ func main() {
 	case CommandCompile:
 		compile()
 	default:
-		println("Invalid command. Use -debug, -run, or -compile.")
+		fmt.Println("Invalid command. Use -debug, -run, or -compile.")
 	}
 }
 
-func cmdWaitKill(id, cmd string) (wait func() error, kill func() error) {
-	fmt.Printf("running (%s) (with waitkill): %s\n", id, cmd)
-	c := exec.Command("bash", "-c", cmd)
-	if err := c.Start(); err != nil {
-		println("command failed: ", err.Error())
-		runtime.Goexit()
-	}
+// ProcessHandle holds a started process with its control functions
+type ProcessHandle struct {
+	cmd    *exec.Cmd
+	wait   func() error
+	cancel context.CancelFunc
+	kill   func() error
+}
 
-	out, err := c.StdoutPipe()
+// ProcessGroup manages multiple child processes
+type ProcessGroup struct {
+	mu          sync.Mutex
+	cleanupOnce sync.Once
+	processes   []*ProcessHandle
+}
+
+func (pg *ProcessGroup) Add(p *ProcessHandle) {
+	pg.mu.Lock()
+	defer pg.mu.Unlock()
+	pg.processes = append(pg.processes, p)
+}
+
+func (pg *ProcessGroup) Cleanup() {
+	pg.cleanupOnce.Do(func() {
+		fmt.Println("cleaning up processes...")
+		pg.mu.Lock()
+		defer pg.mu.Unlock()
+		for _, p := range pg.processes {
+			p.cancel()
+			if err := p.kill(); err != nil {
+				fmt.Printf("failed to kill process (pid=%d): %v\n", p.cmd.Process.Pid, err)
+			}
+		}
+	})
+}
+
+func handleSignals(cleanup func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Println("\nSignal received. Cleaning up...")
+		cleanup()
+		os.Exit(1)
+	}()
+}
+
+func startProcess(id, command string) (*ProcessHandle, error) {
+	fmt.Printf("Starting (%s): %s\n", id, command)
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		println("stdout pipe failed: ", err.Error())
+		cancel()
+		return nil, fmt.Errorf("stdout pipe failed: %w", err)
 	}
 	go func() {
-		defer out.Close()
-		io.Copy(os.Stdout, out)
+		defer stdout.Close()
+		io.Copy(os.Stdout, stdout)
 	}()
 
-	wait = c.Wait
-	kill = func() error {
-		if err := c.Process.Kill(); err != nil {
-			return fmt.Errorf("cmd (%s) kill failed: %w", id, err)
-		}
-		return nil
+	if err := cmd.Start(); err != nil {
+		cancel()
+		return nil, fmt.Errorf("command start failed: %w", err)
 	}
-	return wait, kill
+
+	return &ProcessHandle{
+		cmd:    cmd,
+		wait:   cmd.Wait,
+		cancel: cancel,
+		kill: func() error {
+			return cmd.Process.Kill()
+		},
+	}, nil
+}
+
+func waitForVite() bool {
+	for i := 0; i < CheckViteRetries; i++ {
+		conn, err := net.DialTimeout("tcp", ViteAddress, CheckViteTimeout)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		time.Sleep(CheckViteInterval)
+	}
+	return false
+}
+
+func runDebug() {
+	fmt.Println("Running in debug mode...")
+
+	var wg sync.WaitGroup
+	group := &ProcessGroup{}
+	handleSignals(group.Cleanup)
+
+	// Start proxy
+	proxy, err := startProcess("01", "DEBUG=true go run ./proxy")
+	if err != nil {
+		fmt.Println("Error starting proxy:", err)
+		return
+	}
+	group.Add(proxy)
+	defer group.Cleanup()
+
+	// Start Vite
+	vite, err := startProcess("02", "DEBUG=true npm run dev --prefix ./manager")
+	if err != nil {
+		fmt.Println("Error starting Vite:", err)
+		return
+	}
+	group.Add(vite)
+
+	if !waitForVite() {
+		fmt.Println("Vite server did not start. Exiting...")
+		return
+	}
+
+	// Start Electron
+	electron, err := startProcess("03", "DEBUG=true electron ./manager")
+	if err != nil {
+		fmt.Println("Error starting Electron:", err)
+		return
+	}
+	group.Add(electron)
+
+	// Wait for any to finish, then cleanup all
+	for _, p := range []*ProcessHandle{proxy, vite, electron} {
+		wg.Add(1)
+		go func(proc *ProcessHandle) {
+			defer wg.Done()
+			if err := proc.wait(); err != nil {
+				fmt.Printf("Process (pid=%d) exited with error: %v\n", proc.cmd.Process.Pid, err)
+			} else {
+				fmt.Printf("Process (pid=%d) exited.\n", proc.cmd.Process.Pid)
+			}
+			group.Cleanup() // First one to exit triggers cleanup
+		}(p)
+	}
+
+	wg.Wait()
+}
+
+func run() {
+	fmt.Println("Running in production mode...")
+	// Add your production run logic here
+}
+
+func compile() {
+	cmd("04", "npm run build --prefix ./manager")
+	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
 }
 
 func cmd(id, command string) {
-	fmt.Printf("running (%s): %s\n", id, command)
+	fmt.Printf("Running (%s): %s\n", id, command)
 	c := exec.Command("bash", "-c", command)
 	out, err := c.StdoutPipe()
 	if err != nil {
@@ -101,70 +231,4 @@ func cmd(id, command string) {
 	if err := c.Wait(); err != nil {
 		fmt.Printf("cmd (%s) wait failed: %s\n", id, err.Error())
 	}
-}
-
-// whenOneKillAll waits for the first command to finish and kills all other commands.
-func whenOneKillAll(f ...func() error) {
-	killAll := sync.OnceFunc(func() {
-		for j := range len(f) / 2 {
-			killFunc := f[2*j+1]
-			if err := killFunc(); err != nil {
-				fmt.Printf("error killing command (index %d): %s\n", j, err.Error())
-			}
-		}
-	})
-
-	var wg = &sync.WaitGroup{}
-	for i := range len(f) / 2 {
-		waitFunc := f[2*i]
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			if err := waitFunc(); err != nil {
-				fmt.Printf("error waiting for command (index %d): %s\n", i, err.Error())
-			}
-			killAll()
-		}()
-	}
-
-	wg.Wait()
-}
-
-// run runs the program in production mode.
-func run() {
-	println("Running in production mode...")
-	// Add your production run logic here
-}
-
-// compile compiles the program.
-func compile() {
-	cmd("04", "npm run build --prefix ./manager")
-	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
-}
-
-// runDebug runs the program in debug mode.
-func runDebug() {
-	println("Running in debug mode...")
-	runProxyWait, runProxyKill := cmdWaitKill("01", "DEBUG=true go run ./proxy")
-	runNPMWait, runNPMKill := cmdWaitKill("02", "DEBUG=true npm run dev --prefix ./manager")
-
-	working := false
-	for range 5 {
-		_, err := net.DialTimeout("tcp", ViteAddress, time.Second)
-		if err == nil {
-			working = true
-			break
-		}
-		time.Sleep(CheckViteInterval)
-	}
-
-	if !working {
-		println("Vite server is not running. Exiting...")
-		return
-	}
-
-	runElectronWait, runElectronKill := cmdWaitKill("03", "DEBUG=true electron ./manager")
-
-	defer whenOneKillAll(runProxyWait, runProxyKill, runNPMWait, runNPMKill, runElectronWait, runElectronKill)
 }
