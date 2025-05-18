@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 
@@ -55,6 +56,20 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 		*config = newConfig
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("config updated"))
+	})
+
+	http.HandleFunc("GET /requestsWS", func(w http.ResponseWriter, r *http.Request) {
+		var conn *websocket.Conn
+		var err error
+		if conn, err = websocket.AcceptHTTP(w, r); err != nil {
+			// this might not even work
+			w.WriteHeader(500)
+			w.Write([]byte("failed to accept websocket"))
+			slog.Error("failed to accept websocket", "err", err.Error())
+			return
+		}
+
+		liveRequestWebsockets = append(liveRequestWebsockets, conn)
 	})
 
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
