@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -17,34 +16,47 @@ const window = time.Second * 20
 // ProxyHandler is being used here because CONNECT requests are automatically
 // rejected by net/http's default handler on ListenAndServe.
 type ProxyHandler struct {
-	config           *Config
-	working          atomic.Int32
-	requestsInWindow atomic.Uint32
-	avgMSPerRequest  float64
+	config *Config
+	// working          atomic.Int32
+	// requestsInWindow atomic.Uint32
+	// avgMSPerRequest  float64
 
 	certifcates *Certificates
+
+	// liveRequestMessages messages:
+	//
+	// NEW {id: string, secure: bool, clientIP: string, clientAuthorization: string, host: string}
+	// - followed up by: HTTP {id: string, method: string, headers: map[string][]string, body: []byte}
+	// - followed up
+	liveRequestMessages chan []byte
 
 	// fc is a score determining for priority of requests.
 	fc float64
 }
 
 func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c.working.Add(1)
-	defer c.working.Add(-1)
+	// c.working.Add(1)
+	// defer c.working.Add(-1)
 
-	conn, err := hijack(w)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write(ResponseHijackingError)
-		return
-	}
-	defer conn.Close()
+	req := new(Request)
+	req.Init(w, r)
+	defer req.conn.Close()
 
-	if r.Method == http.MethodConnect { // we're handling an HTTPS connection here
-		err = handleHTTPS(c.config, conn, c.certifcates, r)
+	data, _ := json.Marshal(map[string]any{
+		"id":                  req.id,
+		"secure":              req.secure,
+		"clientIP":            req.clientIP,
+		"clientAuthorization": req.clientAuthorization,
+		"host":                req.host,
+	})
+	c.liveRequestMessages <- append([]byte("NEW "), data...)
+
+	var err error
+	if req.secure { // we're handling an HTTPS connection here
+		err = req.handleHTTPS(c.config, c.certifcates, c.liveRequestMessages)
 	} else {
 		// we're handling an HTTP connection here
-		err = handleHTTP(c.config, conn, r)
+		err = req.handleHTTP(c.config, c.liveRequestMessages)
 	}
 
 	if err != nil {
@@ -62,11 +74,14 @@ func main() {
 	// before the signal handler catches the signal.
 	manageConfigFile(config, os.Getenv("PROXY_CONFIG_FILE"))
 
-	go startControlServer(config)
+	liveRequestMessages := make(chan []byte, 8)
+
+	go startControlServer(config, liveRequestMessages)
 
 	// -log([H+]) im so funny
 	ph := new(ProxyHandler)
 	ph.config = config
+	ph.liveRequestMessages = liveRequestMessages
 	ph.certifcates = new(Certificates)
 	if err := ph.certifcates.Init(); err != nil {
 		slog.Error("fatal certificates init", "err", err.Error())

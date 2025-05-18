@@ -1,0 +1,4 @@
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/tiredkangaroo/websocket v0.0.0-20250331164906-3c827d2ce87b h1:LtKSBUpccUC0oIt5Zf2CWZoc9kk080T3exlVltGw2Ts=
+github.com/tiredkangaroo/websocket v0.0.0-20250331164906-3c827d2ce87b/go.mod h1:kzR3gnf5qdlc3qRSJ7KPKCaD4/7VF2wYRyVQiZ9xxxI=

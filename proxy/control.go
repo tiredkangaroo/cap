@@ -2,11 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"slices"
+
+	"github.com/tiredkangaroo/websocket"
 )
 
-func startControlServer(config *Config) {
+func startControlServer(config *Config, liveRequestMessages chan []byte) {
+	liveRequestWebsockets := []*websocket.Conn{}
 	// Start the control server
 	http.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
 		if config.Debug {
@@ -56,6 +61,23 @@ func startControlServer(config *Config) {
 		setCORSHeaders(w)
 		w.WriteHeader(http.StatusNoContent)
 	})
+
+	go func() {
+		for msg := range liveRequestMessages {
+			fmt.Println(string(msg))
+			for i, ws := range liveRequestWebsockets {
+				err := ws.Write(&websocket.Message{
+					Type: websocket.MessageText,
+					Data: msg,
+				})
+				if err != nil {
+					ws.Close() // close the conn, but it might be already closed
+					// i hope this delete method doesn't affect the range loop
+					liveRequestWebsockets = slices.Delete(liveRequestWebsockets, i, i+1)
+				}
+			}
+		}
+	}()
 
 	err := http.ListenAndServe(":8001", nil)
 	if err != nil {

@@ -18,6 +18,12 @@ var (
 var (
 	// ResponseHijackingError is the response sent to the client when the proxy cannot hijack the connection.
 	ResponseHijackingError []byte = []byte("hijacking error")
+
+	// ReadInterceptedBodyError is the response sent to the client when the proxy cannot read the intercepted body from
+	// an HTTP or HTTPS request. (is it really interception if it isn't an HTTPS request? the client is LTIERALLY giving
+	// it to you)
+	ResponseReadInterceptedBodyError []byte = []byte("read intercepted body error")
+
 	// ResponseRawSuccess is the response sent to the client when the HTTPS proxy successfully hijacks the connection.
 	ResponseRawSuccess []byte = []byte("HTTP/1.1 200 OK\r\n" +
 		"Connection: close\r\n" +
@@ -33,14 +39,16 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func handleHTTP(config *Config, conn net.Conn, r *http.Request) error {
+func (r *Request) handleHTTP(config *Config, liveRequestMessages chan []byte) error {
+	liveRequestMessages <- append([]byte("HTTP "), r.followUpDataWithMITMInfo(config)...)
+
 	// perform the request
-	resp, err := perform(config, r, false)
+	resp, err := r.Perform(config)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
 
-	_, err = conn.Write(resp)
+	_, err = r.conn.Write(resp)
 	return err
 }
 
@@ -53,22 +61,23 @@ func handleHTTP(config *Config, conn net.Conn, r *http.Request) error {
 // (3) The proxy reads the actual request from the client that it meant to send the host.
 // (4) The proxy performs the request to the real host.
 // (5) The proxy sends the response back to the client.
-func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request) error {
+func (r *Request) handleHTTPS(config *Config, c *Certificates, liveRequestMessages chan []byte) error {
+
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
-	_, err := conn.Write(ResponseRawSuccess)
+	_, err := r.conn.Write(ResponseRawSuccess)
 	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
 	}
 
 	if !config.MITM {
-		return handleNoMITM(config, conn, r)
+		return r.handleNoMITM(config, liveRequestMessages)
 	}
 
 	// after the success response, a handshake will occur and the user will
 	// send the ACTUAL request
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
-	tlsconn, err := c.TLSConn(config, conn, r.URL.Hostname())
+	tlsconn, err := c.TLSConn(config, r.conn, r.req.URL.Hostname())
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
@@ -77,8 +86,10 @@ func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request
 	if err != nil {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
+	r.req = finalReq
+	liveRequestMessages <- append([]byte("HTTPS-MITM "), r.followUpDataWithMITMInfo(config)...)
 
-	resp, err := perform(config, finalReq, true)
+	resp, err := r.Perform(config)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -89,8 +100,11 @@ func handleHTTPS(config *Config, conn net.Conn, c *Certificates, r *http.Request
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
-func handleNoMITM(config *Config, conn net.Conn, r *http.Request) error {
-	hconn, err := net.Dial("tcp", r.Host)
+func (r *Request) handleNoMITM(config *Config, liveRequestMessages chan []byte) error {
+	// NOTE: this will later includes bytes transferred etc. but also not just for no MITM both an provide that info
+	liveRequestMessages <- []byte("HTTPS-TUNNEL ")
+
+	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
 		return fmt.Errorf("non-MITM dial host: %w", err)
 	}
@@ -100,7 +114,7 @@ func handleNoMITM(config *Config, conn net.Conn, r *http.Request) error {
 
 	go func() {
 		defer cancel()
-		_, err = io.Copy(hconn, conn)
+		_, err = io.Copy(hconn, r.conn)
 		if err != nil {
 			slog.Warn("io.Copy error (conn -> hostconn)", "err", err)
 		}
@@ -108,7 +122,7 @@ func handleNoMITM(config *Config, conn net.Conn, r *http.Request) error {
 
 	go func() {
 		defer cancel()
-		_, err = io.Copy(conn, hconn)
+		_, err = io.Copy(r.conn, hconn)
 		if err != nil {
 			slog.Warn("io.Copy error (hconn -> conn)", "err", err)
 		}

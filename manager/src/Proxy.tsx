@@ -131,6 +131,29 @@ function SettingsView(props: { proxy: Proxy }) {
                     }}
                 ></input>
             </div>
+            <div className="flex flex-row text-3xl mt-6">
+                <HoverCard>
+                    <HoverCardTrigger>
+                        <p className="text-3xl mt-auto mb-auto">
+                            Request Body Dumping
+                        </p>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="min-w-fit w-[85%]">
+                        Request body dumping allows inspection of the request
+                        body by the client.
+                    </HoverCardContent>
+                </HoverCard>
+                <Switch
+                    className="mt-auto mb-auto ml-auto mr-2"
+                    checked={proxyConfig?.provide_request_body}
+                    onCheckedChange={(checked: boolean) => {
+                        proxyConfig.provide_request_body = checked;
+                        props.proxy.setConfig(proxyConfig);
+                        const newObj = Object.assign({}, proxyConfig);
+                        setProxyConfig(newObj);
+                    }}
+                ></Switch>
+            </div>
         </div>
     );
 }

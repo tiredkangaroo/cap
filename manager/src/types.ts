@@ -13,4 +13,9 @@ export interface Config {
     // it is more resource intensive to generate and store the certificates for each host, perform a
     // TLS handshake as well as to decrypt the traffic, reencrypt it, move requests and responses.
     mitm: boolean;
+
+    // provide_request_body is a boolean that determines whether the proxy should provide the request body.
+    // It can be useful for debugging purposes, however is very resource intensive, especially with larger
+    // bodies.
+    provide_request_body: boolean;
 }
