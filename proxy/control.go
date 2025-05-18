@@ -2,11 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"slices"
 
 	"github.com/tiredkangaroo/websocket"
 )
@@ -68,7 +66,6 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 			slog.Error("failed to accept websocket", "err", err.Error())
 			return
 		}
-
 		liveRequestWebsockets = append(liveRequestWebsockets, conn)
 	})
 
@@ -79,7 +76,7 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 
 	go func() {
 		for msg := range liveRequestMessages {
-			fmt.Println(string(msg))
+			newLiveRequestWebsockets := liveRequestWebsockets
 			for i, ws := range liveRequestWebsockets {
 				err := ws.Write(&websocket.Message{
 					Type: websocket.MessageText,
@@ -87,10 +84,11 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 				})
 				if err != nil {
 					ws.Close() // close the conn, but it might be already closed
-					// i hope this delete method doesn't affect the range loop
-					liveRequestWebsockets = slices.Delete(liveRequestWebsockets, i, i+1)
+					// do NOT use slices.Delete here. it will cause a nil panic because of the clearing in slices.Delete
+					newLiveRequestWebsockets = append(liveRequestWebsockets[:i], liveRequestWebsockets[i+1:]...)
 				}
 			}
+			liveRequestWebsockets = newLiveRequestWebsockets // update the slice so it doesn't grow indefinitely or mess with the range loop
 		}
 	}()
 

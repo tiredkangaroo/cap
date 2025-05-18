@@ -26,8 +26,9 @@ type ProxyHandler struct {
 	// liveRequestMessages messages:
 	//
 	// NEW {id: string, secure: bool, clientIP: string, clientAuthorization: string, host: string}
-	// - followed up by: HTTP {id: string, method: string, headers: map[string][]string, body: []byte}
-	// - followed up
+	// - followed up by: "HTTP {id: string, method: string, headers: map[string][]string, body: []byte}"
+	// - followed up by: "HTTPS-MITM {id: string, method: string, headers: map[string][]string, body: []byte}"
+	// - followed up by: "HTTPS-TUNNEL "
 	liveRequestMessages chan []byte
 
 	// fc is a score determining for priority of requests.

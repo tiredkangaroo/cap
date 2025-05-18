@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Proxy } from "./api";
-import { Config } from "./types";
+import { Config, Request } from "./types";
 
 import { Switch } from "./components/ui/switch";
 import {
@@ -19,6 +19,11 @@ import {
 } from "./components/ui/hover-card";
 
 import { IoSettingsSharp } from "react-icons/io5";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "./components/ui/collapsible";
 
 export function ProxyView() {
     const [proxy, _] = useState<Proxy | null>(
@@ -55,7 +60,92 @@ export function ProxyView() {
                     <SettingsView proxy={proxy} />
                 </div>
             </div>
+            <IncomingRequestsView proxy={proxy} />
         </div>
+    );
+}
+
+function IncomingRequestsView(props: { proxy: Proxy }) {
+    const [requests, setRequests] = useState<Array<Request>>([]);
+
+    useEffect(() => {
+        props.proxy.manageRequests(() => {
+            console.log("update cb", props.proxy.requests);
+            const newObj = Object.assign([], props.proxy.requests);
+            setRequests(newObj);
+        });
+    }, []);
+
+    return (
+        <div className="flex flex-col w-full h-full">
+            <h1 className="ml-2 text-2xl font-bold mb-2">Incoming Requests</h1>
+            <div className="w-full overflow-y-auto h-[80%]">
+                {requests.map((request, index) => (
+                    <RequestView key={index} request={request} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function RequestView(props: { request: Request }) {
+    console.log(props.request);
+    return (
+        <Collapsible className="border-b-1 border-b-black wrap-anywhere">
+            <CollapsibleTrigger className="w-full bg-gray-200">
+                <div className="relative flex flex-row w-full pt-4 pb-4">
+                    <p className="flex-1">
+                        {props.request.secure ? "HTTPS" : "HTTP"}
+                    </p>
+                    <p className="flex-1 ml-1 text-md">{props.request.id}</p>
+                    <p className="flex-1 ml-1 text-center">
+                        {props.request.host}
+                    </p>
+                    <p className="flex-1 ml-1 mr-1">{props.request.clientIP}</p>
+                </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="bg-gray-300">
+                <div className="ml-2 pt-2 pb-1">
+                    {props.request.method ? (
+                        <p className="mb-2">
+                            <b>Method: </b> {props.request.method}
+                        </p>
+                    ) : (
+                        <></>
+                    )}
+                    <p className="mb-2">
+                        <b>Client Authorization: </b>
+                        {props.request.clientAuthorization != "" ? (
+                            props.request.clientAuthorization
+                        ) : (
+                            <i>No Client Authorization</i>
+                        )}
+                    </p>
+                    {props.request.headers ? (
+                        <div className="mb-2">
+                            <b>Headers:</b>
+                            {Object.entries(props.request.headers!).map((v) => (
+                                <p>
+                                    {v[0]}: {v[1].join(", ")}
+                                </p>
+                            ))}
+                        </div>
+                    ) : (
+                        <></>
+                    )}
+                    {props.request.body ? (
+                        <div className="mb-2">
+                            <p>
+                                <b>Body: </b>
+                            </p>
+                            {props.request.body}
+                        </div>
+                    ) : (
+                        <></>
+                    )}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
     );
 }
 
@@ -73,12 +163,10 @@ function SettingsView(props: { proxy: Proxy }) {
 
     return (
         <Dialog>
-            <DialogTrigger>
-                <button className="bg-gray-800 p-4 rounded-xl">
-                    <IoSettingsSharp className="text-white" />
-                </button>
+            <DialogTrigger className="bg-gray-800 p-4 rounded-xl">
+                <IoSettingsSharp className="text-white" />
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-full h-full">
                 <DialogHeader>
                     <DialogTitle className="text-center">Settings</DialogTitle>
                     <DialogDescription className="text-center">

@@ -19,3 +19,15 @@ export interface Config {
     // bodies.
     provide_request_body: boolean;
 }
+
+export interface Request {
+    id: string;
+    secure: boolean;
+    clientIP: string;
+    clientAuthorization: string;
+    host: string;
+
+    method?: string;
+    headers?: Record<string, Array<string>>;
+    body?: string;
+}
