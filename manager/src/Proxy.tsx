@@ -94,7 +94,12 @@ function RequestView(props: { request: Request }) {
         <Collapsible className="border-b-1 border-b-black wrap-anywhere">
             <CollapsibleTrigger className="w-full bg-gray-200">
                 <div className="relative flex flex-row w-full pt-4 pb-4">
-                    <p className="flex-1">
+                    <p
+                        className="flex-1"
+                        style={{
+                            color: props.request.secure ? "#0b5c00" : "#5c0300",
+                        }}
+                    >
                         {props.request.secure ? "HTTPS" : "HTTP"}
                     </p>
                     <p className="flex-1 ml-1 text-md">{props.request.id}</p>
@@ -131,7 +136,9 @@ function RequestView(props: { request: Request }) {
                             ))}
                         </div>
                     ) : (
-                        <></>
+                        <p>
+                            Headers: <i>none or unavailable</i>
+                        </p>
                     )}
                     {props.request.body ? (
                         <div className="mb-2">
@@ -141,7 +148,9 @@ function RequestView(props: { request: Request }) {
                             {props.request.body}
                         </div>
                     ) : (
-                        <></>
+                        <p className="mb-2">
+                            Body: <i>none or unavailable</i>
+                        </p>
                     )}
                 </div>
             </CollapsibleContent>
