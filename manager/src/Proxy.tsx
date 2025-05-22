@@ -184,13 +184,20 @@ export function SettingsViewDialog(props: {
 
     return (
         <dialog
-            className="fixed inset-0 flex z-50 w-screen h-screen"
+            className="fixed inset-0 flex z-50 w-[100%] h-[100%] items-center justify-center"
             open={props.open}
+            hidden={!props.open}
         >
-            <div className="w-full h-full flex-col">
+            <div className="w-[90%] h-[90%] flex bg-gray-100">
                 {/* config cmps  */}
-                <div className="w-full h-[100%] flex flex-col items-center justify-center">
-                    <div className="flex flex-col">
+                <div className="w-full h-full ml-auto mr-auto mt-auto mb-auto flex flex-col items-center justify-center">
+                    <div className="w-full flex flex-col">
+                        <button
+                            className="ml-auto mt-2 mr-2 bg-gray-700 aspect-square w-8 rounded-4xl"
+                            onClick={() => props.setOpen(false)}
+                        >
+                            <IoClose className="text-white ml-auto mr-auto" />
+                        </button>
                         <h1 className="text-3xl text-center mt-7">Settings</h1>
                         <p className="text-center">
                             configuation stuff goes here :/
