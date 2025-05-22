@@ -193,7 +193,7 @@ export function SettingsViewDialog(props: {
                 <div className="w-full h-full ml-auto mr-auto mt-auto mb-auto flex flex-col items-center justify-center">
                     <div className="w-full flex flex-col">
                         <button
-                            className="ml-auto mt-2 mr-2 bg-gray-700 aspect-square w-8 rounded-4xl"
+                            className="ml-auto mt-2 mr-2 bg-black aspect-square w-8 rounded-4xl"
                             onClick={() => props.setOpen(false)}
                         >
                             <IoClose className="text-white ml-auto mr-auto" />
@@ -203,8 +203,9 @@ export function SettingsViewDialog(props: {
                             configuation stuff goes here :/
                         </p>
                     </div>
+
                     <div className="flex flex-col min-w-fit w-[65%] h-full justify-center">
-                        <div className="flex flex-row text-xl">
+                        {/* <div className="flex flex-row text-xl">
                             <HoverCard>
                                 <HoverCardTrigger className="self-start">
                                     <p className="text-xl mt-auto mb-auto">
@@ -223,7 +224,7 @@ export function SettingsViewDialog(props: {
                                 checked={proxyConfig?.mitm}
                                 onCheckedChange={(checked: boolean) => {
                                     proxyConfig.mitm = checked;
-                                    props.proxy.setConfig(proxyConfig);
+                                    props.proxy!.setConfig(proxyConfig);
                                     const newObj = Object.assign(
                                         {},
                                         proxyConfig,
@@ -231,34 +232,59 @@ export function SettingsViewDialog(props: {
                                     setProxyConfig(newObj);
                                 }}
                             ></Switch>
-                        </div>
+                        </div> */}
                         <div className="w-full flex flex-row text-xl mt-6">
-                            <HoverCard>
-                                <HoverCardTrigger>
-                                    <p className="text-xl mt-auto mb-auto">
-                                        Real IP Header{" "}
-                                        {proxyConfig.real_ip_header}
-                                    </p>
-                                </HoverCardTrigger>
-                                <HoverCardContent className="min-w-fit w-[85%]">
-                                    Real IP Header set on means that the proxy
-                                    will add the IP address of the client in the
-                                    X-Forwarded-For header.
-                                </HoverCardContent>
-                            </HoverCard>
-                            <Switch
+                            <div className="flex-col w-[50%]">
+                                <p className="text-xl mt-auto mb-auto">MITM</p>
+                                <p className="text-sm">
+                                    MITM set on indicates that the proxy is
+                                    responsible for the TLS connection, and will
+                                    use its own certificates to encrypt the
+                                    traffic.
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
                                 className="mt-auto mb-auto ml-auto mr-2"
-                                checked={proxyConfig?.real_ip_header}
-                                onCheckedChange={(checked: boolean) => {
-                                    proxyConfig.real_ip_header = checked;
-                                    props.proxy.setConfig(proxyConfig);
+                                defaultChecked={proxyConfig.mitm}
+                                onChange={(e) => {
+                                    proxyConfig.mitm = e.target.checked;
+                                    props.proxy!.setConfig(proxyConfig);
                                     const newObj = Object.assign(
                                         {},
                                         proxyConfig,
                                     );
                                     setProxyConfig(newObj);
                                 }}
-                            ></Switch>
+                            ></input>
+                        </div>
+
+                        <div className="w-full flex flex-row text-xl mt-6">
+                            <div className="flex-col w-[50%]">
+                                <p className="text-xl mt-auto mb-auto">
+                                    Real IP Header
+                                </p>
+                                <p className="text-sm">
+                                    Real IP Header set on means that the proxy
+                                    will attach the IP address of the client in
+                                    the X-Forwarded-For header set for the host.
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="mt-auto mb-auto ml-auto mr-2"
+                                defaultChecked={proxyConfig.real_ip_header}
+                                onChange={(e) => {
+                                    proxyConfig.real_ip_header =
+                                        e.target.checked;
+                                    props.proxy!.setConfig(proxyConfig);
+                                    const newObj = Object.assign(
+                                        {},
+                                        proxyConfig,
+                                    );
+                                    setProxyConfig(newObj);
+                                }}
+                            ></input>
                         </div>
                         <div className="w-full flex flex-row text-xl mt-6">
                             <HoverCard>
@@ -282,7 +308,7 @@ export function SettingsViewDialog(props: {
                                     proxyConfig.certificate_lifetime = parseInt(
                                         e.target.value,
                                     );
-                                    props.proxy.setConfig(proxyConfig);
+                                    props.proxy!.setConfig(proxyConfig);
                                     const newObj = Object.assign(
                                         {},
                                         proxyConfig,
@@ -292,6 +318,35 @@ export function SettingsViewDialog(props: {
                             ></input>
                         </div>
                         <div className="w-full flex flex-row text-xl mt-6">
+                            <div className="flex-col w-[50%]">
+                                <p className="text-xl mt-auto mb-auto">
+                                    Request Body Dumping
+                                </p>
+                                <p className="text-sm">
+                                    Request body dumping allows inspection of
+                                    the request body by the client.
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="mt-auto mb-auto ml-auto mr-2"
+                                defaultChecked={
+                                    proxyConfig.provide_request_body
+                                }
+                                onChange={(e) => {
+                                    proxyConfig.provide_request_body =
+                                        e.target.checked;
+                                    props.proxy!.setConfig(proxyConfig);
+                                    const newObj = Object.assign(
+                                        {},
+                                        proxyConfig,
+                                    );
+                                    setProxyConfig(newObj);
+                                }}
+                            ></input>
+                        </div>
+
+                        {/* <div className="w-full flex flex-row text-xl mt-6">
                             <HoverCard>
                                 <HoverCardTrigger>
                                     <p className="text-xl mt-auto mb-auto">
@@ -308,7 +363,7 @@ export function SettingsViewDialog(props: {
                                 checked={proxyConfig?.provide_request_body}
                                 onCheckedChange={(checked: boolean) => {
                                     proxyConfig.provide_request_body = checked;
-                                    props.proxy.setConfig(proxyConfig);
+                                    props.proxy!.setConfig(proxyConfig);
                                     const newObj = Object.assign(
                                         {},
                                         proxyConfig,
@@ -317,6 +372,7 @@ export function SettingsViewDialog(props: {
                                 }}
                             ></Switch>
                         </div>
+                    </div> */}
                     </div>
                 </div>
             </div>
