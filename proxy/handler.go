@@ -9,6 +9,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+
+	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 var (
@@ -39,11 +42,11 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func (r *Request) handleHTTP(config *Config, liveRequestMessages chan []byte) error {
-	liveRequestMessages <- append([]byte("HTTP "), r.followUpDataWithMITMInfo(config)...)
+func (r *Request) handleHTTP(liveRequestMessages chan []byte) error {
+	liveRequestMessages <- append([]byte("HTTP "), r.followUpDataWithMITMInfo()...)
 
 	// perform the request
-	resp, err := r.Perform(config)
+	resp, err := r.Perform()
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -61,7 +64,7 @@ func (r *Request) handleHTTP(config *Config, liveRequestMessages chan []byte) er
 // (3) The proxy reads the actual request from the client that it meant to send the host.
 // (4) The proxy performs the request to the real host.
 // (5) The proxy sends the response back to the client.
-func (r *Request) handleHTTPS(config *Config, c *Certificates, liveRequestMessages chan []byte) error {
+func (r *Request) handleHTTPS(c *certificate.Certificates, liveRequestMessages chan []byte) error {
 
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
 	_, err := r.conn.Write(ResponseRawSuccess)
@@ -69,15 +72,15 @@ func (r *Request) handleHTTPS(config *Config, c *Certificates, liveRequestMessag
 		return fmt.Errorf("connection write: %w", err)
 	}
 
-	if !config.MITM {
-		return r.handleNoMITM(config, liveRequestMessages)
+	if !config.DefaultConfig.MITM {
+		return r.handleNoMITM(liveRequestMessages)
 	}
 
 	// after the success response, a handshake will occur and the user will
 	// send the ACTUAL request
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
-	tlsconn, err := c.TLSConn(config, r.conn, r.req.URL.Hostname())
+	tlsconn, err := c.TLSConn(r.conn, r.req.URL.Hostname())
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
@@ -87,9 +90,9 @@ func (r *Request) handleHTTPS(config *Config, c *Certificates, liveRequestMessag
 		return fmt.Errorf("read mitm request: %w", err)
 	}
 	r.req = finalReq
-	liveRequestMessages <- append([]byte("HTTPS-MITM "), r.followUpDataWithMITMInfo(config)...)
+	liveRequestMessages <- append([]byte("HTTPS-MITM "), r.followUpDataWithMITMInfo()...)
 
-	resp, err := r.Perform(config)
+	resp, err := r.Perform()
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -100,7 +103,7 @@ func (r *Request) handleHTTPS(config *Config, c *Certificates, liveRequestMessag
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
-func (r *Request) handleNoMITM(config *Config, liveRequestMessages chan []byte) error {
+func (r *Request) handleNoMITM(liveRequestMessages chan []byte) error {
 	// NOTE: this will later includes bytes transferred etc. but also not just for no MITM both an provide that info
 	liveRequestMessages <- []byte("HTTPS-TUNNEL ")
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 )
@@ -20,4 +21,15 @@ func toURL(s string, https bool) (*url.URL, error) {
 		}
 	}
 	return url.Parse(s)
+}
+
+func sendNew(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":                  req.id,
+		"secure":              req.secure,
+		"clientIP":            req.clientIP,
+		"clientAuthorization": req.clientAuthorization,
+		"host":                req.host,
+	})
+	c <- append([]byte("NEW "), data...)
 }

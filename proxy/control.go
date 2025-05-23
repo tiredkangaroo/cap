@@ -6,18 +6,19 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/websocket"
 )
 
-func startControlServer(config *Config, liveRequestMessages chan []byte) {
+func startControlServer(liveRequestMessages chan []byte) {
 	liveRequestWebsockets := []*websocket.Conn{}
 	// Start the control server
 	http.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
-		if config.Debug {
+		if config.DefaultConfig.Debug {
 			setCORSHeaders(w)
 		}
 
-		data, err := json.Marshal(config)
+		data, err := json.Marshal(config.DefaultConfig)
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("failed to marshal config"))
@@ -30,7 +31,7 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 	})
 
 	http.HandleFunc("POST /config", func(w http.ResponseWriter, r *http.Request) {
-		if config.Debug {
+		if config.DefaultConfig.Debug {
 			setCORSHeaders(w)
 		}
 
@@ -43,7 +44,7 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 
 		// possible validation of the config here and authority to change it
 
-		var newConfig Config
+		var newConfig config.Config
 		err = json.Unmarshal(b, &newConfig)
 		if err != nil {
 			w.WriteHeader(400)
@@ -51,7 +52,7 @@ func startControlServer(config *Config, liveRequestMessages chan []byte) {
 			return
 		}
 
-		*config = newConfig
+		*config.DefaultConfig = newConfig
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("config updated"))
 	})

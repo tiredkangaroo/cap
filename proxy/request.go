@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 type Request struct {
@@ -52,7 +53,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-func (r *Request) Perform(config *Config) ([]byte, error) {
+func (r *Request) Perform() ([]byte, error) {
 	// toURL is used to convert the host to a valid URL.
 	newURL, err := toURL(r.req.Host, r.secure)
 	if err != nil {
@@ -67,7 +68,7 @@ func (r *Request) Perform(config *Config) ([]byte, error) {
 	r.req.Header.Del("Proxy-Authorization")
 	r.req.Header.Del("Proxy-Connection")
 
-	if config.RealIPHeader {
+	if config.DefaultConfig.RealIPHeader {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
@@ -86,10 +87,10 @@ func (r *Request) Perform(config *Config) ([]byte, error) {
 }
 
 // followUpDataWithMITMInfo provides data to be sent to the client that has
-func (r *Request) followUpDataWithMITMInfo(config *Config) []byte {
+func (r *Request) followUpDataWithMITMInfo() []byte {
 	var bodyData []byte
 	var err error
-	if config.ProvideRequestBody {
+	if config.DefaultConfig.ProvideRequestBody {
 		bodyData, err = io.ReadAll(r.req.Body)
 		if err != nil {
 			bodyData = ResponseReadInterceptedBodyError

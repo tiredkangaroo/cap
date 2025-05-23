@@ -193,7 +193,7 @@ export function SettingsViewDialog(props: {
                 <div className="w-full h-full ml-auto mr-auto mt-auto mb-auto flex flex-col items-center justify-center">
                     <div className="w-full flex flex-col">
                         <button
-                            className="ml-auto mt-2 mr-2 bg-black aspect-square w-8 rounded-4xl"
+                            className="ml-auto mt-2 mr-2 bg-black aspect-square w-8"
                             onClick={() => props.setOpen(false)}
                         >
                             <IoClose className="text-white ml-auto mr-auto" />
@@ -287,19 +287,17 @@ export function SettingsViewDialog(props: {
                             ></input>
                         </div>
                         <div className="w-full flex flex-row text-xl mt-6">
-                            <HoverCard>
-                                <HoverCardTrigger>
-                                    <p className="w-full text-xl mt-auto mb-auto">
-                                        Certificate Lifetime:{" "}
-                                    </p>
-                                </HoverCardTrigger>
-                                <HoverCardContent className="min-w-fit w-[85%]">
+                            <div className="flex-col w-[50%]">
+                                <p className="text-xl mt-auto mb-auto">
+                                    Certificate Lifetime
+                                </p>
+                                <p className="text-sm">
                                     The lifetime of the certificate in hours. It
                                     is possible to set it to less than 0 in
                                     which any new certificates generated will
                                     not be valid.
-                                </HoverCardContent>
-                            </HoverCard>
+                                </p>
+                            </div>
                             <input
                                 defaultValue={proxyConfig.certificate_lifetime}
                                 type="number"

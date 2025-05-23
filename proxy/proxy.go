@@ -1,27 +1,22 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
-)
 
-const window = time.Second * 20
+	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
+)
 
 // ProxyHandler is being used here because CONNECT requests are automatically
 // rejected by net/http's default handler on ListenAndServe.
 type ProxyHandler struct {
-	config *Config
 	// working          atomic.Int32
 	// requestsInWindow atomic.Uint32
 	// avgMSPerRequest  float64
 
-	certifcates *Certificates
+	certifcates *certificate.Certificates
 
 	// liveRequestMessages messages:
 	//
@@ -29,7 +24,7 @@ type ProxyHandler struct {
 	// - followed up by: "HTTP {id: string, method: string, headers: map[string][]string, body: []byte}"
 	// - followed up by: "HTTPS-MITM {id: string, method: string, headers: map[string][]string, body: []byte}"
 	// - followed up by: "HTTPS-TUNNEL "
-	liveRequestMessages chan []byte
+	controlMessages chan []byte
 
 	// fc is a score determining for priority of requests.
 	fc float64
@@ -43,21 +38,14 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req.Init(w, r)
 	defer req.conn.Close()
 
-	data, _ := json.Marshal(map[string]any{
-		"id":                  req.id,
-		"secure":              req.secure,
-		"clientIP":            req.clientIP,
-		"clientAuthorization": req.clientAuthorization,
-		"host":                req.host,
-	})
-	c.liveRequestMessages <- append([]byte("NEW "), data...)
+	sendNew(req, c.controlMessages)
 
 	var err error
 	if req.secure { // we're handling an HTTPS connection here
-		err = req.handleHTTPS(c.config, c.certifcates, c.liveRequestMessages)
+		err = req.handleHTTPS(c.certifcates, c.controlMessages)
 	} else {
 		// we're handling an HTTP connection here
-		err = req.handleHTTP(c.config, c.liveRequestMessages)
+		err = req.handleHTTP(c.controlMessages)
 	}
 
 	if err != nil {
@@ -65,27 +53,22 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
-	config := new(Config)
-	config.Debug = os.Getenv("DEBUG") == "true"
-	if config.Debug {
-		slog.Info("debug mode")
+func (c *ProxyHandler) Init() error {
+	c.certifcates = new(certificate.Certificates)
+	if err := c.certifcates.Init(); err != nil {
+		return err
 	}
-	// manageConfigFile is on the main thread to stop the program from terminating
-	// before the signal handler catches the signal.
-	manageConfigFile(config, os.Getenv("PROXY_CONFIG_FILE"))
+	return nil
+}
 
-	liveRequestMessages := make(chan []byte, 8)
-
-	go startControlServer(config, liveRequestMessages)
-
-	// -log([H+]) im so funny
+func (c *ProxyHandler) ListenAndServe(controlMessages chan []byte) {
 	ph := new(ProxyHandler)
-	ph.config = config
-	ph.liveRequestMessages = liveRequestMessages
-	ph.certifcates = new(Certificates)
+	ph.certifcates = new(certificate.Certificates)
+	ph.controlMessages = controlMessages
+
 	if err := ph.certifcates.Init(); err != nil {
-		slog.Error("fatal certificates init", "err", err.Error())
+		slog.Error("initializing certificates", "err", err.Error())
+		config.DefaultConfig.MITM = false // NOTE: add errors when trying to set MITM true when initialization fails
 	}
 
 	if err := http.ListenAndServe(":8000", ph); err != nil {
@@ -94,55 +77,4 @@ func main() {
 	} else {
 		os.Exit(0)
 	}
-
-}
-
-func manageConfigFile(config *Config, filename string) {
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		slog.Error("creating/opening file specified in PROXY_CONFIG_FILE", "err", err.Error())
-		return
-	}
-
-	if err := readConfigFile(file, config); err != nil {
-		slog.Error("reading config file", "err", err.Error())
-	}
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		defer os.Exit(0)
-		<-c
-		slog.Info("received signal, saving config file")
-		data, err := json.Marshal(config)
-		if err != nil {
-			slog.Error("saving config file at marshal step", "err", err.Error())
-			return
-		}
-		if err := file.Truncate(0); err != nil {
-			slog.Error("saving config file at truncate step", "err", err.Error())
-		}
-		if _, err := file.Seek(0, 0); err != nil {
-			slog.Error("saving config file at the seek 0 step", "err", err.Error())
-		}
-		if _, err := file.Write(data); err != nil {
-			slog.Error("saving config file at file.Write step", "err", err.Error())
-			return
-		}
-	}()
-
-}
-
-func readConfigFile(file *os.File, config *Config) error {
-	rf, err := io.ReadAll(file)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(rf, config)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

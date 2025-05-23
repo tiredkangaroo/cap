@@ -111,7 +111,7 @@ func (pg *ProcessGroup) Cleanup() {
 
 func (pg *ProcessGroup) Wait() {
 	wg := &sync.WaitGroup{}
-	for i, p := range pg.processes {
+	for _, p := range pg.processes {
 		wg.Add(1)
 		go func(proc *ProcessHandle) {
 			defer wg.Done()
@@ -126,7 +126,9 @@ func (pg *ProcessGroup) Wait() {
 			} else {
 				pg.mx.Lock()
 				// remove the process from the list
-				pg.processes = slices.Delete(pg.processes, i, i)
+				pg.processes = slices.DeleteFunc(pg.processes, func(e *ProcessHandle) bool {
+					return e.cmd.Process.Pid == proc.cmd.Process.Pid
+				})
 				pg.mx.Unlock()
 				fmt.Printf("Process (pid=%d) exited.\n", proc.cmd.Process.Pid)
 			}

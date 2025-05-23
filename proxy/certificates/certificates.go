@@ -1,4 +1,4 @@
-package main
+package certificate
 
 import (
 	"crypto/ecdsa"
@@ -14,6 +14,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 // Certificates is a struct that provides services for making TLS connections.
@@ -69,7 +71,7 @@ func (c *Certificates) Init() error {
 // cache.
 //
 // The certificate is valid for the lifetime specified in the config (CertificateLifetime).
-func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, error) {
+func (c *Certificates) getTLSCert(host string) (tls.Certificate, error) {
 	// check if the certificate is already in the cache
 	cachedCertificate, ok := c.cache.Load(host)
 	if ok {
@@ -101,7 +103,7 @@ func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, err
 		},
 		DNSNames:              []string{host},
 		NotBefore:             time.Now().Add(-(time.Hour * 7200)),
-		NotAfter:              time.Now().Add(time.Hour * time.Duration(cf.CertificateLifetime)),
+		NotAfter:              time.Now().Add(time.Hour * time.Duration(config.DefaultConfig.CertificateLifetime)),
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -141,8 +143,8 @@ func (c *Certificates) getTLSCert(cf *Config, host string) (tls.Certificate, err
 }
 
 // TLSConn creates a new TLS connection using the given config and connection signed for the specified host.
-func (c *Certificates) TLSConn(config *Config, conn net.Conn, host string) (*tls.Conn, error) {
-	cert, err := c.getTLSCert(config, host)
+func (c *Certificates) TLSConn(conn net.Conn, host string) (*tls.Conn, error) {
+	cert, err := c.getTLSCert(host)
 	if err != nil {
 		return nil, err
 	}
