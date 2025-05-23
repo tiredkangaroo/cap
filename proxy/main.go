@@ -16,5 +16,6 @@ func main() {
 		slog.Error("initializing proxy handler", "err", err.Error())
 		return
 	}
+
 	ph.ListenAndServe(controlMessages)
 }

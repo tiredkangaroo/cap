@@ -23,7 +23,7 @@ func toURL(s string, https bool) (*url.URL, error) {
 	return url.Parse(s)
 }
 
-func sendNew(req *Request, c chan []byte) {
+func sendControlNew(req *Request, c chan []byte) {
 	data, _ := json.Marshal(map[string]any{
 		"id":                  req.id,
 		"secure":              req.secure,
@@ -32,4 +32,59 @@ func sendNew(req *Request, c chan []byte) {
 		"host":                req.host,
 	})
 	c <- append([]byte("NEW "), data...)
+}
+
+func sendControlHTTPRequest(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":      req.id,
+		"method":  req.req.Method,
+		"headers": req.req.Header,
+		"body":    string(req.body()),
+	})
+	c <- append([]byte("HTTP "), data...)
+}
+
+func sendControlHTTPSMITMRequest(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":      req.id,
+		"method":  req.req.Method,
+		"headers": req.req.Header,
+		"body":    string(req.body()),
+	})
+	c <- append([]byte("HTTPS-MITM-REQUEST "), data...)
+}
+
+func sendControlHTTPSTunnelRequest(req *Request, c chan []byte) {
+	// NOTE: this will later includes bytes transferred etc. but also not just for no MITM both an provide that info
+	data, _ := json.Marshal(map[string]any{
+		"id": req.id,
+	})
+	c <- append([]byte("HTTPS-TUNNEL-REQUEST "), data...)
+}
+
+func sendControlHTTPResponse(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":         req.id,
+		"statusCode": req.resp.StatusCode,
+		"headers":    req.resp.Header,
+		"body":       string(req.body()),
+	})
+	c <- append([]byte("HTTP-RESPONSE "), data...)
+}
+
+func sendControlHTTPSMITMResponse(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":         req.id,
+		"statusCode": req.resp.StatusCode,
+		"headers":    req.resp.Header,
+		"body":       string(req.body()),
+	})
+	c <- append([]byte("HTTPS-MITM-RESPONSE "), data...)
+}
+
+func sendControlHTTPSTunnelResponse(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id": req.id,
+	})
+	c <- append([]byte("HTTPS-TUNNEL-RESPONSE "), data...)
 }

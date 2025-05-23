@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -16,17 +15,16 @@ import (
 )
 
 type Request struct {
-	id   string
-	date time.Time
-
-	secure bool
-
-	req  *http.Request
-	host string
-
+	id                  string
+	date                time.Time
+	host                string
 	conn                net.Conn
+	secure              bool
 	clientIP            string
 	clientAuthorization string
+
+	req  *http.Request
+	resp *http.Response
 }
 
 func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
@@ -53,11 +51,14 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-func (r *Request) Perform() ([]byte, error) {
+// Perform performs the request and returns the raw response as a byte slice.
+func (r *Request) Perform() (*http.Response, []byte, error) {
+	// might be too resource heavy to do it this way
+
 	// toURL is used to convert the host to a valid URL.
 	newURL, err := toURL(r.req.Host, r.secure)
 	if err != nil {
-		return nil, fmt.Errorf("malformed url (toURL): %w", err)
+		return nil, nil, fmt.Errorf("malformed url (toURL): %w", err)
 	}
 	newURL.Path = r.req.URL.Path
 	newURL.RawQuery = r.req.URL.RawQuery
@@ -75,36 +76,32 @@ func (r *Request) Perform() ([]byte, error) {
 	// do the request
 	resp, err := http.DefaultClient.Do(r.req)
 	if err != nil {
-		return nil, fmt.Errorf("req do error: %w", err)
+		return nil, nil, fmt.Errorf("req do error: %w", err)
 	}
 
-	// might be too resource heavy to do it this way
 	data, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		return nil, fmt.Errorf("dump server response: %w", err)
+		return nil, nil, fmt.Errorf("dump server response: %w", err)
 	}
-	return data, nil
+	return resp, data, nil
 }
 
-// followUpDataWithMITMInfo provides data to be sent to the client that has
-func (r *Request) followUpDataWithMITMInfo() []byte {
+// body reads the body of the request and returns it as a byte slice. If the request
+// is an HTTPS tunnel request, the body will return a message indicating that the configuration
+// does not allow for the body to be read. If the body cannot be read for any another reason, it returns a
+// nil byte slice.
+func (r *Request) body() []byte {
 	var bodyData []byte
 	var err error
 	if config.DefaultConfig.ProvideRequestBody {
 		bodyData, err = io.ReadAll(r.req.Body)
 		if err != nil {
-			bodyData = ResponseReadInterceptedBodyError
 			slog.Error("body data read", "err", err.Error())
+			bodyData = nil
 		}
 		r.req.Body = io.NopCloser(bytes.NewBuffer(bodyData)) // make sure the body can be read again
 	} else {
 		bodyData = []byte("body will not be provided under configuration rules")
 	}
-	data, _ := json.Marshal(map[string]any{
-		"id":      r.id,
-		"method":  r.req.Method,
-		"headers": r.req.Header,
-		"body":    string(bodyData),
-	})
-	return data
+	return bodyData
 }

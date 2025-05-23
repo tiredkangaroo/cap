@@ -1,5 +1,5 @@
 import "./App.css";
-import { ProxyView } from "./Proxy";
+import { ProxyView } from "./ProxyView.tsx";
 
 function App() {
     return (

@@ -12,22 +12,18 @@ import (
 // ProxyHandler is being used here because CONNECT requests are automatically
 // rejected by net/http's default handler on ListenAndServe.
 type ProxyHandler struct {
-	// working          atomic.Int32
-	// requestsInWindow atomic.Uint32
-	// avgMSPerRequest  float64
-
 	certifcates *certificate.Certificates
 
 	// liveRequestMessages messages:
 	//
 	// NEW {id: string, secure: bool, clientIP: string, clientAuthorization: string, host: string}
 	// - followed up by: "HTTP {id: string, method: string, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-MITM {id: string, method: string, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-TUNNEL "
+	// - followed up by: "HTTPS-MITM-REQUEST {id: string, method: string, headers: map[string][]string, body: []byte}"
+	// - followed up by: "HTTPS-TUNNEL-REQUEST "
+	// - followed up by: "HTTP-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
+	// - followed up by: "HTTPS-MITM-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
+	// - followed up by: "HTTPS-TUNNEL-RESPONSE "
 	controlMessages chan []byte
-
-	// fc is a score determining for priority of requests.
-	fc float64
 }
 
 func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +34,7 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req.Init(w, r)
 	defer req.conn.Close()
 
-	sendNew(req, c.controlMessages)
+	sendControlNew(req, c.controlMessages)
 
 	var err error
 	if req.secure { // we're handling an HTTPS connection here

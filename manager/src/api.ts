@@ -106,7 +106,7 @@ export class Proxy {
                     updateCB();
                     break;
                 }
-                case "HTTPS-MITM": {
+                case "HTTPS-MITM-REQUEST": {
                     const rawdata = sp.slice(1).join(" ");
                     const data = JSON.parse(rawdata);
 

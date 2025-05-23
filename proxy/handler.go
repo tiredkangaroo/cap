@@ -22,11 +22,6 @@ var (
 	// ResponseHijackingError is the response sent to the client when the proxy cannot hijack the connection.
 	ResponseHijackingError []byte = []byte("hijacking error")
 
-	// ReadInterceptedBodyError is the response sent to the client when the proxy cannot read the intercepted body from
-	// an HTTP or HTTPS request. (is it really interception if it isn't an HTTPS request? the client is LTIERALLY giving
-	// it to you)
-	ResponseReadInterceptedBodyError []byte = []byte("read intercepted body error")
-
 	// ResponseRawSuccess is the response sent to the client when the HTTPS proxy successfully hijacks the connection.
 	ResponseRawSuccess []byte = []byte("HTTP/1.1 200 OK\r\n" +
 		"Connection: close\r\n" +
@@ -42,16 +37,19 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func (r *Request) handleHTTP(liveRequestMessages chan []byte) error {
-	liveRequestMessages <- append([]byte("HTTP "), r.followUpDataWithMITMInfo()...)
+func (r *Request) handleHTTP(controlMessages chan []byte) error {
+	sendControlHTTPRequest(r, controlMessages)
 
 	// perform the request
-	resp, err := r.Perform()
+	resp, raw, err := r.Perform()
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
+	r.resp = resp
 
-	_, err = r.conn.Write(resp)
+	sendControlHTTPResponse(r, controlMessages)
+
+	_, err = r.conn.Write(raw)
 	return err
 }
 
@@ -64,8 +62,7 @@ func (r *Request) handleHTTP(liveRequestMessages chan []byte) error {
 // (3) The proxy reads the actual request from the client that it meant to send the host.
 // (4) The proxy performs the request to the real host.
 // (5) The proxy sends the response back to the client.
-func (r *Request) handleHTTPS(c *certificate.Certificates, liveRequestMessages chan []byte) error {
-
+func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages chan []byte) error {
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
 	_, err := r.conn.Write(ResponseRawSuccess)
 	if err != nil {
@@ -73,7 +70,7 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, liveRequestMessages c
 	}
 
 	if !config.DefaultConfig.MITM {
-		return r.handleNoMITM(liveRequestMessages)
+		return r.handleNoMITM(controlMessages)
 	}
 
 	// after the success response, a handshake will occur and the user will
@@ -90,22 +87,24 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, liveRequestMessages c
 		return fmt.Errorf("read mitm request: %w", err)
 	}
 	r.req = finalReq
-	liveRequestMessages <- append([]byte("HTTPS-MITM "), r.followUpDataWithMITMInfo()...)
+	sendControlHTTPSMITMRequest(r, controlMessages)
 
-	resp, err := r.Perform()
+	resp, raw, err := r.Perform()
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
+	r.resp = resp
 
-	_, err = tlsconn.Write(resp)
+	sendControlHTTPSMITMResponse(r, controlMessages)
+
+	_, err = tlsconn.Write(raw)
 	return err
 }
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
-func (r *Request) handleNoMITM(liveRequestMessages chan []byte) error {
-	// NOTE: this will later includes bytes transferred etc. but also not just for no MITM both an provide that info
-	liveRequestMessages <- []byte("HTTPS-TUNNEL ")
+func (r *Request) handleNoMITM(controlMessages chan []byte) error {
+	sendControlHTTPSTunnelRequest(r, controlMessages)
 
 	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {

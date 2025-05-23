@@ -30,4 +30,10 @@ export interface Request {
     method?: string;
     headers?: Record<string, Array<string>>;
     body?: string;
+
+    response?: {
+        status?: number;
+        headers?: Record<string, Array<string>>;
+        body?: string;
+    };
 }
