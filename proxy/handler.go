@@ -49,8 +49,10 @@ func (r *Request) handleHTTP(controlMessages chan []byte) error {
 
 	sendControlHTTPResponse(r, controlMessages)
 
-	_, err = r.conn.Write(raw)
-	return err
+	if _, err = r.conn.Write(raw); err != nil {
+		return fmt.Errorf("connection write: %w", err)
+	}
+	return nil
 }
 
 // handleHTTPS handles a HTTPS request. This proxy is a MITM proxy, so it will
@@ -97,8 +99,10 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages chan 
 
 	sendControlHTTPSMITMResponse(r, controlMessages)
 
-	_, err = tlsconn.Write(raw)
-	return err
+	if _, err := tlsconn.Write(raw); err != nil {
+		return fmt.Errorf("tls connection write: %w", err)
+	}
+	return nil
 }
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
@@ -131,7 +135,6 @@ func (r *Request) handleNoMITM(controlMessages chan []byte) error {
 	}()
 
 	<-ctx.Done()
-
 	return nil
 }
 

@@ -46,6 +46,9 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		slog.Error("request handling", "err", err.Error())
+		sendControlError(req, err, c.controlMessages)
+	} else {
+		sendControlDone(req, c.controlMessages)
 	}
 }
 

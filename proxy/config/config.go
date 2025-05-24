@@ -38,6 +38,10 @@ type Config struct {
 	// It can be useful for debugging purposes, however is very resource intensive, especially with larger
 	// bodies.
 	ProvideResponseBody bool `json:"provide_response_body"`
+	// PerformDelay is the delay in milliseconds before the proxy performs the request. It must be a positive
+	// integer. This can be useful for testing purposes, such as simulating network latency, slowing down
+	// actions performed, or other debugging purposes.
+	PerformDelay uint `json:"perform_delay"`
 }
 
 func init() {

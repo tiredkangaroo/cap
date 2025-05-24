@@ -74,6 +74,10 @@ func (r *Request) Perform() (*http.Response, []byte, error) {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
+	if config.DefaultConfig.PerformDelay != 0 {
+		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)
+	}
+
 	// do the request
 	resp, err := http.DefaultClient.Do(r.req)
 	if err != nil {

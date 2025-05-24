@@ -88,3 +88,18 @@ func sendControlHTTPSTunnelResponse(req *Request, c chan []byte) {
 	})
 	c <- append([]byte("HTTPS-TUNNEL-RESPONSE "), data...)
 }
+
+func sendControlDone(req *Request, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id": req.id,
+	})
+	c <- append([]byte("DONE "), data...)
+}
+
+func sendControlError(req *Request, err error, c chan []byte) {
+	data, _ := json.Marshal(map[string]any{
+		"id":    req.id,
+		"error": err.Error(),
+	})
+	c <- append([]byte("ERROR "), data...)
+}

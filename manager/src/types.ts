@@ -23,6 +23,11 @@ export interface Config {
     // It can be useful for debugging purposes, however is very resource intensive, especially with larger
     // bodies.
     provide_response_body: boolean;
+
+    // perform_delay is a number that determines the delay in milliseconds that the proxy should perform
+    // before responding to a request. This can be useful for testing purposes, such as simulating
+    // network latency. This number must be greater than or equal to 0.
+    perform_delay: number;
 }
 
 export interface Request {
@@ -42,4 +47,7 @@ export interface Request {
         headers?: Record<string, Array<string>>;
         body?: string;
     };
+
+    state: "Processing" | "Canceled" | "Done" | "Error";
+    error?: string;
 }

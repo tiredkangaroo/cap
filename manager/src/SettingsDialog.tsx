@@ -32,12 +32,12 @@ export function SettingsDialog(props: {
             open={props.open}
             hidden={!props.open}
         >
-            <div className="w-[90%] h-[90%] flex bg-gray-100">
+            <div className="w-[90%] h-[90%] flex bg-gray-100 overflow-auto">
                 {/* config cmps  */}
                 <div className="w-full h-full ml-auto mr-auto mt-auto mb-auto flex flex-col items-center justify-center">
                     <div className="w-full flex flex-col">
                         <button
-                            className="ml-auto mt-2 mr-2 bg-black aspect-square w-8"
+                            className="ml-auto mr-2 bg-black aspect-square w-8"
                             onClick={() => props.setOpen(false)}
                         >
                             <IoClose className="text-white ml-auto mr-auto" />
@@ -77,35 +77,35 @@ export function SettingsDialog(props: {
                             attach the IP address of the client in the
                             X-Forwarded-For header set for the host.
                         </CheckField>
-                        <div className="w-full flex flex-row text-xl mt-6">
-                            <div className="flex-col w-[50%]">
-                                <p className="text-xl mt-auto mb-auto">
-                                    Certificate Lifetime
-                                </p>
-                                <p className="text-sm">
-                                    The lifetime of the certificate in hours. It
-                                    is possible to set it to less than 0 in
-                                    which any new certificates generated will
-                                    not be valid.
-                                </p>
-                            </div>
-                            <input
-                                defaultValue={proxyConfig.certificate_lifetime}
-                                type="number"
-                                className="ml-auto mr-2 min-w-fit text-md border-2 border-black text-center"
-                                onBlur={(e) => {
-                                    proxyConfig.certificate_lifetime = parseInt(
-                                        e.target.value,
-                                    );
-                                    props.proxy!.setConfig(proxyConfig);
-                                    const newObj = Object.assign(
-                                        {},
-                                        proxyConfig,
-                                    );
-                                    setProxyConfig(newObj);
-                                }}
-                            ></input>
-                        </div>
+                        <InputField
+                            name="Certificate Lifetime"
+                            defaultValue={proxyConfig.certificate_lifetime}
+                            type="number"
+                            onChange={(v: string) => {
+                                proxyConfig.certificate_lifetime = parseInt(v);
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            The lifetime of the certificate in hours. It is
+                            possible to set it to less than 0 in which any new
+                            certificates generated will not be valid.
+                        </InputField>
+                        <InputField
+                            name="Perform Delay"
+                            defaultValue={proxyConfig.perform_delay}
+                            type="number"
+                            onChange={(v: string) => {
+                                proxyConfig.perform_delay = parseInt(v);
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            The delay in milliseconds that the proxy should wait
+                            before performing to a request.
+                        </InputField>
                         <CheckField
                             name="Request Body Dumping"
                             defaultChecked={proxyConfig.provide_request_body}
@@ -163,4 +163,43 @@ function CheckField(props: {
             ></input>
         </div>
     );
+}
+
+function InputField(props: {
+    name: string;
+    defaultValue: string | number;
+    type: string;
+    onChange(v: string): void;
+    children: string;
+}) {
+    return (
+        <div className="w-full flex flex-row text-xl mt-6">
+            <div className="flex-col w-[50%]">
+                <p className="text-xl mt-auto mb-auto">{props.name}</p>
+                <p className="text-sm">{props.children}</p>
+            </div>
+            <input
+                defaultValue={props.defaultValue}
+                type="number"
+                className="ml-auto mr-2 min-w-fit text-md border-2 border-black text-center"
+                onBlur={(e) => props.onChange(e.target.value)}
+            ></input>
+        </div>
+    );
+    // return (
+    //     <div className="w-full flex flex-row text-xl mt-6">
+    //         <div className="flex-col w-[50%]">
+    //             <p className="text-xl mt-auto mb-auto">{props.name}</p>
+    //             <p className="text-sm">{props.children}</p>
+    //         </div>
+    //         <input
+    //             type={props.type}
+    //             className="mt-auto mb-auto ml-auto mr-2"
+    //             defaultValue={props.defaultValue}
+    //             onChange={(e) => {
+    //                 props.onChange(e.target.value);
+    //             }}
+    //         ></input>
+    //     </div>
+    // );
 }
