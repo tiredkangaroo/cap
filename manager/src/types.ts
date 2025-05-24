@@ -29,7 +29,8 @@ export interface Request {
     id: string;
     secure: boolean;
     clientIP: string;
-    clientAuthorization: string;
+    clientAuthorizationUser?: string;
+    clientAuthorizationPassword?: string;
     host: string;
 
     method?: string;

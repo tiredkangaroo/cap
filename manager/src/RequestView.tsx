@@ -33,8 +33,12 @@ export function RequestView(props: { request: Request }) {
                     </p>
                     <div className="mt-2 ml-5">
                         <FieldView
-                            name="Client Authorization"
-                            value={props.request.clientAuthorization}
+                            name="Client Username"
+                            value={props.request.clientAuthorizationUser}
+                        />
+                        <FieldView
+                            name="Client Password"
+                            value={props.request.clientAuthorizationPassword}
                         />
                         <FieldView name="Method" value={props.request.method} />
                         <FieldView

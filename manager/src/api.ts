@@ -68,14 +68,20 @@ export class Proxy {
                 case "NEW": {
                     const rawdata = sp.slice(1).join(" ");
                     const data = JSON.parse(rawdata);
-                    console.log("new", data.id);
                     const request: Request = {
                         id: data.id,
                         secure: data.secure,
                         clientIP: data.clientIP,
-                        clientAuthorization: data.clientAuthorization,
                         host: data.host,
                     };
+                    console.log("new", data);
+                    if (data.clientAuthorization != "") {
+                        const [user, password] = atob(
+                            data.clientAuthorization.split(" ")[1],
+                        ).split(":");
+                        request.clientAuthorizationUser = user;
+                        request.clientAuthorizationPassword = password;
+                    }
                     const r = this.requests.find(
                         (v: Request) => v.id == request.id,
                     );
