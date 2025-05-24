@@ -21,7 +21,7 @@ export function SettingsDialog(props: {
             setProxyConfig(props.proxy!.config);
         };
         load();
-    }, []);
+    }, [props.proxy]);
 
     if (props.proxy === null) {
         return <></>;
@@ -49,59 +49,34 @@ export function SettingsDialog(props: {
                     </div>
 
                     <div className="flex flex-col min-w-fit w-[65%] h-full justify-center">
-                        <div className="w-full flex flex-row text-xl mt-6">
-                            <div className="flex-col w-[50%]">
-                                <p className="text-xl mt-auto mb-auto">MITM</p>
-                                <p className="text-sm">
-                                    MITM set on indicates that the proxy is
-                                    responsible for the TLS connection, and will
-                                    use its own certificates to encrypt the
-                                    traffic.
-                                </p>
-                            </div>
-                            <input
-                                type="checkbox"
-                                className="mt-auto mb-auto ml-auto mr-2"
-                                defaultChecked={proxyConfig.mitm}
-                                onChange={(e) => {
-                                    proxyConfig.mitm = e.target.checked;
-                                    props.proxy!.setConfig(proxyConfig);
-                                    const newObj = Object.assign(
-                                        {},
-                                        proxyConfig,
-                                    );
-                                    setProxyConfig(newObj);
-                                }}
-                            ></input>
-                        </div>
-
-                        <div className="w-full flex flex-row text-xl mt-6">
-                            <div className="flex-col w-[50%]">
-                                <p className="text-xl mt-auto mb-auto">
-                                    Real IP Header
-                                </p>
-                                <p className="text-sm">
-                                    Real IP Header set on means that the proxy
-                                    will attach the IP address of the client in
-                                    the X-Forwarded-For header set for the host.
-                                </p>
-                            </div>
-                            <input
-                                type="checkbox"
-                                className="mt-auto mb-auto ml-auto mr-2"
-                                defaultChecked={proxyConfig.real_ip_header}
-                                onChange={(e) => {
-                                    proxyConfig.real_ip_header =
-                                        e.target.checked;
-                                    props.proxy!.setConfig(proxyConfig);
-                                    const newObj = Object.assign(
-                                        {},
-                                        proxyConfig,
-                                    );
-                                    setProxyConfig(newObj);
-                                }}
-                            ></input>
-                        </div>
+                        <CheckField
+                            name="MITM"
+                            defaultChecked={proxyConfig.mitm}
+                            onChange={(v: boolean) => {
+                                proxyConfig.mitm = v;
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            MITM set on indicates that the proxy is responsible
+                            for the TLS connection, and will use its own
+                            certificates to encrypt the traffic.
+                        </CheckField>
+                        <CheckField
+                            name="Real IP Header"
+                            defaultChecked={proxyConfig.real_ip_header}
+                            onChange={(v: boolean) => {
+                                proxyConfig.real_ip_header = v;
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            Real IP Header set on means that the proxy will
+                            attach the IP address of the client in the
+                            X-Forwarded-For header set for the host.
+                        </CheckField>
                         <div className="w-full flex flex-row text-xl mt-6">
                             <div className="flex-col w-[50%]">
                                 <p className="text-xl mt-auto mb-auto">
@@ -131,37 +106,61 @@ export function SettingsDialog(props: {
                                 }}
                             ></input>
                         </div>
-                        <div className="w-full flex flex-row text-xl mt-6">
-                            <div className="flex-col w-[50%]">
-                                <p className="text-xl mt-auto mb-auto">
-                                    Request Body Dumping
-                                </p>
-                                <p className="text-sm">
-                                    Request body dumping allows inspection of
-                                    the request body by the client.
-                                </p>
-                            </div>
-                            <input
-                                type="checkbox"
-                                className="mt-auto mb-auto ml-auto mr-2"
-                                defaultChecked={
-                                    proxyConfig.provide_request_body
-                                }
-                                onChange={(e) => {
-                                    proxyConfig.provide_request_body =
-                                        e.target.checked;
-                                    props.proxy!.setConfig(proxyConfig);
-                                    const newObj = Object.assign(
-                                        {},
-                                        proxyConfig,
-                                    );
-                                    setProxyConfig(newObj);
-                                }}
-                            ></input>
-                        </div>
+                        <CheckField
+                            name="Request Body Dumping"
+                            defaultChecked={proxyConfig.provide_request_body}
+                            onChange={(v: boolean) => {
+                                proxyConfig.provide_request_body = v;
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            Request body dumping allows inspection of the
+                            request body by the client. It is resource
+                            intensive, especially with larger bodies.
+                        </CheckField>
+                        <CheckField
+                            name="Response Body Dumping"
+                            defaultChecked={proxyConfig.provide_response_body}
+                            onChange={(v: boolean) => {
+                                proxyConfig.provide_response_body = v;
+                                props.proxy!.setConfig(proxyConfig);
+                                const newObj = Object.assign({}, proxyConfig);
+                                setProxyConfig(newObj);
+                            }}
+                        >
+                            Response body dumping allows inspection of the
+                            response body by the client. It is resource
+                            intensive, especially with larger bodies.
+                        </CheckField>
                     </div>
                 </div>
             </div>
         </dialog>
+    );
+}
+
+function CheckField(props: {
+    name: string;
+    defaultChecked: boolean;
+    onChange(v: boolean): void;
+    children: string;
+}) {
+    return (
+        <div className="w-full flex flex-row text-xl mt-6">
+            <div className="flex-col w-[50%]">
+                <p className="text-xl mt-auto mb-auto">{props.name}</p>
+                <p className="text-sm">{props.children}</p>
+            </div>
+            <input
+                type="checkbox"
+                className="mt-auto mb-auto ml-auto mr-2"
+                defaultChecked={props.defaultChecked}
+                onChange={(e) => {
+                    props.onChange(e.target.checked);
+                }}
+            ></input>
+        </div>
     );
 }

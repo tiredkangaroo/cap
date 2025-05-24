@@ -8,6 +8,7 @@ import { Config } from "./types";
 import { SettingsDialog } from "./SettingsDialog";
 
 export function ProxyView() {
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [proxy, _] = useState<Proxy | null>(
         new Proxy("Proxy 1", "http://localhost:8001"),
     );
@@ -22,7 +23,7 @@ export function ProxyView() {
             setProxyConfig(proxy.config);
         };
         load();
-    }, []);
+    }, [proxy]);
 
     if (proxy === null || proxyConfig == null) {
         return (

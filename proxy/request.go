@@ -105,3 +105,19 @@ func (r *Request) body() []byte {
 	}
 	return bodyData
 }
+
+func (r *Request) respbody() []byte {
+	var bodyData []byte
+	var err error
+	if config.DefaultConfig.ProvideResponseBody {
+		bodyData, err = io.ReadAll(r.resp.Body)
+		if err != nil {
+			slog.Error("body data read", "err", err.Error())
+			bodyData = nil
+		}
+		r.resp.Body = io.NopCloser(bytes.NewBuffer(bodyData)) // make sure the body can be read again
+	} else {
+		bodyData = []byte("body will not be provided under configuration rules")
+	}
+	return bodyData
+}

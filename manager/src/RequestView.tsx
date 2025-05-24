@@ -19,7 +19,7 @@ export function RequestView(props: { request: Request }) {
                     >
                         {props.request.secure ? "HTTPS" : "HTTP"}
                     </p>
-                    <p className="flex-1 ml-1 text-md">{props.request.id}</p>
+                    <p className="flex-1 ml-1 text-sm">{props.request.id}</p>
                     <p className="flex-1 ml-1 text-center">
                         {props.request.host}
                     </p>
@@ -28,51 +28,74 @@ export function RequestView(props: { request: Request }) {
             </CollapsibleTrigger>
             <CollapsibleContent className="bg-gray-300">
                 <div className="ml-2 pt-2 pb-1">
-                    <p className="mb-2">
-                        <b>Client Authorization: </b>
-                        {props.request.clientAuthorization != "" ? (
-                            props.request.clientAuthorization
-                        ) : (
-                            <i>No Client Authorization</i>
-                        )}
+                    <p>
+                        <b>Request: </b>
                     </p>
-                    {props.request.method ? (
-                        <p className="mb-2">
-                            <b>Method: </b> {props.request.method}
-                        </p>
-                    ) : (
-                        <p>
-                            <b>Method: </b> unavailable
-                        </p>
-                    )}
-                    {props.request.headers ? (
-                        <div className="mb-2">
-                            <b>Headers:</b>
-                            {Object.entries(props.request.headers!).map((v) => (
-                                <p key={v[0]}>
-                                    {v[0]}: {v[1].join(", ")}
-                                </p>
-                            ))}
-                        </div>
-                    ) : (
-                        <p>
-                            Headers: <i>none or unavailable</i>
-                        </p>
-                    )}
-                    {props.request.body ? (
-                        <div className="mb-2">
-                            <p>
-                                <b>Body: </b>
-                            </p>
-                            {props.request.body}
-                        </div>
-                    ) : (
-                        <p className="mb-2">
-                            Body: <i>none or unavailable</i>
-                        </p>
-                    )}
+                    <div className="mt-2 ml-5">
+                        <FieldView
+                            name="Client Authorization"
+                            value={props.request.clientAuthorization}
+                        />
+                        <FieldView name="Method" value={props.request.method} />
+                        <FieldView
+                            name="Headers"
+                            value={props.request.headers}
+                        />
+                        <FieldView name="Body" value={props.request.body} />
+                    </div>
+                    <p>
+                        <b>Response: </b>
+                    </p>
+                    <div className="mt-2 ml-5">
+                        <FieldView
+                            name="Status"
+                            value={props.request.response?.statusCode}
+                        />
+                        <FieldView
+                            name="Headers"
+                            value={props.request.response?.headers}
+                        />
+                        <FieldView
+                            name="Body"
+                            value={props.request.response?.body}
+                        />
+                    </div>
                 </div>
             </CollapsibleContent>
         </Collapsible>
+    );
+}
+
+function FieldView(props: {
+    name: string;
+    value: number | string | Record<string, Array<string>> | undefined;
+}) {
+    function ValueView() {
+        if (props.value === undefined) return <i>none or unavailable</i>;
+        if (
+            typeof props.value === "string" ||
+            typeof props.value === "number"
+        ) {
+            if (props.name == "Body") {
+                return <p>{props.value}</p>;
+            } else {
+                return <>{props.value}</>;
+            }
+        }
+        return (
+            <>
+                {Object.entries(props.value!).map((v) => (
+                    <p key={v[0]}>
+                        {v[0]}: {v[1].join(", ")}
+                    </p>
+                ))}
+            </>
+        );
+    }
+    return (
+        <div className="mb-2">
+            <b>{props.name}: </b>
+            <ValueView />
+        </div>
     );
 }

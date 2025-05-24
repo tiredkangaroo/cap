@@ -17,6 +17,7 @@ export class Proxy {
             certificate_lifetime: 0,
             mitm: false,
             provide_request_body: false,
+            provide_response_body: false,
         };
     }
 
@@ -121,6 +122,50 @@ export class Proxy {
                     req.method = data.method;
                     req.headers = data.headers;
                     req.body = data.body;
+                    reqs.splice(i, 1, req);
+
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
+                case "HTTP-RESPONSE": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.response = {
+                        statusCode: data.statusCode,
+                        headers: data.headers,
+                        body: data.body,
+                    };
+                    reqs.splice(i, 1, req);
+
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
+                case "HTTPS-MITM-RESPONSE": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.response = {
+                        statusCode: data.statusCode,
+                        headers: data.headers,
+                        body: data.body,
+                    };
                     reqs.splice(i, 1, req);
 
                     this.requests = reqs;

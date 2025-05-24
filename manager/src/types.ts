@@ -18,6 +18,11 @@ export interface Config {
     // It can be useful for debugging purposes, however is very resource intensive, especially with larger
     // bodies.
     provide_request_body: boolean;
+
+    // provide_response_body is a boolean that determines whether the proxy should provide the response body.
+    // It can be useful for debugging purposes, however is very resource intensive, especially with larger
+    // bodies.
+    provide_response_body: boolean;
 }
 
 export interface Request {
@@ -32,7 +37,7 @@ export interface Request {
     body?: string;
 
     response?: {
-        status?: number;
+        statusCode?: number;
         headers?: Record<string, Array<string>>;
         body?: string;
     };

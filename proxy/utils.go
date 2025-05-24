@@ -67,7 +67,7 @@ func sendControlHTTPResponse(req *Request, c chan []byte) {
 		"id":         req.id,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
-		"body":       string(req.body()),
+		"body":       string(req.respbody()),
 	})
 	c <- append([]byte("HTTP-RESPONSE "), data...)
 }
@@ -77,7 +77,7 @@ func sendControlHTTPSMITMResponse(req *Request, c chan []byte) {
 		"id":         req.id,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
-		"body":       string(req.body()),
+		"body":       string(req.respbody()),
 	})
 	c <- append([]byte("HTTPS-MITM-RESPONSE "), data...)
 }

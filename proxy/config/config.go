@@ -34,6 +34,10 @@ type Config struct {
 	// It can be useful for debugging purposes, however is very resource intensive, especially with larger
 	// bodies.
 	ProvideRequestBody bool `json:"provide_request_body"`
+	// ProvideResponseBody is a boolean that determines whether the proxy should provide the response body.
+	// It can be useful for debugging purposes, however is very resource intensive, especially with larger
+	// bodies.
+	ProvideResponseBody bool `json:"provide_response_body"`
 }
 
 func init() {
