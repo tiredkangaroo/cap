@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"log/slog"
@@ -109,8 +110,19 @@ func (r *Request) body() []byte {
 func (r *Request) respbody() []byte {
 	var bodyData []byte
 	var err error
+	// FIXME: logic is too complex
 	if config.DefaultConfig.ProvideResponseBody {
-		bodyData, err = io.ReadAll(r.resp.Body)
+		var rd = r.resp.Body
+		if r.resp.Header.Get("Content-Encoding") == "gzip" {
+			rd, err = gzip.NewReader(r.resp.Body)
+			if err != nil {
+				slog.Error("gzip reader error", "err", err.Error())
+				rd = r.resp.Body // fallback to the original body if gzip reader fails
+			} else {
+				defer rd.Close() // ensure the gzip reader is closed after reading
+			}
+		}
+		bodyData, err = io.ReadAll(rd)
 		if err != nil {
 			slog.Error("body data read", "err", err.Error())
 			bodyData = nil

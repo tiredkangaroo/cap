@@ -61,7 +61,7 @@ export class Proxy {
         }
         this.ws = ws;
 
-        this.ws.onmessage = (event: MessageEvent) => {
+        this.ws.onmessage = async (event: MessageEvent) => {
             const sp = event.data.split(" ");
             // FIXME: there may be a bug where a NEW is recieved multiple times
             switch (sp[0]) {
@@ -101,6 +101,7 @@ export class Proxy {
                     req.method = data.method;
                     req.headers = data.headers;
                     req.body = data.body;
+                    // req.body = await decodedBody(data.headers, data.body);
                     reqs.splice(i, 1, req);
 
                     this.requests = reqs;
@@ -122,6 +123,7 @@ export class Proxy {
                     req.method = data.method;
                     req.headers = data.headers;
                     req.body = data.body;
+                    // req.body = await decodedBody(data.headers, data.body);
                     reqs.splice(i, 1, req);
 
                     this.requests = reqs;
@@ -143,6 +145,8 @@ export class Proxy {
                         statusCode: data.statusCode,
                         headers: data.headers,
                         body: data.body,
+
+                        // body: await decodedBody(data.headers, data.body),
                     };
                     reqs.splice(i, 1, req);
 
@@ -177,4 +181,38 @@ export class Proxy {
             }
         };
     }
+}
+
+async function decodedBody(
+    headers: Record<string, Array<string>>,
+    body: string,
+): Promise<string> {
+    if (
+        headers["Content-Encoding"] == undefined ||
+        !headers["Content-Encoding"].includes("gzip")
+    ) {
+        return body;
+    }
+
+    // Convert string -> Uint8Array
+    const binaryData = new Uint8Array(body.length);
+    for (let i = 0; i < body.length; i++) {
+        binaryData[i] = body.charCodeAt(i);
+    }
+
+    // Create ReadableStream from binary
+    const stream = new ReadableStream({
+        start(controller) {
+            controller.enqueue(binaryData);
+            controller.close();
+        },
+    });
+
+    // Decompress using DecompressionStream
+    const decompressedStream = stream.pipeThrough(
+        new DecompressionStream("gzip"),
+    );
+
+    const text = await new Response(decompressedStream).text();
+    return text;
 }
