@@ -5,6 +5,7 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 import { Request } from "./types";
+import { downloadBody, downloadRequest } from "./downloadRequest";
 
 const stateColors = {
     Processing: "#000",
@@ -41,6 +42,14 @@ export function RequestView(props: { request: Request }) {
                 </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="bg-gray-300 max-h-[50vh] overflow-y-auto">
+                <button
+                    className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
+                    onClick={() => {
+                        downloadRequest(props.request);
+                    }}
+                >
+                    Download
+                </button>
                 <div className="ml-2 pt-2 pb-1">
                     {props.request.error != undefined ? (
                         <p>
@@ -69,6 +78,18 @@ export function RequestView(props: { request: Request }) {
                             name="Headers"
                             value={props.request.headers}
                         />
+                        <button
+                            className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
+                            onClick={() =>
+                                downloadBody(
+                                    props.request.id,
+                                    props.request.body,
+                                    props.request.headers!["Content-Type"][0],
+                                )
+                            }
+                        >
+                            Download Body
+                        </button>
                         <ShowHideFieldView
                             name={
                                 "Body (" +
@@ -79,7 +100,6 @@ export function RequestView(props: { request: Request }) {
                             hiddenValue=""
                             defaultShow={false}
                         />
-                        {/* <FieldView name="Body" value={props.request.body} /> */}
                     </div>
                     <p>
                         <b>Response: </b>
@@ -93,6 +113,20 @@ export function RequestView(props: { request: Request }) {
                             name="Headers"
                             value={props.request.response?.headers}
                         />
+                        <button
+                            className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
+                            onClick={() =>
+                                downloadBody(
+                                    props.request.id,
+                                    props.request.response!.body,
+                                    props.request.response!.headers![
+                                        "Content-Type"
+                                    ][0],
+                                )
+                            }
+                        >
+                            Download Body
+                        </button>
                         <ShowHideFieldView
                             name={
                                 "Body (" +

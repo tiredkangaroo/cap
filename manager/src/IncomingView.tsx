@@ -14,7 +14,7 @@ export function IncomingView(props: { proxy: Proxy }) {
             const newObj = Object.assign([], props.proxy.requests);
             setRequests(newObj);
         });
-    }, []);
+    }, [props.proxy]);
 
     return (
         <div className="flex flex-col w-full h-full">
