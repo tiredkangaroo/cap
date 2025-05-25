@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
     Collapsible,
     CollapsibleTrigger,
@@ -6,6 +5,7 @@ import {
 } from "./components/ui/collapsible";
 import { Request } from "./types";
 import { downloadBody, downloadRequest } from "./downloadRequest";
+import { useState } from "react";
 
 const stateColors = {
     Processing: "#000",
@@ -26,7 +26,9 @@ export function RequestView(props: { request: Request }) {
                     >
                         {props.request.secure ? "HTTPS" : "HTTP"}
                     </p> */}
-                    <p className="flex-1 ml-1 text-sm">{props.request.id}</p>
+                    <p className="flex-1 ml-1 text-sm">
+                        {props.request.datetime}
+                    </p>
                     <p className="flex-1 ml-1 text-center">
                         {props.request.host}
                     </p>
@@ -59,6 +61,7 @@ export function RequestView(props: { request: Request }) {
                     ) : (
                         <></>
                     )}
+                    <FieldView name="ID" value={props.request.id} />
                     <p>
                         <b>Request: </b>
                     </p>
@@ -91,16 +94,7 @@ export function RequestView(props: { request: Request }) {
                         >
                             Download Body
                         </button>
-                        <ShowHideFieldView
-                            name={
-                                "Body (" +
-                                props.request.body?.length +
-                                " bytes)"
-                            }
-                            value={props.request.body}
-                            hiddenValue=""
-                            defaultShow={false}
-                        />
+                        <BodyView value={props.request.body} />
                     </div>
                     <p>
                         <b>Response: </b>
@@ -128,16 +122,7 @@ export function RequestView(props: { request: Request }) {
                         >
                             Download Body
                         </button>
-                        <ShowHideFieldView
-                            name={
-                                "Body (" +
-                                props.request.response?.body?.length +
-                                " bytes)"
-                            }
-                            value={props.request.response?.body}
-                            defaultShow={false}
-                            hiddenValue=""
-                        />
+                        <BodyView value={props.request.response?.body} />
                     </div>
                 </div>
             </CollapsibleContent>
@@ -186,7 +171,7 @@ function FieldView(props: {
     return (
         <div className="mb-2 text-lg flex flex-row w-full">
             <b className="flex-1">{props.name} </b>
-            <div className="flex-1 text-start">
+            <div className="flex-1">
                 <ValueView
                     name={props.name}
                     value={props.value}
@@ -209,7 +194,7 @@ function ShowHideFieldView(props: {
             <b className="flex-1">{props.name}</b>
             <div className="flex-1 text-start">
                 <button
-                    className="text-sm pl-3 pr-3 bg-gray-600 text-white"
+                    className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
                     onClick={() => setShow(!show)}
                 >
                     {show ? "Hide" : "Show"}
@@ -224,6 +209,40 @@ function ShowHideFieldView(props: {
                     <i>{props.hiddenValue}</i>
                 )}
             </div>
+        </div>
+    );
+}
+
+function BodyView(props: { value: string | undefined }) {
+    const [show, setShow] = useState(false);
+
+    return (
+        <div className="mb-2 text-lg w-full">
+            <div className="flex flex-row items-center">
+                <b className="ml-2 flex-1">
+                    Body (
+                    {props.value !=
+                    "body will not be provided under configuration rules"
+                        ? props.value?.length
+                        : 0}{" "}
+                    bytes)
+                </b>
+                <div className="flex-1 flex flex-row">
+                    <button
+                        className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
+                        onClick={() => setShow(!show)}
+                    >
+                        {show ? "Hide" : "Show"}
+                    </button>
+                    {!show && <i className="mr-4">hidden</i>}
+                </div>
+            </div>
+
+            {show && (
+                <pre className="ml-2 mt-2 whitespace-pre-wrap">
+                    {props.value}
+                </pre>
+            )}
         </div>
     );
 }

@@ -19,7 +19,7 @@ export function IncomingView(props: { proxy: Proxy }) {
     return (
         <div className="flex flex-col w-full h-full">
             <h1 className="ml-2 text-2xl font-bold mb-2">Incoming Requests</h1>
-            <div className="w-full overflow-y-auto h-[80%]">
+            <div className="w-full overflow-y-auto h-[90%]">
                 {requests.map((request, index) => (
                     <RequestView key={index} request={request} />
                 ))}

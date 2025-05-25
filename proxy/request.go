@@ -17,7 +17,7 @@ import (
 
 type Request struct {
 	id                  string
-	date                time.Time
+	datetime            time.Time
 	host                string
 	conn                net.Conn
 	secure              bool
@@ -29,6 +29,7 @@ type Request struct {
 }
 
 func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
+	r.datetime = time.Now()
 	id, err := uuid.NewRandom()
 	if err != nil {
 		slog.Error("uuid error", "err", err.Error())

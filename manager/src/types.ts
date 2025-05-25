@@ -32,6 +32,7 @@ export interface Config {
 
 export interface Request {
     id: string;
+    datetime: string;
     secure: boolean;
     clientIP: string;
     clientAuthorizationUser?: string;

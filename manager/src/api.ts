@@ -72,6 +72,7 @@ export class Proxy {
                     const data = JSON.parse(rawdata);
                     const request: Request = {
                         id: data.id,
+                        datetime: data.datetime,
                         secure: data.secure,
                         clientIP: data.clientIP,
                         host: data.host,
@@ -92,7 +93,7 @@ export class Proxy {
                         return;
                     }
 
-                    this.requests = [request, ...this.requests];
+                    this.requests = [...this.requests, request];
                     updateCB();
                     break;
                 }

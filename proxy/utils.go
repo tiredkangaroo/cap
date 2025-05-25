@@ -26,6 +26,7 @@ func toURL(s string, https bool) (*url.URL, error) {
 func sendControlNew(req *Request, c chan []byte) {
 	data, _ := json.Marshal(map[string]any{
 		"id":                  req.id,
+		"datetime":            req.datetime.Format("2006-01-02 15:04:05"),
 		"secure":              req.secure,
 		"clientIP":            req.clientIP,
 		"clientAuthorization": req.clientAuthorization,
