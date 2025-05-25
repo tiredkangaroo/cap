@@ -28,6 +28,9 @@ export interface Config {
     // before responding to a request. This can be useful for testing purposes, such as simulating
     // network latency. This number must be greater than or equal to 0.
     perform_delay: number;
+
+    // require_approval is a boolean that determines whether the proxy should require approval for each request.
+    require_approval: boolean;
 }
 
 export interface Request {

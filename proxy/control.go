@@ -10,8 +10,8 @@ import (
 	"github.com/tiredkangaroo/websocket"
 )
 
-func startControlServer(liveRequestMessages chan []byte) {
-	liveRequestWebsockets := []*websocket.Conn{}
+func startControlServer(controlMessages *ControlChannel) {
+	controlMessagesWebsockets := []*websocket.Conn{}
 	// Start the control server
 	http.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
 		if config.DefaultConfig.Debug {
@@ -67,7 +67,7 @@ func startControlServer(liveRequestMessages chan []byte) {
 			slog.Error("failed to accept websocket", "err", err.Error())
 			return
 		}
-		liveRequestWebsockets = append(liveRequestWebsockets, conn)
+		controlMessagesWebsockets = append(controlMessagesWebsockets, conn)
 	})
 
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
@@ -76,9 +76,9 @@ func startControlServer(liveRequestMessages chan []byte) {
 	})
 
 	go func() {
-		for msg := range liveRequestMessages {
-			newLiveRequestWebsockets := liveRequestWebsockets
-			for i, ws := range liveRequestWebsockets {
+		for msg := range controlMessages.u {
+			newLiveRequestWebsockets := controlMessagesWebsockets
+			for i, ws := range controlMessagesWebsockets {
 				err := ws.Write(&websocket.Message{
 					Type: websocket.MessageText,
 					Data: msg,
@@ -86,10 +86,10 @@ func startControlServer(liveRequestMessages chan []byte) {
 				if err != nil {
 					ws.Close() // close the conn, but it might be already closed
 					// do NOT use slices.Delete here. it will cause a nil panic because of the clearing in slices.Delete
-					newLiveRequestWebsockets = append(liveRequestWebsockets[:i], liveRequestWebsockets[i+1:]...)
+					newLiveRequestWebsockets = append(controlMessagesWebsockets[:i], controlMessagesWebsockets[i+1:]...)
 				}
 			}
-			liveRequestWebsockets = newLiveRequestWebsockets // update the slice so it doesn't grow indefinitely or mess with the range loop
+			controlMessagesWebsockets = newLiveRequestWebsockets // update the slice so it doesn't grow indefinitely or mess with the range loop
 		}
 	}()
 

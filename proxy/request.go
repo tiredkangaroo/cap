@@ -75,6 +75,9 @@ func (r *Request) Perform() (*http.Response, []byte, error) {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
+	if config.DefaultConfig.RequireApproval {
+
+	}
 	if config.DefaultConfig.PerformDelay != 0 {
 		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)
 	}

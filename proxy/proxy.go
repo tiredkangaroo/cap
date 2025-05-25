@@ -23,7 +23,7 @@ type ProxyHandler struct {
 	// - followed up by: "HTTP-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
 	// - followed up by: "HTTPS-MITM-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
 	// - followed up by: "HTTPS-TUNNEL-RESPONSE "
-	controlMessages chan []byte
+	controlMessages *ControlChannel
 }
 
 func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +34,7 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req.Init(w, r)
 	defer req.conn.Close()
 
-	sendControlNew(req, c.controlMessages)
+	c.controlMessages.sendControlNew(req)
 
 	var err error
 	if req.secure { // we're handling an HTTPS connection here
@@ -46,9 +46,9 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		slog.Error("request handling", "err", err.Error())
-		sendControlError(req, err, c.controlMessages)
+		c.controlMessages.sendControlError(req, err)
 	} else {
-		sendControlDone(req, c.controlMessages)
+		c.controlMessages.sendControlDone(req)
 	}
 }
 
@@ -60,7 +60,7 @@ func (c *ProxyHandler) Init() error {
 	return nil
 }
 
-func (c *ProxyHandler) ListenAndServe(controlMessages chan []byte) {
+func (c *ProxyHandler) ListenAndServe(controlMessages *ControlChannel) {
 	ph := new(ProxyHandler)
 	ph.certifcates = new(certificate.Certificates)
 	ph.controlMessages = controlMessages

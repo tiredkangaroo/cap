@@ -1,10 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/url"
 	"strings"
+	"sync"
 )
+
+type ControlChannel struct {
+	u                 chan []byte
+	mxWaitingApproval sync.Mutex
+	waitingApproval   map[string]context.CancelFunc // maps request ID to ctx.Done() func
+}
 
 // toURL converts a string to a URL. If the string does not start with "http://" or
 // "https://", it will prepend "http://" or "https://" based on the https parameter.
@@ -23,7 +31,7 @@ func toURL(s string, https bool) (*url.URL, error) {
 	return url.Parse(s)
 }
 
-func sendControlNew(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlNew(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id":                  req.id,
 		"datetime":            req.datetime.Format("2006-01-02 15:04:05"),
@@ -32,10 +40,10 @@ func sendControlNew(req *Request, c chan []byte) {
 		"clientAuthorization": req.clientAuthorization,
 		"host":                req.host,
 	})
-	c <- append([]byte("NEW "), data...)
+	c.u <- append([]byte("NEW "), data...)
 }
 
-func sendControlHTTPRequest(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlHTTPRequest(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id":      req.id,
 		"method":  req.req.Method,
@@ -44,10 +52,10 @@ func sendControlHTTPRequest(req *Request, c chan []byte) {
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
-	c <- append([]byte("HTTP "), data...)
+	c.u <- append([]byte("HTTP "), data...)
 }
 
-func sendControlHTTPSMITMRequest(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlHTTPSMITMRequest(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id":      req.id,
 		"method":  req.req.Method,
@@ -56,55 +64,61 @@ func sendControlHTTPSMITMRequest(req *Request, c chan []byte) {
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
-	c <- append([]byte("HTTPS-MITM-REQUEST "), data...)
+	c.u <- append([]byte("HTTPS-MITM-REQUEST "), data...)
 }
 
-func sendControlHTTPSTunnelRequest(req *Request, c chan []byte) {
-	// NOTE: this will later includes bytes transferred etc. but also not just for no MITM both an provide that info
+func (c *ControlChannel) sendControlHTTPSTunnelRequest(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id": req.id,
 	})
-	c <- append([]byte("HTTPS-TUNNEL-REQUEST "), data...)
+	c.u <- append([]byte("HTTPS-TUNNEL-REQUEST "), data...)
 }
 
-func sendControlHTTPResponse(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlHTTPResponse(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id":         req.id,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
 		"body":       string(req.respbody()),
 	})
-	c <- append([]byte("HTTP-RESPONSE "), data...)
+	c.u <- append([]byte("HTTP-RESPONSE "), data...)
 }
 
-func sendControlHTTPSMITMResponse(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlHTTPSMITMResponse(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id":         req.id,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
 		"body":       string(req.respbody()),
 	})
-	c <- append([]byte("HTTPS-MITM-RESPONSE "), data...)
+	c.u <- append([]byte("HTTPS-MITM-RESPONSE "), data...)
 }
 
-func sendControlHTTPSTunnelResponse(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlHTTPSTunnelResponse(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id": req.id,
 	})
-	c <- append([]byte("HTTPS-TUNNEL-RESPONSE "), data...)
+	c.u <- append([]byte("HTTPS-TUNNEL-RESPONSE "), data...)
 }
 
-func sendControlDone(req *Request, c chan []byte) {
+func (c *ControlChannel) sendControlDone(req *Request) {
 	data, _ := json.Marshal(map[string]any{
 		"id": req.id,
 	})
-	c <- append([]byte("DONE "), data...)
+	c.u <- append([]byte("DONE "), data...)
 }
 
-func sendControlError(req *Request, err error, c chan []byte) {
+func (c *ControlChannel) sendControlError(req *Request, err error) {
 	data, _ := json.Marshal(map[string]any{
 		"id":    req.id,
 		"error": err.Error(),
 	})
-	c <- append([]byte("ERROR "), data...)
+	c.u <- append([]byte("ERROR "), data...)
+}
+
+func (c *ControlChannel) waitApproval(req *Request) {
+	data, _ := json.Marshal(map[string]any{
+		"id": req.id,
+	})
+	c.u <- append([]byte("WAIT-APPROVAL "), data...)
 }

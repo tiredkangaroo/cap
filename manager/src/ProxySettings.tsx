@@ -100,6 +100,20 @@ export function ProxySettingsView(props: { proxy: Proxy }) {
                 the client. It is resource intensive, especially with larger
                 bodies.
             </CheckField>
+
+            <CheckField
+                name="Require Approval"
+                defaultChecked={proxyConfig.require_approval}
+                onChange={(v: boolean) => {
+                    proxyConfig.require_approval = v;
+                    props.proxy!.setConfig(proxyConfig);
+                    setProxyConfig({ ...proxyConfig });
+                }}
+            >
+                Require approval makes the proxy wait for the client to approve
+                the request before proceeding. This is useful for debugging and
+                security purposes.
+            </CheckField>
         </div>
     );
 }

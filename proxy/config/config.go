@@ -42,6 +42,14 @@ type Config struct {
 	// integer. This can be useful for testing purposes, such as simulating network latency, slowing down
 	// actions performed, or other debugging purposes.
 	PerformDelay uint `json:"perform_delay"`
+
+	// RequireApproval is a boolean that determines whether the proxy should require approval to perform
+	// requests. If true, the proxy will wait for an approval before performing the request. The client
+	// may timeout if the approval is not received in time. This should be taken into consideration.
+	//
+	// This is useful for debugging purposes, such as inspecting the request before it is performed,
+	// or for security purposes, such as ensuring that the request is safe to perform.
+	RequireApproval bool `json:"require_approval"`
 }
 
 func init() {

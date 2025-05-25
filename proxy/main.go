@@ -7,7 +7,9 @@ import (
 )
 
 func main() {
-	controlMessages := make(chan []byte, 8)
+	controlMessages := &ControlChannel{
+		u: make(chan []byte, 8),
+	}
 
 	go startControlServer(controlMessages)
 
