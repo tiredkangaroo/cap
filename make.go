@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"os/exec"
@@ -34,19 +35,22 @@ const (
 )
 
 func init() {
-	runDebug := flag.Bool("debug", false, "Run the program (debug mode)")
-	run := flag.Bool("run", false, "Run the program (production mode)")
-	compile := flag.Bool("compile", false, "Compile the program")
+	// runDebug := flag.Bool("debug", false, "Run the program (debug mode)")
+	// run := flag.Bool("run", false, "Run the program (production mode)")
+	// compile := flag.Bool("compile", false, "Compile the program")
 	flag.Parse()
 
-	if *runDebug {
+	cmd := flag.Arg(0)
+
+	switch cmd {
+	case "debug":
 		command = CommandRunDebug
-	}
-	if *run {
+	case "run":
 		command = CommandRun
-	}
-	if *compile {
+	case "compile":
 		command = CommandCompile
+	default:
+		slog.Error("Invalid command. Use debug, run, or compile.")
 	}
 }
 
