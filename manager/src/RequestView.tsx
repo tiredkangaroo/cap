@@ -78,6 +78,7 @@ export function RequestView(props: { request: Request }) {
                         />
                         <FieldView name="Method" value={props.request.method} />
                         <FieldView name="Path" value={props.request.path} />
+                        <FieldView name="Query" value={props.request.query} />
                         <FieldView
                             name="Headers"
                             value={props.request.headers}
@@ -156,9 +157,14 @@ function ValueView(props: {
     return (
         <>
             {Object.entries(props.value!).map((v) => (
-                <p key={v[0]} className="text-sm">
-                    <b>{v[0]}</b>: {v[1].join(", ")}
-                </p>
+                <div key={v[0]} className="text-sm">
+                    {v[1].map((x) => (
+                        <p>
+                            <b>{v[0]}</b>: {x}
+                        </p>
+                        // <span className="underline">{v[1].join(", ")}</span>
+                    ))}
+                </div>
             ))}
         </>
     );

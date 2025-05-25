@@ -110,6 +110,7 @@ export class Proxy {
                     const i = reqs.indexOf(req);
                     req.method = data.method;
                     req.path = data.path;
+                    req.query = data.query;
                     req.headers = data.headers;
                     req.body = data.body;
 
@@ -134,6 +135,7 @@ export class Proxy {
                     const i = reqs.indexOf(req);
                     req.method = data.method;
                     req.path = data.path;
+                    req.query = data.query;
                     req.headers = data.headers;
                     req.body = data.body;
                     // req.body = await decodedBody(data.headers, data.body);

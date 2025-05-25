@@ -41,6 +41,7 @@ export interface Request {
 
     method?: string;
     path?: string;
+    query?: Record<string, Array<string>>;
     headers?: Record<string, Array<string>>;
     body?: string;
 

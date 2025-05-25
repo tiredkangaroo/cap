@@ -40,6 +40,7 @@ func sendControlHTTPRequest(req *Request, c chan []byte) {
 		"id":      req.id,
 		"method":  req.req.Method,
 		"path":    req.req.URL.Path,
+		"query":   req.req.URL.Query(),
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
@@ -51,6 +52,7 @@ func sendControlHTTPSMITMRequest(req *Request, c chan []byte) {
 		"id":      req.id,
 		"method":  req.req.Method,
 		"path":    req.req.URL.Path,
+		"query":   req.req.URL.Query(),
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
