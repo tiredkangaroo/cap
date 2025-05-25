@@ -39,6 +39,7 @@ export interface Request {
     host: string;
 
     method?: string;
+    path?: string;
     headers?: Record<string, Array<string>>;
     body?: string;
 

@@ -62,7 +62,7 @@ export function RequestView(props: { request: Request }) {
                     <p>
                         <b>Request: </b>
                     </p>
-                    <div className="mt-2 ml-5">
+                    <div className="hashi w-full pt-2 pl-5 pr-5">
                         <FieldView
                             name="Client Username"
                             value={props.request.clientAuthorizationUser}
@@ -74,6 +74,7 @@ export function RequestView(props: { request: Request }) {
                             defaultShow={false}
                         />
                         <FieldView name="Method" value={props.request.method} />
+                        <FieldView name="Path" value={props.request.path} />
                         <FieldView
                             name="Headers"
                             value={props.request.headers}
@@ -144,47 +145,54 @@ export function RequestView(props: { request: Request }) {
     );
 }
 
+function ValueView(props: {
+    name: string;
+    value: number | string | Record<string, Array<string>> | undefined;
+    italic?: boolean;
+}) {
+    if (props.value == undefined || props.value == "") {
+        return <i>none or unavailable</i>;
+    }
+    if (typeof props.value === "string" || typeof props.value === "number") {
+        if (props.name.startsWith("Body")) {
+            if (props.italic === true) {
+                return <i>{props.value}</i>;
+            } else {
+                return <p className="text-sm">{props.value}</p>;
+            }
+        } else {
+            if (props.italic === true) {
+                return <i>{props.value}</i>;
+            } else {
+                return <>{props.value}</>;
+            }
+        }
+    }
+    return (
+        <>
+            {Object.entries(props.value!).map((v) => (
+                <p key={v[0]} className="text-sm">
+                    <b>{v[0]}</b>: {v[1].join(", ")}
+                </p>
+            ))}
+        </>
+    );
+}
 function FieldView(props: {
     name: string;
     value: number | string | Record<string, Array<string>> | undefined;
     italic?: boolean;
 }) {
-    function ValueView() {
-        if (props.value == undefined || props.value == "") {
-            return <i>none or unavailable</i>;
-        }
-        if (
-            typeof props.value === "string" ||
-            typeof props.value === "number"
-        ) {
-            if (props.name.startsWith("Body")) {
-                if (props.italic === true) {
-                    return <i>{props.value}</i>;
-                } else {
-                    return <p>{props.value}</p>;
-                }
-            } else {
-                if (props.italic === true) {
-                    return <i>{props.value}</i>;
-                } else {
-                    return <>{props.value}</>;
-                }
-            }
-        }
-        return (
-            <>
-                {Object.entries(props.value!).map((v) => (
-                    <p key={v[0]} className="text-sm">
-                        <b>{v[0]}</b>: {v[1].join(", ")}
-                    </p>
-                ))}
-            </>
-        );
-    }
     return (
-        <div className="mb-2 text-lg">
-            <b>{props.name} </b>
-            <ValueView />
+        <div className="mb-2 text-lg flex flex-row w-full">
+            <b className="flex-1">{props.name} </b>
+            <div className="flex-1 text-start">
+                <ValueView
+                    name={props.name}
+                    value={props.value}
+                    italic={props.italic}
+                />
+            </div>
         </div>
     );
 }
@@ -196,51 +204,26 @@ function ShowHideFieldView(props: {
     defaultShow: boolean;
 }) {
     const [show, setShow] = useState(props.defaultShow);
-    // <div className="flex flex-row">
-    //     <FieldView
-    //         name="Client Password"
-    //         value={
-    //             showClientPassword
-    //                 ? props.request
-    //                       .clientAuthorizationPassword
-    //                 : "********"
-    //         }
-    //     />
-    //     <button
-    //         onClick={() => {
-    //             setShowClientPassword(!showClientPassword);
-    //         }}
-    //         className="bg-gray-400 mt-auto mb-auto ml-4 text-black pl-1 pr-1"
-    //     >
-    //         {showClientPassword ? "hide" : "show"}
-    //     </button>
-    // </div>
     return (
-        <div className="flex flex-row">
-            <FieldView
-                name={props.name}
-                // what in the ternary hell
-                value={
-                    show
-                        ? props.value
-                        : props.value != undefined && props.value != ""
-                          ? "hidden"
-                          : ""
-                }
-                italic={!show}
-            />
-            {props.value != undefined && props.value != "" ? (
+        <div className="mb-2 text-lg flex flex-row w-full">
+            <b className="flex-1">{props.name}</b>
+            <div className="flex-1 text-start">
                 <button
-                    onClick={() => {
-                        setShow(!show);
-                    }}
-                    className="bg-gray-400 mt-auto mb-auto text-black pl-1 pr-1 w-20 ml-4"
+                    className="text-sm pl-3 pr-3 bg-gray-600 text-white"
+                    onClick={() => setShow(!show)}
                 >
-                    {show ? "hide" : "show"}
+                    {show ? "Hide" : "Show"}
                 </button>
-            ) : (
-                <></>
-            )}
+                {show ? (
+                    <ValueView
+                        name={props.name}
+                        value={props.value}
+                        italic={false}
+                    />
+                ) : (
+                    <i>{props.hiddenValue}</i>
+                )}
+            </div>
         </div>
     );
 }

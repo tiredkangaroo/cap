@@ -38,6 +38,7 @@ func sendControlHTTPRequest(req *Request, c chan []byte) {
 	data, _ := json.Marshal(map[string]any{
 		"id":      req.id,
 		"method":  req.req.Method,
+		"path":    req.req.URL.Path,
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
@@ -48,6 +49,7 @@ func sendControlHTTPSMITMRequest(req *Request, c chan []byte) {
 	data, _ := json.Marshal(map[string]any{
 		"id":      req.id,
 		"method":  req.req.Method,
+		"path":    req.req.URL.Path,
 		"headers": req.req.Header,
 		"body":    string(req.body()),
 	})
