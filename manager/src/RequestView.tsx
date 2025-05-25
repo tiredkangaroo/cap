@@ -3,7 +3,7 @@ import {
     CollapsibleTrigger,
     CollapsibleContent,
 } from "./components/ui/collapsible";
-import { Request } from "./types";
+import { Request, RequestsViewConfig } from "./types";
 import { downloadBody, downloadRequest } from "./downloadRequest";
 import { useState } from "react";
 
@@ -13,7 +13,10 @@ const stateColors = {
     Done: "#62806b",
     Error: "oklch(50.5% 0.213 27.518)",
 };
-export function RequestView(props: { request: Request }) {
+export function RequestView(props: {
+    request: Request;
+    requestsViewConfig: RequestsViewConfig;
+}) {
     return (
         <Collapsible className="border-b-1 border-b-black wrap-anywhere">
             <CollapsibleTrigger className="w-full bg-gray-200">
@@ -53,7 +56,8 @@ export function RequestView(props: { request: Request }) {
                     Download
                 </button>
                 <div className="ml-2 pt-2 pb-1">
-                    {props.request.error != undefined ? (
+                    {props.request.error != undefined &&
+                    !props.requestsViewConfig.hideError ? (
                         <p>
                             <span className="text-red-700">Error</span>:{" "}
                             {props.request.error}
@@ -61,7 +65,11 @@ export function RequestView(props: { request: Request }) {
                     ) : (
                         <></>
                     )}
-                    <FieldView name="ID" value={props.request.id} />
+                    <FieldView
+                        name="ID"
+                        value={props.request.id}
+                        hide={props.requestsViewConfig.hideID}
+                    />
                     <p>
                         <b>Request: </b>
                     </p>
@@ -69,33 +77,57 @@ export function RequestView(props: { request: Request }) {
                         <FieldView
                             name="Client Username"
                             value={props.request.clientAuthorizationUser}
+                            hide={props.requestsViewConfig.hideClientUser}
                         />
                         <ShowHideFieldView
                             name="Client Password"
                             value={props.request.clientAuthorizationPassword}
                             hiddenValue="********"
                             defaultShow={false}
+                            hide={props.requestsViewConfig.hideClientPassword}
                         />
-                        <FieldView name="Method" value={props.request.method} />
-                        <FieldView name="Path" value={props.request.path} />
-                        <FieldView name="Query" value={props.request.query} />
+                        <FieldView
+                            name="Method"
+                            value={props.request.method}
+                            hide={props.requestsViewConfig.hideMethod}
+                        />
+                        <FieldView
+                            name="Path"
+                            value={props.request.path}
+                            hide={props.requestsViewConfig.hidePath}
+                        />
+                        <FieldView
+                            name="Query"
+                            value={props.request.query}
+                            hide={props.requestsViewConfig.hideQuery}
+                        />
                         <FieldView
                             name="Headers"
                             value={props.request.headers}
+                            hide={props.requestsViewConfig.hideRequestHeaders}
                         />
-                        <button
-                            className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
-                            onClick={() =>
-                                downloadBody(
-                                    props.request.id,
-                                    props.request.body,
-                                    props.request.headers!["Content-Type"][0],
-                                )
-                            }
-                        >
-                            Download Body
-                        </button>
-                        <BodyView value={props.request.body} />
+                        {props.requestsViewConfig.hideRequestBody ? (
+                            <></>
+                        ) : (
+                            <button
+                                className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
+                                onClick={() =>
+                                    downloadBody(
+                                        props.request.id,
+                                        props.request.body,
+                                        props.request.headers![
+                                            "Content-Type"
+                                        ][0],
+                                    )
+                                }
+                            >
+                                Download Body
+                            </button>
+                        )}
+                        <BodyView
+                            value={props.request.body}
+                            hide={props.requestsViewConfig.hideRequestBody}
+                        />
                     </div>
                     <p>
                         <b>Response: </b>
@@ -104,26 +136,35 @@ export function RequestView(props: { request: Request }) {
                         <FieldView
                             name="Status"
                             value={props.request.response?.statusCode}
+                            hide={props.requestsViewConfig.hideResponseStatus}
                         />
                         <FieldView
                             name="Headers"
                             value={props.request.response?.headers}
+                            hide={props.requestsViewConfig.hideResponseHeaders}
                         />
-                        <button
-                            className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
-                            onClick={() =>
-                                downloadBody(
-                                    props.request.id,
-                                    props.request.response!.body,
-                                    props.request.response!.headers![
-                                        "Content-Type"
-                                    ][0],
-                                )
-                            }
-                        >
-                            Download Body
-                        </button>
-                        <BodyView value={props.request.response?.body} />
+                        {props.requestsViewConfig.hideResponseBody ? (
+                            <></>
+                        ) : (
+                            <button
+                                className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
+                                onClick={() =>
+                                    downloadBody(
+                                        props.request.id,
+                                        props.request.response!.body,
+                                        props.request.response!.headers![
+                                            "Content-Type"
+                                        ][0],
+                                    )
+                                }
+                            >
+                                Download Body
+                            </button>
+                        )}
+                        <BodyView
+                            value={props.request.response?.body}
+                            hide={props.requestsViewConfig.hideResponseBody}
+                        />
                     </div>
                 </div>
             </CollapsibleContent>
@@ -158,8 +199,8 @@ function ValueView(props: {
         <>
             {Object.entries(props.value!).map((v) => (
                 <div key={v[0]} className="text-sm">
-                    {v[1].map((x) => (
-                        <p>
+                    {v[1].map((x, i) => (
+                        <p key={i}>
                             <b>{v[0]}</b>: {x}
                         </p>
                         // <span className="underline">{v[1].join(", ")}</span>
@@ -170,10 +211,14 @@ function ValueView(props: {
     );
 }
 function FieldView(props: {
+    hide: boolean;
     name: string;
     value: number | string | Record<string, Array<string>> | undefined;
     italic?: boolean;
 }) {
+    if (props.hide) {
+        return <></>;
+    }
     return (
         <div className="mb-2 text-lg flex flex-row w-full">
             <b className="flex-1">{props.name} </b>
@@ -190,11 +235,15 @@ function FieldView(props: {
 
 function ShowHideFieldView(props: {
     name: string;
+    hide: boolean;
     value: string | undefined;
     hiddenValue: string;
     defaultShow: boolean;
 }) {
     const [show, setShow] = useState(props.defaultShow);
+    if (props.hide) {
+        return <></>;
+    }
     return (
         <div className="mb-2 text-lg flex flex-row w-full">
             <b className="flex-1">{props.name}</b>
@@ -219,9 +268,11 @@ function ShowHideFieldView(props: {
     );
 }
 
-function BodyView(props: { value: string | undefined }) {
+function BodyView(props: { value: string | undefined; hide: boolean }) {
     const [show, setShow] = useState(false);
-
+    if (props.hide) {
+        return <></>;
+    }
     return (
         <div className="mb-2 text-lg w-full">
             <div className="flex flex-row items-center">

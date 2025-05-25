@@ -54,3 +54,18 @@ export interface Request {
     state: "Processing" | "Canceled" | "Done" | "Error";
     error?: string;
 }
+
+export interface RequestsViewConfig {
+    hideError: boolean;
+    hideID: boolean;
+    hideClientUser: boolean;
+    hideClientPassword: boolean;
+    hideMethod: boolean;
+    hidePath: boolean;
+    hideQuery: boolean;
+    hideRequestHeaders: boolean;
+    hideRequestBody: boolean;
+    hideResponseStatus: boolean;
+    hideResponseHeaders: boolean;
+    hideResponseBody: boolean;
+}

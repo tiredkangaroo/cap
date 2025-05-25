@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 
-import { Request } from "./types";
+import { Request, RequestsViewConfig } from "./types";
 import { Proxy } from "./api";
 
 import { RequestView } from "./RequestView";
 
-export function IncomingView(props: { proxy: Proxy }) {
+export function IncomingView(props: {
+    proxy: Proxy;
+    requestsViewConfig: RequestsViewConfig;
+}) {
     const [requests, setRequests] = useState<Array<Request>>([]);
 
     useEffect(() => {
@@ -21,7 +24,11 @@ export function IncomingView(props: { proxy: Proxy }) {
             <h1 className="ml-2 text-2xl font-bold mb-2">Incoming Requests</h1>
             <div className="w-full overflow-y-auto h-[90%]">
                 {requests.map((request, index) => (
-                    <RequestView key={index} request={request} />
+                    <RequestView
+                        key={index}
+                        request={request}
+                        requestsViewConfig={props.requestsViewConfig}
+                    />
                 ))}
             </div>
         </div>

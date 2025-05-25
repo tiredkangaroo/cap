@@ -14,6 +14,20 @@ export function ProxyView() {
     );
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [requestsViewConfig, setRequestsViewConfig] = useState({
+        hideError: false,
+        hideID: false,
+        hideClientUser: false,
+        hideClientPassword: false,
+        hideMethod: false,
+        hidePath: false,
+        hideQuery: false,
+        hideRequestHeaders: false,
+        hideRequestBody: false,
+        hideResponseStatus: false,
+        hideResponseHeaders: false,
+        hideResponseBody: false,
+    });
 
     //NOTE: async/await in set state functions
     useEffect(() => {
@@ -39,6 +53,8 @@ export function ProxyView() {
                 proxy={proxy}
                 open={settingsOpen}
                 setOpen={setSettingsOpen}
+                requestsViewConfig={requestsViewConfig}
+                setRequestsViewConfig={setRequestsViewConfig}
             />
             <div className="flex flex-row mt-4 w-full">
                 <div className="ml-auto mr-auto text-center">
@@ -52,7 +68,10 @@ export function ProxyView() {
                     <IoSettingsSharp className="ml-auto mr-auto text-white" />
                 </button>
             </div>
-            <IncomingView proxy={proxy} />
+            <IncomingView
+                proxy={proxy}
+                requestsViewConfig={requestsViewConfig}
+            />
         </div>
     );
 }

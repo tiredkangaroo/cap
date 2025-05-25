@@ -2,11 +2,17 @@ import { Proxy } from "./api";
 import { IoClose } from "react-icons/io5";
 import { ProxySettingsView } from "./ProxySettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { RequestsViewConfig } from "./types";
+import { ViewSettings } from "./ViewSettings";
 
 export function SettingsDialog(props: {
     proxy: Proxy | null;
     open: boolean;
     setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    requestsViewConfig: RequestsViewConfig;
+    setRequestsViewConfig: React.Dispatch<
+        React.SetStateAction<RequestsViewConfig>
+    >;
 }) {
     if (props.proxy === null) return <></>;
 
@@ -38,9 +44,9 @@ export function SettingsDialog(props: {
                     >
                         <TabsList>
                             <TabsTrigger value="requests-view">
-                                view
+                                Request View
                             </TabsTrigger>
-                            <TabsTrigger value="proxy">proxy</TabsTrigger>
+                            <TabsTrigger value="proxy">Proxy</TabsTrigger>
                         </TabsList>
 
                         {/* This is now scrollable if needed */}
@@ -51,8 +57,16 @@ export function SettingsDialog(props: {
                             <ProxySettingsView proxy={props.proxy} />
                         </TabsContent>
 
-                        <TabsContent value="requests-view">
-                            <p className="p-2">no</p>
+                        <TabsContent
+                            className="flex-grow min-h-0 overflow-y-auto pr-1"
+                            value="requests-view"
+                        >
+                            <ViewSettings
+                                requestsViewConfig={props.requestsViewConfig}
+                                setRequestsViewConfig={
+                                    props.setRequestsViewConfig
+                                }
+                            />
                         </TabsContent>
                     </Tabs>
                 </div>
