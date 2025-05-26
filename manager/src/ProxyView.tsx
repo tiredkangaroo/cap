@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
-import { Proxy } from "./api";
+import { Proxy } from "./api/api";
 import { IncomingView } from "./IncomingView";
 
 import { IoSettingsSharp } from "react-icons/io5";
 import { Config } from "./types";
-import { SettingsDialog } from "./SettingsDialog";
+import { SettingsDialog } from "./settings/SettingsDialog";
 
 export function ProxyView() {
     //eslint-disable-next-line @typescript-eslint/no-unused-vars

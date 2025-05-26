@@ -1,7 +1,12 @@
 import { Proxy } from "./api";
 import { IoClose } from "react-icons/io5";
 import { ProxySettingsView } from "./ProxySettings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "../components/ui/tabs";
 import { RequestsViewConfig } from "./types";
 import { ViewSettings } from "./ViewSettings";
 

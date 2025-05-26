@@ -1,5 +1,5 @@
 import { CheckField } from "./SettingsFields";
-import { RequestsViewConfig } from "./types";
+import { RequestsViewConfig } from "../types";
 
 export function ViewSettings(props: {
     requestsViewConfig: RequestsViewConfig;

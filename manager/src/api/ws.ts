@@ -1,0 +1,181 @@
+import { Request } from "@/types";
+
+interface IDMessage {
+    id: string;
+}
+
+export class ClientWS {
+    ws: WebSocket | null = null;
+
+    constructor() {
+        this.ws = null;
+    }
+
+    getActionData(ev: MessageEvent): [string, object] {
+        const sp = ev.data.split(" ");
+        return [sp[0], JSON.parse(sp.slice(1).join(" "))];
+    }
+
+    isOpen(): boolean {
+        return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    onmessage = (
+        event: MessageEvent,
+        requests: Array<Request>,
+    ): Array<Request> => {
+        console.log("Message received:", event.data);
+        const [action, rawdata] = this.getActionData(event);
+        switch (action) {
+            case "NEW": {
+                const data = rawdata as Request;
+                requests.push(data);
+                break;
+            }
+            case "REQUEST": {
+                const data = rawdata as {
+                    id: string;
+                    method: string;
+                    path: string;
+                    query: Record<string, Array<string>>;
+                    headers: Record<string, Array<string>>;
+                    body: string | null;
+                };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.method = data.method;
+                    request.path = data.path;
+                    request.query = data.query;
+                    request.headers = data.headers;
+                    request.body = data.body;
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "RESPONSE": {
+                const data = rawdata as {
+                    id: string;
+                    statusCode: number;
+                    headers: Record<string, Array<string>>;
+                    body: string | null;
+                };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.response = {
+                        statusCode: data.statusCode,
+                        headers: data.headers,
+                        body: data.body,
+                    };
+                    request.state = "Done";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "ERROR": {
+                const data = rawdata as { id: string; error: string };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Error";
+                    request.error = data.error;
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "APPROVAL-WAIT": {
+                const data = rawdata as { id: string };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Waiting Approval";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "APPROVAL-RECIEVED": {
+                const data = rawdata as { id: string };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Processing";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "APPROVAL-CANCELED": {
+                const data = rawdata as { id: string };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Canceled";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+
+            default:
+                break;
+        }
+        return requests;
+    };
+
+    approveRequest(id: string): void {
+        if (this.ws == null || !this.isOpen()) {
+            console.error("WebSocket is not initialized or not open");
+            return;
+        }
+        const data: IDMessage = {
+            id: id,
+        };
+        this.ws.send(`APPROVAL-APPROVE ${JSON.stringify(data)}`);
+    }
+
+    cancelRequest(id: string): void {
+        if (this.ws == null || !this.isOpen()) {
+            console.error("WebSocket is not initialized or not open");
+            return;
+        }
+        const data: IDMessage = {
+            id: id,
+        };
+        this.ws.send(`APPROVAL-CANCEL ${JSON.stringify(data)}`);
+    }
+
+    updateRequest(request: Request): void {
+        if (this.ws == null || !this.isOpen()) {
+            console.error("WebSocket is not initialized or not open");
+            return;
+        }
+        const data = {
+            id: request.id,
+            request: request,
+        };
+        this.ws.send(`UPDATE-REQUEST ${JSON.stringify(data)}`);
+    }
+}

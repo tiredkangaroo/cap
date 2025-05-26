@@ -16,7 +16,9 @@ import (
 // (proxy -> client) REQUEST <id, method, path, query, headers, body>
 // (proxy -> client) APPROVAL-WAIT <id>
 // (client -> proxy) APPROVAL-APPROVE <id>
-// (client -> proxy) APPROVAL-CANCELED <id>
+// (client -> proxy) APPROVAL-CANCEL <id>
+// (proxy -> client) APPROVAL-RECIEVED <id>
+// (proxy -> client) APPROVAL-CANCELED <id>
 // (proxy -> client) RESPONSE <id, statusCode, headers, body>
 // (proxy -> client) DONE <id>
 // (proxy -> client) ERROR <id, err>
@@ -80,8 +82,8 @@ func (c *Manager) SendDone(req *Request) {
 
 func (c *Manager) SendError(req *Request, err error) {
 	c.writeJSON("ERROR", map[string]any{
-		"id":  req.id,
-		"err": err.Error(),
+		"id":    req.id,
+		"error": err.Error(),
 	})
 }
 
@@ -131,7 +133,7 @@ func (c *Manager) HandleMessage(msg *websocket.Message) {
 	switch action {
 	case "APPROVAL-APPROVE":
 		c.handleApprovalApprove(data)
-	case "APPROVAL-CANCELED":
+	case "APPROVAL-CANCEL":
 		c.handleApprovalCancel(data)
 	}
 }
