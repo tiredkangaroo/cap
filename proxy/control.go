@@ -90,7 +90,7 @@ func startControlServer(controlMessages *ControlChannel) {
 	go func() {
 		for msg := range controlMessages.u {
 			newLiveRequestWebsockets := controlMessagesWebsockets
-			for i, ws := range controlMessagesWebsockets {
+			for _, ws := range controlMessagesWebsockets {
 				err := ws.Write(&websocket.Message{
 					Type: websocket.MessageText,
 					Data: msg,
