@@ -331,6 +331,19 @@ export class Proxy {
             })}`,
         );
     }
+
+    updateRequest(id: string, request: Request): void {
+        if (this.ws == null) {
+            console.error("WebSocket is not initialized");
+            return;
+        }
+        this.ws.send(
+            `UPDATE-REQUEST ${JSON.stringify({
+                id: id,
+                request: request,
+            })}`,
+        );
+    }
 }
 
 // async function decodedBody(

@@ -31,6 +31,8 @@ type Request struct {
 
 	req  *http.Request
 	resp *http.Response
+
+	approveResponseFunc func(approved bool)
 }
 
 func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {

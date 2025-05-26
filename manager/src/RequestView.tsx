@@ -19,8 +19,10 @@ const stateColors: Record<string, string> = {
 export function RequestView(props: {
     proxy: Proxy;
     request: Request;
+    setRequest: (req: Request) => void;
     requestsViewConfig: RequestsViewConfig;
 }) {
+    const [editMode, setEditMode] = useState(false);
     return (
         <Collapsible className="border-b-1 border-b-black wrap-anywhere">
             <CollapsibleTrigger className="w-full bg-gray-200">
@@ -48,14 +50,30 @@ export function RequestView(props: {
                 </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="bg-gray-300 max-h-[50vh] overflow-y-auto">
-                <button
-                    className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
-                    onClick={() => {
-                        downloadRequest(props.request);
-                    }}
-                >
-                    Download
-                </button>
+                <div className="flex flex-row">
+                    <button
+                        className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
+                        onClick={() => {
+                            downloadRequest(props.request);
+                        }}
+                    >
+                        Download
+                    </button>
+                    <button
+                        className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2 disabled:bg-gray-500 disabled:cursor-not-allowed!"
+                        disabled={props.request.state !== "Waiting Approval"}
+                        onClick={() => {
+                            if (editMode) {
+                                // pressed save
+                                props.proxy.updateRequest(props.request);
+                                props.setRequest(props.request);
+                            }
+                            setEditMode(!editMode);
+                        }}
+                    >
+                        {editMode ? "Save" : "Edit"}
+                    </button>
+                </div>
                 <div className="ml-2 pt-2 pb-1">
                     {props.request.error != undefined &&
                     !props.requestsViewConfig.hideError ? (

@@ -150,9 +150,9 @@ func handleClientMessage(msg *websocket.Message, controlMessages *ControlChannel
 			return
 		}
 		controlMessages.mxWaitingApprovalResponse.Lock()
-		if fn, ok := controlMessages.waitingApprovalResponse[id]; ok {
+		if r, ok := controlMessages.waitingApprovalResponse[id]; ok {
 			slog.Info("approval received for request", "id", id)
-			fn(true)
+			r.approveResponseFunc(true)
 		}
 		controlMessages.mxWaitingApprovalResponse.Unlock()
 	case "WAIT-APPROVAL-CANCELED":
@@ -166,11 +166,39 @@ func handleClientMessage(msg *websocket.Message, controlMessages *ControlChannel
 			return
 		}
 		controlMessages.mxWaitingApprovalResponse.Lock()
-		if fn, ok := controlMessages.waitingApprovalResponse[id]; ok {
+		if r, ok := controlMessages.waitingApprovalResponse[id]; ok {
 			slog.Info("cancel received for request", "id", id)
-			fn(false)
+			r.approveResponseFunc(false)
 		}
 		controlMessages.mxWaitingApprovalResponse.Unlock()
+		// case "UPDATE-REQUEST":
+		// 	if len(sData) < 2 {
+		// 		slog.Error("invalid control message", "data", string(msg.Data))
+		// 		return
+		// 	}
+		// 	id, ok := data["id"].(string)
+		// 	if !ok {
+		// 		slog.Error("invalid control message", "data", string(msg.Data), "err", "id is not a string")
+		// 		return
+		// 	}
+		// 	controlMessages.mxWaitingApprovalResponse.Lock()
+		// 	if r, ok := controlMessages.waitingApprovalResponse[id]; ok {
+		// 		slog.Info("update received for request", "id", id)
+		// 		wsreq, ok := r.(*Request)
 
+		// 		updateRequest(r, data["request"])
+		// 	} else {
+		// 		slog.Error("no request found for update", "id", id)
+		// 	}
+
+		// }
 	}
 }
+
+// func updateRequest(req *Request, data map[string]any) {
+// 	if data == nil {
+// 		slog.Error("no data provided for request update", "id", req.id)
+// 		return
+// 	}
+
+// }

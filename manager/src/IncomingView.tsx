@@ -29,6 +29,11 @@ export function IncomingView(props: {
                         proxy={props.proxy}
                         request={request}
                         requestsViewConfig={props.requestsViewConfig}
+                        setRequest={(req: Request) => {
+                            const newRequests = [...requests];
+                            newRequests[index] = req;
+                            setRequests(newRequests);
+                        }}
                     />
                 ))}
             </div>
