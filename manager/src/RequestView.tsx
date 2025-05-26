@@ -6,14 +6,18 @@ import {
 import { Request, RequestsViewConfig } from "./types";
 import { downloadBody, downloadRequest } from "./downloadRequest";
 import { useState } from "react";
+import { Proxy } from "./api";
 
-const stateColors = {
+const stateColors: Record<string, string> = {
     Processing: "#000",
     Canceled: "#806262",
     Done: "#62806b",
     Error: "oklch(50.5% 0.213 27.518)",
+    "Approval Timeout": "#806262",
+    "Waiting Approval": "#806262",
 };
 export function RequestView(props: {
+    proxy: Proxy;
     request: Request;
     requestsViewConfig: RequestsViewConfig;
 }) {
@@ -35,14 +39,11 @@ export function RequestView(props: {
                     <p className="flex-1 ml-1 text-center">
                         {props.request.host}
                     </p>
-                    <p
-                        className="flex-1"
-                        style={{
-                            color: stateColors[props.request.state],
-                        }}
-                    >
-                        {props.request.state}
-                    </p>
+                    <StateView
+                        proxy={props.proxy}
+                        id={props.request.id}
+                        state={props.request.state}
+                    />
                     {/* <p className="flex-1 ml-1 mr-1">{props.request.clientIP}</p> */}
                 </div>
             </CollapsibleTrigger>
@@ -210,6 +211,44 @@ function ValueView(props: {
         </>
     );
 }
+
+function StateView(props: { proxy: Proxy; id: string; state: string }) {
+    if (props.state == "Waiting Approval") {
+        return (
+            <div className="flex-1 flex flex-row">
+                <button
+                    className="bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        props.proxy.approveRequest(props.id);
+                    }}
+                >
+                    Approve
+                </button>
+                <button
+                    className="ml-2 bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        props.proxy.cancelRequest(props.id);
+                    }}
+                >
+                    Cancel
+                </button>
+            </div>
+        );
+    }
+    return (
+        <p
+            className="flex-1"
+            style={{
+                color: stateColors[props.state],
+            }}
+        >
+            {props.state}
+        </p>
+    );
+}
+
 function FieldView(props: {
     hide: boolean;
     name: string;

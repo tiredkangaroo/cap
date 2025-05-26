@@ -3,15 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ControlChannel struct {
-	u                 chan []byte
-	mxWaitingApproval sync.Mutex
-	waitingApproval   map[string]context.CancelFunc // maps request ID to ctx.Done() func
+	u                         chan []byte
+	mxWaitingApprovalResponse sync.Mutex
+	waitingApprovalResponse   map[string]func(approved bool) // maps req id
 }
 
 // toURL converts a string to a URL. If the string does not start with "http://" or
@@ -116,9 +118,45 @@ func (c *ControlChannel) sendControlError(req *Request, err error) {
 	c.u <- append([]byte("ERROR "), data...)
 }
 
-func (c *ControlChannel) waitApproval(req *Request) {
+func (c *ControlChannel) waitApproval(req *Request) bool {
 	data, _ := json.Marshal(map[string]any{
 		"id": req.id,
 	})
+	// NOTE: default approval timeout here
+
+	var cancelApproval bool
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+
+	c.mxWaitingApprovalResponse.Lock()
+	c.waitingApprovalResponse[req.id] = func(approved bool) {
+		cancelApproval = approved
+		cancel() // cancel the context to stop waiting
+	}
+	c.mxWaitingApprovalResponse.Unlock()
 	c.u <- append([]byte("WAIT-APPROVAL "), data...)
+
+	<-ctx.Done()
+	fmt.Println("approval ctx", ctx.Err(), "cancelApproval", cancelApproval)
+	switch ctx.Err() {
+	case context.Canceled:
+		c.mxWaitingApprovalResponse.Lock()
+		delete(c.waitingApprovalResponse, req.id)
+		c.mxWaitingApprovalResponse.Unlock()
+
+		if cancelApproval {
+			// approval was given
+			c.u <- append([]byte("WAIT-APPROVAL-APPROVED "), data...)
+			return true
+		} else {
+			c.u <- append([]byte("CANCELED "), data...)
+			return false
+		}
+	case context.DeadlineExceeded:
+		// approval was not given in time
+		c.u <- append([]byte("WAIT-APPROVAL-TIMEOUT "), data...)
+		return false
+	default:
+		// unreachable but we walkin
+		return false
+	}
 }

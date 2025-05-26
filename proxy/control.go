@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/websocket"
@@ -68,6 +69,17 @@ func startControlServer(controlMessages *ControlChannel) {
 			return
 		}
 		controlMessagesWebsockets = append(controlMessagesWebsockets, conn)
+		//NOTE: if there's a write error, and its deleted, what happens? grtine leak?
+		go func() {
+			for {
+				msg, err := conn.Read()
+				if err != nil {
+					slog.Error("failed to read from websocket", "err", err.Error())
+					return
+				}
+				handleClientMessage(msg, controlMessages)
+			}
+		}()
 	})
 
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
@@ -84,9 +96,15 @@ func startControlServer(controlMessages *ControlChannel) {
 					Data: msg,
 				})
 				if err != nil {
-					ws.Close() // close the conn, but it might be already closed
+					slog.Error("failed to write to websocket", "ws", ws, "err", err.Error())
+					// FIXME: a working connection might "fail to write" but its not even closed yet and can be perfectly used?! also the
+					// code works even if i delete the websocket from the slice on this error condition, and the ws is still perfectly usable
+					// somehow for writing again and syncs to the clietn
+					//
+					// i dont understand :( :(  :(
+					// ws.Close() // close the conn, but it might be already closed
 					// do NOT use slices.Delete here. it will cause a nil panic because of the clearing in slices.Delete
-					newLiveRequestWebsockets = append(controlMessagesWebsockets[:i], controlMessagesWebsockets[i+1:]...)
+					// newLiveRequestWebsockets = append(controlMessagesWebsockets[:i], controlMessagesWebsockets[i+1:]...)
 				}
 			}
 			controlMessagesWebsockets = newLiveRequestWebsockets // update the slice so it doesn't grow indefinitely or mess with the range loop
@@ -104,4 +122,55 @@ func setCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Request-Method", "POST, GET, OPTIONS")
 	w.Header().Set("Access-Control-Max-Age", "300")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func handleClientMessage(msg *websocket.Message, controlMessages *ControlChannel) {
+	if msg.Type != websocket.MessageText {
+		slog.Error("invalid message type", "type", msg.Type)
+		return
+	}
+	sData := strings.Split(string(msg.Data), " ")
+	if len(sData) < 2 {
+		slog.Error("invalid control message", "data", string(msg.Data))
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(strings.Join(sData[1:], " ")), &data); err != nil {
+		slog.Error("failed to unmarshal control message", "data", string(msg.Data), "err", err.Error())
+		return
+	}
+	switch sData[0] {
+	case "WAIT-APPROVAL-APPROVE":
+		if len(sData) < 2 {
+			slog.Error("invalid control message", "data", string(msg.Data))
+			return
+		}
+		id, ok := data["id"].(string)
+		if !ok {
+			slog.Error("invalid control message", "data", string(msg.Data), "err", "id is not a string")
+			return
+		}
+		controlMessages.mxWaitingApprovalResponse.Lock()
+		if fn, ok := controlMessages.waitingApprovalResponse[id]; ok {
+			slog.Info("approval received for request", "id", id)
+			fn(true)
+		}
+		controlMessages.mxWaitingApprovalResponse.Unlock()
+	case "WAIT-APPROVAL-CANCELED":
+		if len(sData) < 2 {
+			slog.Error("invalid control message", "data", string(msg.Data))
+			return
+		}
+		id, ok := data["id"].(string)
+		if !ok {
+			slog.Error("invalid control message", "data", string(msg.Data), "err", "id is not a string")
+			return
+		}
+		controlMessages.mxWaitingApprovalResponse.Lock()
+		if fn, ok := controlMessages.waitingApprovalResponse[id]; ok {
+			slog.Info("cancel received for request", "id", id)
+			fn(false)
+		}
+		controlMessages.mxWaitingApprovalResponse.Unlock()
+
+	}
 }

@@ -54,7 +54,13 @@ export interface Request {
         body?: string;
     };
 
-    state: "Processing" | "Canceled" | "Done" | "Error";
+    state:
+        | "Processing"
+        | "Waiting Approval"
+        | "Approval Timeout"
+        | "Canceled"
+        | "Done"
+        | "Error";
     error?: string;
 }
 

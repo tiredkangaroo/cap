@@ -8,7 +8,8 @@ import (
 
 func main() {
 	controlMessages := &ControlChannel{
-		u: make(chan []byte, 8),
+		u:                       make(chan []byte, 8),
+		waitingApprovalResponse: make(map[string]func(approved bool), 8),
 	}
 
 	go startControlServer(controlMessages)

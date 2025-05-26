@@ -19,6 +19,7 @@ export class Proxy {
             provide_request_body: false,
             provide_response_body: false,
             perform_delay: 0,
+            require_approval: false,
         };
     }
 
@@ -64,6 +65,7 @@ export class Proxy {
         this.ws = ws;
 
         this.ws.onmessage = async (event: MessageEvent) => {
+            console.log("message", event.data);
             const sp = event.data.split(" ");
             // FIXME: there may be a bug where a NEW is recieved multiple times
             switch (sp[0]) {
@@ -78,7 +80,6 @@ export class Proxy {
                         host: data.host,
                         state: "Processing",
                     };
-                    console.log("new", data);
                     if (data.clientAuthorization != "") {
                         const [user, password] = atob(
                             data.clientAuthorization.split(" ")[1],
@@ -191,6 +192,79 @@ export class Proxy {
                     updateCB();
                     break;
                 }
+                case "WAIT-APPROVAL": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.state = "Waiting Approval";
+                    reqs.splice(i, 1, req);
+
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
+                case "WAIT-APPROVAL-APPROVED": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.state = "Processing";
+                    reqs.splice(i, 1, req);
+
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
+                case "WAIT-APPROVAL-TIMEOUT": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.state = "Approval Timeout";
+                    reqs.splice(i, 1, req);
+
+                    console.log("after wat ", req);
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
+                case "CANCELED": {
+                    const rawdata = sp.slice(1).join(" ");
+                    const data = JSON.parse(rawdata);
+
+                    const reqs = this.requests;
+                    const req = reqs.find((v: Request) => v.id == data.id);
+                    if (req == undefined) {
+                        console.error("got info for a request we don't have");
+                        return;
+                    }
+                    const i = reqs.indexOf(req);
+                    req.state = "Canceled";
+                    reqs.splice(i, 1, req);
+
+                    this.requests = reqs;
+                    updateCB();
+                    break;
+                }
                 case "DONE": {
                     const rawdata = sp.slice(1).join(" ");
                     const data = JSON.parse(rawdata);
@@ -232,6 +306,30 @@ export class Proxy {
                     console.log("unknown message", event.data);
             }
         };
+    }
+
+    approveRequest(id: string): void {
+        if (this.ws == null) {
+            console.error("WebSocket is not initialized");
+            return;
+        }
+        this.ws.send(
+            `WAIT-APPROVAL-APPROVE ${JSON.stringify({
+                id: id,
+            })}`,
+        );
+    }
+
+    cancelRequest(id: string): void {
+        if (this.ws == null) {
+            console.error("WebSocket is not initialized");
+            return;
+        }
+        this.ws.send(
+            `WAIT-APPROVAL-CANCELED ${JSON.stringify({
+                id: id,
+            })}`,
+        );
     }
 }
 

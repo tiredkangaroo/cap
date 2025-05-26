@@ -26,6 +26,7 @@ export function IncomingView(props: {
                 {requests.map((request, index) => (
                     <RequestView
                         key={index}
+                        proxy={props.proxy}
                         request={request}
                         requestsViewConfig={props.requestsViewConfig}
                     />

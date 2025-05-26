@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
+)
+
+var (
+	ErrPerformStop = errors.New("perform stopped")
 )
 
 type Request struct {
@@ -54,7 +59,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 }
 
 // Perform performs the request and returns the raw response as a byte slice.
-func (r *Request) Perform() (*http.Response, []byte, error) {
+func (r *Request) Perform(cm *ControlChannel) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
 
 	// toURL is used to convert the host to a valid URL.
@@ -76,7 +81,9 @@ func (r *Request) Perform() (*http.Response, []byte, error) {
 	}
 
 	if config.DefaultConfig.RequireApproval {
-
+		if !cm.waitApproval(r) {
+			return nil, nil, ErrPerformStop
+		}
 	}
 	if config.DefaultConfig.PerformDelay != 0 {
 		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)

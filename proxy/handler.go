@@ -41,7 +41,7 @@ func (r *Request) handleHTTP(controlMessages *ControlChannel) error {
 	controlMessages.sendControlHTTPRequest(r)
 
 	// perform the request
-	resp, raw, err := r.Perform()
+	resp, raw, err := r.Perform(controlMessages)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -91,7 +91,7 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages *Cont
 	r.req = finalReq
 	controlMessages.sendControlHTTPSMITMRequest(r)
 
-	resp, raw, err := r.Perform()
+	resp, raw, err := r.Perform(controlMessages)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}

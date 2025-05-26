@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -42,6 +43,10 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// we're handling an HTTP connection here
 		err = req.handleHTTP(c.controlMessages)
+	}
+
+	if errors.Is(err, ErrPerformStop) { // ignore PerformStop errors and don't send a control message
+		return
 	}
 
 	if err != nil {
