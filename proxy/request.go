@@ -61,7 +61,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 }
 
 // Perform performs the request and returns the raw response as a byte slice.
-func (r *Request) Perform(cm *ControlChannel) (*http.Response, []byte, error) {
+func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
 
 	// toURL is used to convert the host to a valid URL.
@@ -83,7 +83,7 @@ func (r *Request) Perform(cm *ControlChannel) (*http.Response, []byte, error) {
 	}
 
 	if config.DefaultConfig.RequireApproval {
-		if !cm.waitApproval(r) {
+		if !m.RecieveApproval(r) {
 			return nil, nil, ErrPerformStop
 		}
 	}

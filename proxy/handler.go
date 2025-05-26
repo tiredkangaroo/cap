@@ -37,17 +37,17 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func (r *Request) handleHTTP(controlMessages *ControlChannel) error {
-	controlMessages.sendControlHTTPRequest(r)
+func (r *Request) handleHTTP(m *Manager) error {
+	m.SendRequest(r)
 
 	// perform the request
-	resp, raw, err := r.Perform(controlMessages)
+	resp, raw, err := r.Perform(m)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
 	r.resp = resp
 
-	controlMessages.sendControlHTTPResponse(r)
+	m.SendResponse(r)
 
 	if _, err = r.conn.Write(raw); err != nil {
 		return fmt.Errorf("connection write: %w", err)
@@ -64,7 +64,7 @@ func (r *Request) handleHTTP(controlMessages *ControlChannel) error {
 // (3) The proxy reads the actual request from the client that it meant to send the host.
 // (4) The proxy performs the request to the real host.
 // (5) The proxy sends the response back to the client.
-func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages *ControlChannel) error {
+func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
 	_, err := r.conn.Write(ResponseRawSuccess)
 	if err != nil {
@@ -72,7 +72,7 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages *Cont
 	}
 
 	if !config.DefaultConfig.MITM {
-		return r.handleNoMITM(controlMessages)
+		return r.handleNoMITM()
 	}
 
 	// after the success response, a handshake will occur and the user will
@@ -89,15 +89,16 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages *Cont
 		return fmt.Errorf("read mitm request: %w", err)
 	}
 	r.req = finalReq
-	controlMessages.sendControlHTTPSMITMRequest(r)
 
-	resp, raw, err := r.Perform(controlMessages)
+	m.SendRequest(r)
+
+	resp, raw, err := r.Perform(m)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
 	r.resp = resp
 
-	controlMessages.sendControlHTTPSMITMResponse(r)
+	m.SendResponse(r)
 
 	if _, err := tlsconn.Write(raw); err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
@@ -107,9 +108,7 @@ func (r *Request) handleHTTPS(c *certificate.Certificates, controlMessages *Cont
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
-func (r *Request) handleNoMITM(controlMessages *ControlChannel) error {
-	controlMessages.sendControlHTTPSTunnelRequest(r)
-
+func (r *Request) handleNoMITM() error {
 	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
 		return fmt.Errorf("non-MITM dial host: %w", err)
