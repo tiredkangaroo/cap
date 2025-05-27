@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/tiredkangaroo/websocket"
@@ -135,6 +139,8 @@ func (c *Manager) HandleMessage(msg *websocket.Message) {
 		c.handleApprovalApprove(data)
 	case "APPROVAL-CANCEL":
 		c.handleApprovalCancel(data)
+	case "UPDATE-REQUEST":
+		c.handleUpdateRequest(data)
 	}
 }
 
@@ -154,6 +160,47 @@ func (c *Manager) handleApprovalCancel(data []byte) {
 		return
 	}
 	req.approveResponseFunc(false)
+}
+
+func (c *Manager) handleUpdateRequest(data []byte) {
+	fmt.Println("166", string(data))
+	type updatedMessageType struct {
+		IDMessage
+		Request struct {
+			Body    string      `json:"body"`
+			Headers http.Header `json:"headers"`
+			Host    string      `json:"host"`
+			Method  string      `json:"method"`
+			Path    string      `json:"path"`
+			Query   url.Values  `json:"query"`
+		} `json:"request"`
+	}
+	updatedMessage, err := expectJSON[updatedMessageType](data)
+	fmt.Println("177", updatedMessage)
+	if err != nil {
+		// handle error: invalid message format
+		return
+	}
+
+	c.approvalWaitersRWMu.RLock()
+	defer c.approvalWaitersRWMu.RUnlock()
+	req, ok := c.approvalWaiters[updatedMessage.ID]
+	if !ok {
+		// handle error: request not found
+		return
+	}
+	if req.req.Body != nil {
+		req.req.Body.Close() // close the old body if it exists
+	}
+
+	req.req.Body = io.NopCloser(strings.NewReader(updatedMessage.Request.Body))
+	req.req.Header = updatedMessage.Request.Headers
+	req.req.Host = updatedMessage.Request.Host
+	req.req.Method = updatedMessage.Request.Method
+	req.req.URL.Path = updatedMessage.Request.Path
+	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
+
+	fmt.Println(req.req)
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

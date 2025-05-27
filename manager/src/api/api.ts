@@ -99,6 +99,7 @@ export class Proxy {
         req.response = newrequest.response;
 
         this.clientWS.updateRequest(newrequest);
+        this.requests[reqIndex] = req;
         this.updateCB!();
     }
 }

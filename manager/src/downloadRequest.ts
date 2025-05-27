@@ -8,11 +8,11 @@ export function downloadRequest(request: Request): void {
 
 export function downloadBody(
     id: string,
-    body: string | undefined,
+    body: string | null,
     contentTypeHeader: string | undefined,
 ): void {
-    if (body == undefined) {
-        console.error("request body is undefined, cannot download");
+    if (body == null) {
+        console.error("request body is null, cannot download");
         return;
     }
     let type = "text/plain";

@@ -6,7 +6,7 @@ import {
 import { Request, RequestsViewConfig } from "./types";
 import { downloadBody, downloadRequest } from "./downloadRequest";
 import { useState } from "react";
-import { Proxy } from "./api";
+import { Proxy } from "./api/api";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -59,20 +59,12 @@ export function RequestView(props: {
                     >
                         Download
                     </button>
-                    <button
-                        className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2 disabled:bg-gray-500 disabled:cursor-not-allowed!"
-                        disabled={props.request.state !== "Waiting Approval"}
-                        onClick={() => {
-                            if (editMode) {
-                                // pressed save
-                                props.proxy.updateRequest(props.request);
-                                props.setRequest(props.request);
-                            }
-                            setEditMode(!editMode);
-                        }}
-                    >
-                        {editMode ? "Save" : "Edit"}
-                    </button>
+                    <EditButton
+                        proxy={props.proxy}
+                        request={props.request}
+                        editMode={editMode}
+                        setEditMode={setEditMode}
+                    />
                 </div>
                 <div className="ml-2 pt-2 pb-1">
                     {props.request.error != undefined &&
@@ -88,6 +80,8 @@ export function RequestView(props: {
                         name="ID"
                         value={props.request.id}
                         hide={props.requestsViewConfig.hideID}
+                        editMode={editMode}
+                        disableEdits={true}
                     />
                     <p>
                         <b>Request: </b>
@@ -97,6 +91,7 @@ export function RequestView(props: {
                             name="Client Username"
                             value={props.request.clientAuthorizationUser}
                             hide={props.requestsViewConfig.hideClientUser}
+                            editMode={editMode}
                         />
                         <ShowHideFieldView
                             name="Client Password"
@@ -104,26 +99,43 @@ export function RequestView(props: {
                             hiddenValue="********"
                             defaultShow={false}
                             hide={props.requestsViewConfig.hideClientPassword}
+                            editMode={editMode}
                         />
                         <FieldView
                             name="Method"
                             value={props.request.method}
                             hide={props.requestsViewConfig.hideMethod}
+                            editMode={editMode}
+                            setValue={(v) => {
+                                props.setRequest({
+                                    ...props.request,
+                                    method: v,
+                                });
+                            }}
                         />
                         <FieldView
                             name="Path"
                             value={props.request.path}
                             hide={props.requestsViewConfig.hidePath}
+                            editMode={editMode}
+                            setValue={(v) => {
+                                props.setRequest({
+                                    ...props.request,
+                                    path: v,
+                                });
+                            }}
                         />
                         <FieldView
                             name="Query"
                             value={props.request.query}
                             hide={props.requestsViewConfig.hideQuery}
+                            editMode={editMode}
                         />
                         <FieldView
                             name="Headers"
                             value={props.request.headers}
                             hide={props.requestsViewConfig.hideRequestHeaders}
+                            editMode={editMode}
                         />
                         {props.requestsViewConfig.hideRequestBody ? (
                             <></>
@@ -146,6 +158,7 @@ export function RequestView(props: {
                         <BodyView
                             value={props.request.body}
                             hide={props.requestsViewConfig.hideRequestBody}
+                            editMode={editMode}
                         />
                     </div>
                     <p>
@@ -156,11 +169,13 @@ export function RequestView(props: {
                             name="Status"
                             value={props.request.response?.statusCode}
                             hide={props.requestsViewConfig.hideResponseStatus}
+                            editMode={editMode}
                         />
                         <FieldView
                             name="Headers"
                             value={props.request.response?.headers}
                             hide={props.requestsViewConfig.hideResponseHeaders}
+                            editMode={editMode}
                         />
                         {props.requestsViewConfig.hideResponseBody ? (
                             <></>
@@ -183,6 +198,7 @@ export function RequestView(props: {
                         <BodyView
                             value={props.request.response?.body}
                             hide={props.requestsViewConfig.hideResponseBody}
+                            editMode={editMode}
                         />
                     </div>
                 </div>
@@ -191,28 +207,37 @@ export function RequestView(props: {
     );
 }
 
-function ValueView(props: {
+function ValueView<
+    T extends number | string | Record<string, Array<string>> | undefined,
+>(props: {
     name: string;
-    value: number | string | Record<string, Array<string>> | undefined;
-    italic?: boolean;
+    value: T;
+    setValue?: (v: T) => void;
+    editMode: boolean;
+    disableEdits?: boolean;
 }) {
+    if (
+        ((props.editMode && typeof props.value === "string") ||
+            typeof props.value === "number") &&
+        !props.disableEdits
+    ) {
+        return (
+            <input
+                type={typeof props.value === "number" ? "number" : "text"}
+                className="bg-gray-200 text-black w-full pl-2"
+                defaultValue={props.value}
+                onBlur={(e) => {
+                    const v = e.target.value as T;
+                    props.setValue!(v);
+                }}
+            />
+        );
+    }
     if (props.value == undefined || props.value == "") {
         return <i>none or unavailable</i>;
     }
     if (typeof props.value === "string" || typeof props.value === "number") {
-        if (props.name.startsWith("Body")) {
-            if (props.italic === true) {
-                return <i>{props.value}</i>;
-            } else {
-                return <p className="text-sm">{props.value}</p>;
-            }
-        } else {
-            if (props.italic === true) {
-                return <i>{props.value}</i>;
-            } else {
-                return <>{props.value}</>;
-            }
-        }
+        return <>{props.value}</>;
     }
     return (
         <>
@@ -222,7 +247,6 @@ function ValueView(props: {
                         <p key={i}>
                             <b>{v[0]}</b>: {x}
                         </p>
-                        // <span className="underline">{v[1].join(", ")}</span>
                     ))}
                 </div>
             ))}
@@ -267,11 +291,43 @@ function StateView(props: { proxy: Proxy; id: string; state: string }) {
     );
 }
 
-function FieldView(props: {
+function EditButton(props: {
+    proxy: Proxy;
+    request: Request;
+    editMode: boolean;
+    setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+    if (props.request.state !== "Waiting Approval") {
+        return <></>;
+    }
+    return (
+        <button
+            className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
+            onClick={() => {
+                if (props.editMode) {
+                    // pressed save
+                    console.log("pre", props.request);
+                    props.setEditMode(false);
+                    props.proxy.updateRequest(props.request);
+                } else {
+                    props.setEditMode(true);
+                }
+            }}
+        >
+            {props.editMode ? "Save" : "Edit"}
+        </button>
+    );
+}
+
+function FieldView<
+    T extends string | number | Record<string, string[]> | undefined,
+>(props: {
+    disableEdits?: boolean;
+    editMode: boolean;
     hide: boolean;
     name: string;
-    value: number | string | Record<string, Array<string>> | undefined;
-    italic?: boolean;
+    value: T;
+    setValue?: (v: T) => void;
 }) {
     if (props.hide) {
         return <></>;
@@ -283,7 +339,9 @@ function FieldView(props: {
                 <ValueView
                     name={props.name}
                     value={props.value}
-                    italic={props.italic}
+                    editMode={props.editMode}
+                    disableEdits={props.disableEdits}
+                    setValue={props.setValue}
                 />
             </div>
         </div>
@@ -296,6 +354,7 @@ function ShowHideFieldView(props: {
     value: string | undefined;
     hiddenValue: string;
     defaultShow: boolean;
+    editMode: boolean;
 }) {
     const [show, setShow] = useState(props.defaultShow);
     if (props.hide) {
@@ -315,7 +374,7 @@ function ShowHideFieldView(props: {
                     <ValueView
                         name={props.name}
                         value={props.value}
-                        italic={false}
+                        editMode={props.editMode}
                     />
                 ) : (
                     <i>{props.hiddenValue}</i>
@@ -325,7 +384,11 @@ function ShowHideFieldView(props: {
     );
 }
 
-function BodyView(props: { value: string | undefined; hide: boolean }) {
+function BodyView(props: {
+    value: string | null | undefined;
+    hide: boolean;
+    editMode: boolean;
+}) {
     const [show, setShow] = useState(false);
     if (props.hide) {
         return <></>;

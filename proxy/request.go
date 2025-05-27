@@ -119,7 +119,7 @@ func (r *Request) body() []byte {
 		}
 		r.req.Body = io.NopCloser(bytes.NewBuffer(bodyData)) // make sure the body can be read again
 	} else {
-		bodyData = []byte("body will not be provided under configuration rules")
+		bodyData = nil
 	}
 	return bodyData
 }
@@ -146,7 +146,7 @@ func (r *Request) respbody() []byte {
 		}
 		r.resp.Body = io.NopCloser(bytes.NewBuffer(bodyData)) // make sure the body can be read again
 	} else {
-		bodyData = []byte("body will not be provided under configuration rules")
+		bodyData = nil
 	}
 	return bodyData
 }
