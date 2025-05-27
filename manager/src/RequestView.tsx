@@ -1,12 +1,15 @@
+import { downloadBody, downloadRequest } from "./downloadRequest";
+import { Request, RequestsViewConfig } from "./types";
+import { Proxy } from "./api/api";
+
 import {
     Collapsible,
     CollapsibleTrigger,
     CollapsibleContent,
 } from "./components/ui/collapsible";
-import { Request, RequestsViewConfig } from "./types";
-import { downloadBody, downloadRequest } from "./downloadRequest";
+
 import { useState } from "react";
-import { Proxy } from "./api/api";
+import { FaRegTrashCan } from "react-icons/fa6";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -231,6 +234,42 @@ function ValueView<
                     props.setValue!(v);
                 }}
             />
+        );
+    }
+    if (
+        props.editMode &&
+        !props.disableEdits &&
+        typeof props.value == "object"
+    ) {
+        // object in editing mode
+        return (
+            <>
+                {Object.entries(props.value!).map((v) => (
+                    <div key={v[0]} className="text-sm">
+                        {v[1].map((x, i) => (
+                            <p key={i}>
+                                <b>{v[0]}</b>: {x}
+                            </p>
+                        ))}
+                        <button
+                            onClick={() => {
+                                const newValue = {
+                                    ...(props.value as Record<
+                                        string,
+                                        Array<string>
+                                    >),
+                                };
+                                if (newValue[v[0]]) {
+                                    delete newValue[v[0]];
+                                }
+                                props.setValue!(newValue as T);
+                            }}
+                        >
+                            <FaRegTrashCan />
+                        </button>
+                    </div>
+                ))}
+            </>
         );
     }
     if (props.value == undefined || props.value == "") {
