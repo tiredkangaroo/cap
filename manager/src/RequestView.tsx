@@ -8,7 +8,7 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 
 const stateColors: Record<string, string> = {
@@ -48,6 +48,7 @@ export function RequestView(props: {
                         proxy={props.proxy}
                         id={props.request.id}
                         state={props.request.state}
+                        setEditMode={setEditMode}
                     />
                     {/* <p className="flex-1 ml-1 mr-1">{props.request.clientIP}</p> */}
                 </div>
@@ -133,12 +134,24 @@ export function RequestView(props: {
                             value={props.request.query}
                             hide={props.requestsViewConfig.hideQuery}
                             editMode={editMode}
+                            setValue={(v) =>
+                                props.setRequest({
+                                    ...props.request,
+                                    query: v,
+                                })
+                            }
                         />
                         <FieldView
                             name="Headers"
                             value={props.request.headers}
                             hide={props.requestsViewConfig.hideRequestHeaders}
                             editMode={editMode}
+                            setValue={(v) => {
+                                props.setRequest({
+                                    ...props.request,
+                                    headers: v,
+                                });
+                            }}
                         />
                         {props.requestsViewConfig.hideRequestBody ? (
                             <></>
@@ -219,6 +232,12 @@ function ValueView<
     editMode: boolean;
     disableEdits?: boolean;
 }) {
+    const objectKeyRef = useRef<HTMLInputElement | null>(null);
+    const objectValueRef = useRef<HTMLInputElement | null>(null);
+
+    // function MapValueView() {
+    //     if (props.editMode && )
+    // }
     if (
         ((props.editMode && typeof props.value === "string") ||
             typeof props.value === "number") &&
@@ -246,29 +265,70 @@ function ValueView<
             <>
                 {Object.entries(props.value!).map((v) => (
                     <div key={v[0]} className="text-sm">
-                        {v[1].map((x, i) => (
-                            <p key={i}>
-                                <b>{v[0]}</b>: {x}
-                            </p>
-                        ))}
-                        <button
-                            onClick={() => {
-                                const newValue = {
-                                    ...(props.value as Record<
-                                        string,
-                                        Array<string>
-                                    >),
-                                };
-                                if (newValue[v[0]]) {
-                                    delete newValue[v[0]];
-                                }
-                                props.setValue!(newValue as T);
-                            }}
-                        >
-                            <FaRegTrashCan />
-                        </button>
+                        <div className="flex flex-row gap-3">
+                            {v[1].map((x, i) => (
+                                <p key={i}>
+                                    <b>{v[0]}</b>: {x}
+                                </p>
+                            ))}
+
+                            <button
+                                onClick={() => {
+                                    const newValue = {
+                                        ...(props.value as Record<
+                                            string,
+                                            Array<string>
+                                        >),
+                                    };
+                                    if (newValue[v[0]]) {
+                                        delete newValue[v[0]];
+                                    }
+                                    props.setValue!(newValue as T);
+                                }}
+                            >
+                                <FaRegTrashCan />
+                            </button>
+                        </div>
+                        {/* NOTE: add multiple values for a header */}
                     </div>
                 ))}
+                <div className="flex flex-row gap-3 text-sm max-h-fit items-center">
+                    <input
+                        type="text"
+                        placeholder="Key"
+                        ref={objectKeyRef}
+                        className="pt-1 pb-1 pl-2 mt-2 border-2 border-black rounded-2xl text-sm w-[40%]"
+                    ></input>
+                    <input
+                        type="text"
+                        placeholder="Value"
+                        ref={objectValueRef}
+                        className="pt-1 pb-1 pl-2 mt-2 border-2 border-black rounded-2xl text-sm w-[40%]"
+                    ></input>
+                    <button
+                        className="pl-2 pr-2 bg-black aspect-square text-white mt-auto"
+                        onClick={() => {
+                            const newValue = {
+                                ...(props.value as Record<
+                                    string,
+                                    Array<string>
+                                >),
+                            };
+                            const key = objectKeyRef.current!.value;
+                            const val = objectValueRef.current!.value;
+                            if (newValue[key] != undefined) {
+                                const v = newValue[key];
+                                v.push(val);
+                                newValue[key] = v;
+                            } else {
+                                newValue[key] = [val];
+                            }
+                            props.setValue!(newValue as T);
+                        }}
+                    >
+                        +
+                    </button>
+                </div>
             </>
         );
     }
@@ -293,7 +353,12 @@ function ValueView<
     );
 }
 
-function StateView(props: { proxy: Proxy; id: string; state: string }) {
+function StateView(props: {
+    proxy: Proxy;
+    id: string;
+    state: string;
+    setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
     if (props.state == "Waiting Approval") {
         return (
             <div className="flex-1 flex flex-row">
@@ -301,6 +366,7 @@ function StateView(props: { proxy: Proxy; id: string; state: string }) {
                     className="bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
                     onClick={(e) => {
                         e.stopPropagation();
+                        props.setEditMode(false);
                         props.proxy.approveRequest(props.id);
                     }}
                 >
