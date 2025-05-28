@@ -1,4 +1,4 @@
-import { Proxy } from "./api";
+import { Proxy } from "../api/api";
 import { IoClose } from "react-icons/io5";
 import { ProxySettingsView } from "./ProxySettings";
 import {
@@ -7,7 +7,7 @@ import {
     TabsList,
     TabsTrigger,
 } from "../components/ui/tabs";
-import { RequestsViewConfig } from "./types";
+import { RequestsViewConfig } from "../types";
 import { ViewSettings } from "./ViewSettings";
 
 export function SettingsDialog(props: {

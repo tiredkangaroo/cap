@@ -186,6 +186,7 @@ export function RequestView(props: {
                             value={props.request.response?.statusCode}
                             hide={props.requestsViewConfig.hideResponseStatus}
                             editMode={editMode}
+                            disableEdits={true}
                         />
                         <FieldView
                             name="Headers"
@@ -324,6 +325,8 @@ function ValueView<
                                 newValue[key] = [val];
                             }
                             props.setValue!(newValue as T);
+                            objectKeyRef.current!.value = "";
+                            objectValueRef.current!.value = "";
                         }}
                     >
                         +

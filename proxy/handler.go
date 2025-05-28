@@ -72,7 +72,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 
 	if !config.DefaultConfig.MITM {
-		return r.handleNoMITM()
+		return r.handleNoMITM(m)
 	}
 
 	// after the success response, a handshake will occur and the user will
@@ -108,7 +108,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
-func (r *Request) handleNoMITM() error {
+func (r *Request) handleNoMITM(m *Manager) error {
 	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
 		return fmt.Errorf("non-MITM dial host: %w", err)
@@ -117,6 +117,7 @@ func (r *Request) handleNoMITM() error {
 	// me gusta context :)
 	ctx, cancel := context.WithCancel(context.Background())
 
+	m.SendTunnel(r)
 	go func() {
 		defer cancel()
 		_, err = io.Copy(hconn, r.conn)
@@ -134,6 +135,8 @@ func (r *Request) handleNoMITM() error {
 	}()
 
 	<-ctx.Done()
+	m.SendDone(r)
+
 	return nil
 }
 

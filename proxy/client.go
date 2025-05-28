@@ -58,6 +58,12 @@ func (c *Manager) SendNew(req *Request) {
 	})
 }
 
+func (c *Manager) SendTunnel(req *Request) {
+	c.writeJSON("TUNNEL", IDMessage{
+		ID: req.id,
+	})
+}
+
 func (c *Manager) SendRequest(req *Request) {
 	c.writeJSON("REQUEST", map[string]any{
 		"id":      req.id,

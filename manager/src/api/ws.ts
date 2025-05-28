@@ -29,7 +29,33 @@ export class ClientWS {
         switch (action) {
             case "NEW": {
                 const data = rawdata as Request;
-                requests.push(data);
+                // Check if the request already exists
+                const existingIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (existingIndex !== -1) {
+                    // Update the existing request
+                    requests[existingIndex] = data;
+                    console.warn(
+                        `Request with ID ${data.id} already exists, updating it.`,
+                    );
+                } else {
+                    requests.push(data);
+                }
+                break;
+            }
+            case "TUNNEL": {
+                const data = rawdata as IDMessage;
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Processing";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
                 break;
             }
             case "REQUEST": {
@@ -74,7 +100,6 @@ export class ClientWS {
                         headers: data.headers,
                         body: data.body,
                     };
-                    request.state = "Done";
                     requests[requestIndex] = request;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
@@ -132,6 +157,20 @@ export class ClientWS {
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
                     request.state = "Canceled";
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "DONE": {
+                const data = rawdata as { id: string };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = "Done";
                     requests[requestIndex] = request;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
