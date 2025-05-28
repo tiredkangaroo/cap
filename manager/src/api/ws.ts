@@ -33,6 +33,10 @@ export class ClientWS {
                 const existingIndex = requests.findIndex(
                     (r) => r.id === data.id,
                 );
+                [
+                    data.clientAuthorizationUser,
+                    data.clientAuthorizationPassword,
+                ] = clientAuthorizationToUserPass(data.clientAuthorization);
                 if (existingIndex !== -1) {
                     // Update the existing request
                     requests[existingIndex] = data;
@@ -42,6 +46,7 @@ export class ClientWS {
                 } else {
                     requests.push(data);
                 }
+
                 break;
             }
             case "TUNNEL": {
@@ -217,4 +222,16 @@ export class ClientWS {
         };
         this.ws.send(`UPDATE-REQUEST ${JSON.stringify(data)}`);
     }
+}
+
+function clientAuthorizationToUserPass(
+    authorization: string,
+): [string, string] {
+    if (!authorization.startsWith("Basic ")) {
+        return ["", ""];
+    }
+    const base64 = authorization.slice(6); // Remove "Basic " prefix
+    const decoded = atob(base64);
+    const [user, password] = decoded.split(":");
+    return [user, password];
 }

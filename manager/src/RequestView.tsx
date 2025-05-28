@@ -466,20 +466,28 @@ function ShowHideFieldView(props: {
     editMode: boolean;
 }) {
     const [show, setShow] = useState(props.defaultShow);
+
+    const isValueEmpty = props.value === undefined || props.value.trim() === "";
+
     if (props.hide) {
         return <></>;
     }
+
     return (
         <div className="mb-2 text-lg flex flex-row w-full">
             <b className="flex-1">{props.name}</b>
             <div className="flex-1 text-start">
-                <button
-                    className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
-                    onClick={() => setShow(!show)}
-                >
-                    {show ? "Hide" : "Show"}
-                </button>
-                {show ? (
+                {!isValueEmpty && (
+                    <button
+                        className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
+                        onClick={() => setShow(!show)}
+                    >
+                        {show ? "Hide" : "Show"}
+                    </button>
+                )}
+                {isValueEmpty ? (
+                    <i>none or unavailable</i>
+                ) : show ? (
                     <ValueView
                         name={props.name}
                         value={props.value}
@@ -508,7 +516,9 @@ function BodyView(props: {
                 <b className="ml-2 flex-1">
                     Body (
                     {props.value !=
-                    "body will not be provided under configuration rules"
+                        "body will not be provided under configuration rules" &&
+                    props.value != null &&
+                    props.value != undefined
                         ? props.value?.length
                         : 0}{" "}
                     bytes)

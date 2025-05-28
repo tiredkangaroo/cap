@@ -38,6 +38,7 @@ export interface Request {
     datetime: string;
     secure: boolean;
     clientIP: string;
+    clientAuthorization: string;
     clientAuthorizationUser?: string;
     clientAuthorizationPassword?: string;
     host: string;
