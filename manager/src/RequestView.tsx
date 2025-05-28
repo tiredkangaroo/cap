@@ -224,55 +224,27 @@ export function RequestView(props: {
     );
 }
 
-function ValueView<
-    T extends number | string | Record<string, Array<string>> | undefined,
->(props: {
-    name: string;
-    value: T;
-    setValue?: (v: T) => void;
+function MapView(props: {
     editMode: boolean;
     disableEdits?: boolean;
+    value: Record<string, Array<string>>;
+    setValue: (v: Record<string, Array<string>>) => void;
 }) {
     const objectKeyRef = useRef<HTMLInputElement | null>(null);
     const objectValueRef = useRef<HTMLInputElement | null>(null);
 
-    // function MapValueView() {
-    //     if (props.editMode && )
-    // }
-    if (
-        ((props.editMode && typeof props.value === "string") ||
-            typeof props.value === "number") &&
-        !props.disableEdits
-    ) {
-        return (
-            <input
-                type={typeof props.value === "number" ? "number" : "text"}
-                className="bg-gray-200 text-black w-full pl-2"
-                defaultValue={props.value}
-                onBlur={(e) => {
-                    const v = e.target.value as T;
-                    props.setValue!(v);
-                }}
-            />
-        );
-    }
-    if (
-        props.editMode &&
-        !props.disableEdits &&
-        typeof props.value == "object"
-    ) {
-        // object in editing mode
-        return (
-            <>
-                {Object.entries(props.value!).map((v) => (
-                    <div key={v[0]} className="text-sm">
-                        <div className="flex flex-row gap-3">
-                            {v[1].map((x, i) => (
-                                <p key={i}>
-                                    <b>{v[0]}</b>: {x}
-                                </p>
-                            ))}
+    return (
+        <>
+            {Object.keys(props.value!).length !== 0 ? (
+                Object.entries(props.value!).map((v) => (
+                    <div key={v[0]} className="flex flex-row gap-3 text-sm">
+                        {v[1].map((x, i) => (
+                            <p key={i}>
+                                <b>{v[0]}</b>: {x}
+                            </p>
+                        ))}
 
+                        {props.editMode && !props.disableEdits ? (
                             <button
                                 onClick={() => {
                                     const newValue = {
@@ -284,16 +256,21 @@ function ValueView<
                                     if (newValue[v[0]]) {
                                         delete newValue[v[0]];
                                     }
-                                    props.setValue!(newValue as T);
+                                    props.setValue!(newValue);
                                 }}
                             >
                                 <FaRegTrashCan />
                             </button>
-                        </div>
-                        {/* NOTE: add multiple values for a header */}
+                        ) : (
+                            <></>
+                        )}
                     </div>
-                ))}
-                <div className="flex flex-row gap-3 text-sm max-h-fit items-center">
+                ))
+            ) : (
+                <i className="text-sm">none or unavailable</i>
+            )}
+            {props.editMode && !props.disableEdits ? (
+                <div className="flex flex-row gap-3 text-sm max-h-fit items-center mb-4">
                     <input
                         type="text"
                         placeholder="Key"
@@ -324,7 +301,7 @@ function ValueView<
                             } else {
                                 newValue[key] = [val];
                             }
-                            props.setValue!(newValue as T);
+                            props.setValue!(newValue);
                             objectKeyRef.current!.value = "";
                             objectValueRef.current!.value = "";
                         }}
@@ -332,28 +309,52 @@ function ValueView<
                         +
                     </button>
                 </div>
-            </>
-        );
-    }
-    if (props.value == undefined || props.value == "") {
-        return <i>none or unavailable</i>;
-    }
-    if (typeof props.value === "string" || typeof props.value === "number") {
-        return <>{props.value}</>;
-    }
-    return (
-        <>
-            {Object.entries(props.value!).map((v) => (
-                <div key={v[0]} className="text-sm">
-                    {v[1].map((x, i) => (
-                        <p key={i}>
-                            <b>{v[0]}</b>: {x}
-                        </p>
-                    ))}
-                </div>
-            ))}
+            ) : (
+                <></>
+            )}
         </>
     );
+}
+
+function ValueView<
+    T extends number | string | Record<string, Array<string>> | undefined,
+>(props: {
+    name: string;
+    value: T;
+    setValue?: (v: T) => void;
+    editMode: boolean;
+    disableEdits?: boolean;
+}) {
+    if (props.value == undefined || props.value === "") {
+        return <i>none or unavailable</i>;
+    }
+    if (typeof props.value === "object") {
+        return (
+            <MapView
+                editMode={props.editMode}
+                disableEdits={props.disableEdits}
+                value={props.value as Record<string, Array<string>>}
+                setValue={
+                    props.setValue as (v: Record<string, Array<string>>) => void
+                }
+            />
+        );
+    }
+    if (props.editMode && !props.disableEdits) {
+        return (
+            <input
+                type={typeof props.value === "number" ? "number" : "text"}
+                className="bg-gray-200 text-black w-full pl-2"
+                defaultValue={props.value}
+                onBlur={(e) => {
+                    const v = e.target.value as T;
+                    props.setValue!(v);
+                }}
+            />
+        );
+    }
+
+    return <>{props.value}</>;
 }
 
 function StateView(props: {

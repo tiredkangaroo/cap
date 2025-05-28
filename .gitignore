@@ -2,3 +2,6 @@ certs
 proxy/tmp
 proxy/proxy-app
 proxy/config.json
+testserver/localhost.crt
+testserver/localhost.key
+testserver/localhost.csr
