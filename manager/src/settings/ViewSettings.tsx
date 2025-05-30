@@ -34,6 +34,30 @@ export function ViewSettings(props: {
                 Hide the ID field.
             </CheckField>
             <CheckField
+                name="Hide Host"
+                defaultChecked={props.requestsViewConfig.hideHost}
+                onChange={(c: boolean) => {
+                    props.setRequestsViewConfig((prev) => ({
+                        ...prev,
+                        hideHost: c,
+                    }));
+                }}
+            >
+                Hide the host field.
+            </CheckField>
+            <CheckField
+                name="Hide Client IP"
+                defaultChecked={props.requestsViewConfig.hideClientIP}
+                onChange={(c: boolean) => {
+                    props.setRequestsViewConfig((prev) => ({
+                        ...prev,
+                        hideClientIP: c,
+                    }));
+                }}
+            >
+                Hide the client IP field.
+            </CheckField>
+            <CheckField
                 name="Hide Client User"
                 defaultChecked={props.requestsViewConfig.hideClientUser}
                 onChange={(c: boolean) => {

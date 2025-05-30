@@ -104,6 +104,13 @@ export function RequestView(props: {
                             }}
                         />
                         <FieldView
+                            name="Client IP"
+                            value={props.request.clientIP}
+                            hide={props.requestsViewConfig.hideClientIP}
+                            editMode={editMode}
+                            disableEdits={true}
+                        />
+                        <FieldView
                             name="Client Username"
                             value={props.request.clientAuthorizationUser}
                             hide={props.requestsViewConfig.hideClientUser}
@@ -188,7 +195,6 @@ export function RequestView(props: {
                             hide={props.requestsViewConfig.hideRequestBody}
                             editMode={editMode}
                             setValue={(v: string) => {
-                                console.log("e");
                                 props.setRequest({
                                     ...props.request,
                                     body: v,
@@ -247,6 +253,13 @@ export function RequestView(props: {
                             }}
                         />
                     </div>
+                    <FieldView
+                        name="Bytes Transferred"
+                        hide={props.requestsViewConfig.hideBytesTransferred}
+                        value={props.request.bytesTransferred}
+                        editMode={editMode}
+                        disableEdits={true}
+                    ></FieldView>
                 </div>
             </CollapsibleContent>
         </Collapsible>

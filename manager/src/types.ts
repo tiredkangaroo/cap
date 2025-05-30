@@ -55,6 +55,8 @@ export interface Request {
         body: string | null;
     };
 
+    bytesTransferred?: number;
+
     state:
         | "Processing"
         | "Waiting Approval"
@@ -80,4 +82,5 @@ export interface RequestsViewConfig {
     hideResponseStatus: boolean;
     hideResponseHeaders: boolean;
     hideResponseBody: boolean;
+    hideBytesTransferred: boolean;
 }

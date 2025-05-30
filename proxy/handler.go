@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"time"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -84,7 +85,8 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 		return fmt.Errorf("tls conn: %w", err)
 	}
 
-	finalReq, err := http.ReadRequest(bufio.NewReader(tlsconn))
+	buf := bufio.NewReader(tlsconn)
+	finalReq, err := http.ReadRequest(buf)
 	if err != nil {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
@@ -100,18 +102,30 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	m.SendResponse(r)
 
-	if _, err := tlsconn.Write(raw); err != nil {
+	_, err = tlsconn.Write(raw)
+	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
 	}
+
 	return nil
 }
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.
 func (r *Request) handleNoMITM(m *Manager) error {
+	// this code will need to be combined because it's the same in Perform and here in tunneling
+	if config.DefaultConfig.PerformDelay != 0 {
+		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)
+	}
+	if config.DefaultConfig.RequireApproval {
+		if !m.RecieveApproval(r) {
+			return ErrPerformStop
+		}
+	}
+
 	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
-		return fmt.Errorf("non-MITM dial host: %w", err)
+		return fmt.Errorf("dial host: %w", err)
 	}
 
 	// me gusta context :)
@@ -120,7 +134,7 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	m.SendTunnel(r)
 	go func() {
 		defer cancel()
-		_, err = io.Copy(hconn, r.conn)
+		_, err := io.Copy(hconn, r.conn)
 		if err != nil {
 			slog.Warn("io.Copy error (conn -> hostconn)", "err", err)
 		}
@@ -128,13 +142,14 @@ func (r *Request) handleNoMITM(m *Manager) error {
 
 	go func() {
 		defer cancel()
-		_, err = io.Copy(r.conn, hconn)
+		_, err := io.Copy(r.conn, hconn)
 		if err != nil {
 			slog.Warn("io.Copy error (hconn -> conn)", "err", err)
 		}
 	}()
 
 	<-ctx.Done()
+
 	m.SendDone(r)
 
 	return nil

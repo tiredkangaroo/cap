@@ -71,7 +71,9 @@ export class ClientWS {
                     query: Record<string, Array<string>>;
                     headers: Record<string, Array<string>>;
                     body: string | null;
+                    bytesTransferred: number;
                 };
+                console.log("76", data);
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
                 );
@@ -82,6 +84,22 @@ export class ClientWS {
                     request.query = data.query;
                     request.headers = data.headers;
                     request.body = data.body;
+                    request.bytesTransferred = data.bytesTransferred;
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
+            case "SET-BYTES-TRANSFERRED": {
+                const data = rawdata as {
+                    id: string;
+                    bytesTransferred: number;
+                };
+                const requestIndex = requests.findIndex((r) => r.id == data.id);
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.bytesTransferred = data.bytesTransferred;
                     requests[requestIndex] = request;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
@@ -169,14 +187,17 @@ export class ClientWS {
                 break;
             }
             case "DONE": {
-                const data = rawdata as { id: string };
+                const data = rawdata as {
+                    id: string;
+                    bytesTransferred: number;
+                };
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
                 );
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
                     request.state = "Done";
-                    requests[requestIndex] = request;
+                    request.bytesTransferred = data.bytesTransferred;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
                 }

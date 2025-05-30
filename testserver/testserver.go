@@ -8,6 +8,14 @@ import (
 	"net/http"
 )
 
+type HackHandler struct{}
+
+func (h HackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// imho bradbury should've developed captain beatty's intentional will to be burned
+	w.WriteHeader(http.StatusUnavailableForLegalReasons)
+	w.Write([]byte("you've been hacked?! mwhaha"))
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -40,6 +48,11 @@ func main() {
 	go func() {
 		if err := http.ListenAndServeTLS(":6201", "localhost.crt", "localhost.key", nil); err != nil {
 			log.Fatalf("https server error: %v", err)
+		}
+	}()
+	go func() {
+		if err := http.ListenAndServe(":6202", new(HackHandler)); err != nil {
+			log.Fatalf("http server error: %v", err)
 		}
 	}()
 	select {} // block forever

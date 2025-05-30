@@ -21,6 +21,7 @@ var (
 )
 
 type Request struct {
+	// NOTE: most if not all of these fields should NOT be private fields
 	id                  string
 	datetime            time.Time
 	host                string
@@ -49,7 +50,9 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("hijack error: %w", err)
 	}
-	r.conn = conn
+	r.conn = &CustomConn{
+		u: conn,
+	}
 
 	r.req = req
 	r.secure = r.req.Method == http.MethodConnect
@@ -102,6 +105,11 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 		return nil, nil, fmt.Errorf("dump server response: %w", err)
 	}
 	return resp, data, nil
+}
+
+func (r *Request) BytesTransferred() int64 {
+	cc := r.conn.(*CustomConn)
+	return cc.BytesTransferred()
 }
 
 // body reads the body of the request and returns it as a byte slice. If the request

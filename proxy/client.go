@@ -66,12 +66,13 @@ func (c *Manager) SendTunnel(req *Request) {
 
 func (c *Manager) SendRequest(req *Request) {
 	c.writeJSON("REQUEST", map[string]any{
-		"id":      req.id,
-		"method":  req.req.Method,
-		"path":    req.req.URL.Path,
-		"query":   req.req.URL.Query(),
-		"headers": req.req.Header,
-		"body":    string(req.body()),
+		"id":               req.id,
+		"method":           req.req.Method,
+		"path":             req.req.URL.Path,
+		"query":            req.req.URL.Query(),
+		"headers":          req.req.Header,
+		"body":             string(req.body()),
+		"bytesTransferred": req.BytesTransferred(),
 	})
 }
 
@@ -85,8 +86,9 @@ func (c *Manager) SendResponse(req *Request) {
 }
 
 func (c *Manager) SendDone(req *Request) {
-	c.writeJSON("DONE", IDMessage{
-		ID: req.id,
+	c.writeJSON("DONE", map[string]any{
+		"id":               req.id,
+		"bytesTransferred": req.BytesTransferred(),
 	})
 }
 
@@ -195,6 +197,7 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		// handle error: request not found
 		return
 	}
+	fmt.Println("200 old", req.req)
 	if req.req.Body != nil {
 		req.req.Body.Close() // close the old body if it exists
 	}
@@ -207,7 +210,7 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 	req.req.URL.Path = updatedMessage.Request.Path
 	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
 
-	fmt.Println(req.req)
+	fmt.Println("213", req.req)
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map
