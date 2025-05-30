@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -10,13 +11,14 @@ import (
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
+		fmt.Println(string(body))
 		data, err := json.Marshal(map[string]any{
 			"proto":  r.Proto,
 			"method": r.Method,
 			"header": r.Header,
 			"path":   r.URL.Path,
 			"query":  r.URL.Query(),
-			"body":   body,
+			"body":   string(body), // haha thought there was an issue in my body in the proxy (gets encoded), but its the test server :/
 		})
 		if err != nil {
 			http.Error(w, "error marshaling JSON", http.StatusInternalServerError)

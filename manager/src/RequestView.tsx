@@ -92,6 +92,18 @@ export function RequestView(props: {
                     </p>
                     <div className="hashi w-full pt-2 pl-5 pr-5">
                         <FieldView
+                            name="Host"
+                            value={props.request.host}
+                            hide={props.requestsViewConfig.hideHost}
+                            editMode={editMode}
+                            setValue={(v: string) => {
+                                props.setRequest({
+                                    ...props.request,
+                                    host: v,
+                                });
+                            }}
+                        />
+                        <FieldView
                             name="Client Username"
                             value={props.request.clientAuthorizationUser}
                             hide={props.requestsViewConfig.hideClientUser}
@@ -175,6 +187,13 @@ export function RequestView(props: {
                             value={props.request.body}
                             hide={props.requestsViewConfig.hideRequestBody}
                             editMode={editMode}
+                            setValue={(v: string) => {
+                                console.log("e");
+                                props.setRequest({
+                                    ...props.request,
+                                    body: v,
+                                });
+                            }}
                         />
                     </div>
                     <p>
@@ -216,6 +235,16 @@ export function RequestView(props: {
                             value={props.request.response?.body}
                             hide={props.requestsViewConfig.hideResponseBody}
                             editMode={editMode}
+                            setValue={(v: string) => {
+                                //NOTE: not implemented
+                                props.setRequest({
+                                    ...props.request,
+                                    response: {
+                                        ...props.request.response!,
+                                        body: v,
+                                    },
+                                });
+                            }}
                         />
                     </div>
                 </div>
@@ -505,40 +534,54 @@ function BodyView(props: {
     value: string | null | undefined;
     hide: boolean;
     editMode: boolean;
+    setValue?: (v: string) => void;
 }) {
-    const [show, setShow] = useState(false);
+    const bodyBytes =
+        props.value != null && props.value != undefined
+            ? props.value.length
+            : 0;
+    const [showBody, setShowBody] = useState<boolean>(
+        bodyBytes == 0 ? true : false,
+    );
+
     if (props.hide) {
         return <></>;
     }
     return (
         <div className="mb-2 text-lg w-full">
             <div className="flex flex-row items-center">
-                <b className="ml-2 flex-1">
-                    Body (
-                    {props.value !=
-                        "body will not be provided under configuration rules" &&
-                    props.value != null &&
-                    props.value != undefined
-                        ? props.value?.length
-                        : 0}{" "}
-                    bytes)
-                </b>
+                <b className="ml-2 flex-1">Body ({bodyBytes} bytes)</b>
                 <div className="flex-1 flex flex-row">
-                    <button
-                        className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
-                        onClick={() => setShow(!show)}
-                    >
-                        {show ? "Hide" : "Show"}
-                    </button>
-                    {!show && <i className="mr-4">hidden</i>}
+                    {bodyBytes != 0 ? (
+                        <>
+                            <button
+                                className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
+                                onClick={() => setShowBody(!showBody)}
+                            >
+                                {showBody ? "Hide" : "Show"}
+                            </button>
+                            {!showBody && <i className="mr-4">hidden</i>}
+                        </>
+                    ) : (
+                        <></>
+                    )}
                 </div>
             </div>
-
-            {show && (
-                <pre className="ml-2 mt-2 whitespace-pre-wrap">
-                    {props.value}
-                </pre>
-            )}
+            <div className="ml-2 font-[monospace]">
+                {props.editMode && showBody ? (
+                    <textarea
+                        defaultValue={props.value ?? ""}
+                        className="w-full border-2 border-black p-1"
+                        onBlur={(e) => {
+                            props.setValue!(e.target.value);
+                        }}
+                    ></textarea>
+                ) : showBody ? (
+                    <pre className="ml-2 mt-2 whitespace-pre-wrap">
+                        {props.value}
+                    </pre>
+                ) : null}{" "}
+            </div>
         </div>
     );
 }

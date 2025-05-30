@@ -203,6 +203,7 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 	req.req.Header = updatedMessage.Request.Headers
 	req.req.Host = updatedMessage.Request.Host
 	req.req.Method = updatedMessage.Request.Method
+	req.req.URL.Host = updatedMessage.Request.Host
 	req.req.URL.Path = updatedMessage.Request.Path
 	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
 

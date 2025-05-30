@@ -68,6 +68,8 @@ export interface Request {
 export interface RequestsViewConfig {
     hideError: boolean;
     hideID: boolean;
+    hideHost: boolean; // not implemented yet
+    hideClientIP: boolean; // not implemented yet
     hideClientUser: boolean;
     hideClientPassword: boolean;
     hideMethod: boolean;
