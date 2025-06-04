@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,7 +18,6 @@ func (h HackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		fmt.Println(string(body))
 		data, err := json.Marshal(map[string]any{
 			"proto":  r.Proto,
 			"method": r.Method,

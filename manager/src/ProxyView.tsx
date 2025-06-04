@@ -15,6 +15,13 @@ export function ProxyView() {
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [requestsViewConfig, setRequestsViewConfig] = useState({
+        hideDate: false,
+        hideHostCollapsed: false,
+        hideClientApplication: false,
+        hideState: false,
+
+        hideHost: false,
+        hideClientIP: false,
         hideError: false,
         hideID: false,
         hideClientUser: false,
@@ -27,6 +34,7 @@ export function ProxyView() {
         hideResponseStatus: false,
         hideResponseHeaders: false,
         hideResponseBody: false,
+        hideBytesTransferred: false,
     });
 
     //NOTE: async/await in set state functions

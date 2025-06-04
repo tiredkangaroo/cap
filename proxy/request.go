@@ -22,13 +22,16 @@ var (
 
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
-	id                  string
-	datetime            time.Time
-	host                string
-	conn                net.Conn
-	secure              bool
+	id       string
+	datetime time.Time
+	host     string
+	conn     net.Conn
+	secure   bool
+
 	clientIP            string
 	clientAuthorization string
+	clientProcessID     int
+	clientProcessName   string
 
 	req  *http.Request
 	resp *http.Response
@@ -59,6 +62,8 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.host = r.req.Host
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
+
+	getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
 
 	return nil
 }

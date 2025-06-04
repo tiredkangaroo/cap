@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -48,13 +49,23 @@ func (c *Manager) AcceptWS(w http.ResponseWriter, r *http.Request) (*websocket.C
 }
 
 func (c *Manager) SendNew(req *Request) {
+	var secureState string
+	if req.secure && config.DefaultConfig.MITM {
+		secureState = "HTTPS (with MITM)"
+	} else if req.secure {
+		secureState = "HTTPS (Secure)"
+	} else {
+		secureState = "HTTP (Insecure)"
+	}
 	c.writeJSON("NEW", map[string]any{
 		"id":                  req.id,
 		"datetime":            req.datetime,
 		"host":                req.host,
-		"secure":              req.secure,
+		"secureState":         secureState,
 		"clientIP":            req.clientIP,
 		"clientAuthorization": req.clientAuthorization,
+		"clientProcessID":     req.clientProcessID,
+		"clientApplication":   req.clientProcessName,
 	})
 }
 
@@ -65,6 +76,8 @@ func (c *Manager) SendTunnel(req *Request) {
 }
 
 func (c *Manager) SendRequest(req *Request) {
+	// NOTE: HTTP requests will have a 0 bytesTransferred value because the request is read before the connection is hijacked and
+	// made custom.
 	c.writeJSON("REQUEST", map[string]any{
 		"id":               req.id,
 		"method":           req.req.Method,

@@ -23,9 +23,11 @@ export function IncomingView(props: {
         props.proxy.requests = requests;
     }, [requests]);
 
-    console.log("22", requests);
+    let currentCollapsibleSetOpen: React.Dispatch<
+        React.SetStateAction<boolean>
+    > | null = null;
     return (
-        <div className="flex flex-col w-full h-full">
+        <div className="flex flex-col w-full h-full pb-3">
             <div className="flex flex-row w-full">
                 <h1 className="ml-2 text-2xl font-bold mb-2">
                     Incoming Requests
@@ -39,7 +41,30 @@ export function IncomingView(props: {
                     Clear
                 </button>
             </div>
-            <div className="mt-2 w-full overflow-y-auto h-[80%]">
+            <div className="mt-2 flex flex-row w-full space-y-2 text-center bg-gray-300 pt-1">
+                {!props.requestsViewConfig.hideDate ? (
+                    <p className="flex-1">Date</p>
+                ) : (
+                    <></>
+                )}
+                {!props.requestsViewConfig.hideHostCollapsed ? (
+                    <p className="flex-1">Host</p>
+                ) : (
+                    <></>
+                )}
+                {!props.requestsViewConfig.hideClientApplication ? (
+                    <p className="flex-1">Client Application</p>
+                ) : (
+                    <></>
+                )}
+                {!props.requestsViewConfig.hideState ? (
+                    <p className="flex-1">State</p>
+                ) : (
+                    <></>
+                )}
+            </div>
+            <div className="w-full overflow-y-auto h-[80vh]">
+                {/* NOTE: ui should auto scroll to the bottom most point of where a request has opened IF it overflows its larger container */}
                 {requests.map((request, index) => (
                     <RequestView
                         key={index}
@@ -50,6 +75,13 @@ export function IncomingView(props: {
                             const newRequests = [...requests];
                             newRequests[index] = req;
                             setRequests(newRequests);
+                        }}
+                        imOpen={(s) => {
+                            // im open im open no zawg ur not
+                            if (currentCollapsibleSetOpen !== null) {
+                                currentCollapsibleSetOpen(false);
+                            }
+                            currentCollapsibleSetOpen = s;
                         }}
                     />
                 ))}

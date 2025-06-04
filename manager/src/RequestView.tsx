@@ -8,7 +8,7 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 
-import { useRef, useState } from "react";
+import { Children, useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 
 const stateColors: Record<string, string> = {
@@ -24,33 +24,47 @@ export function RequestView(props: {
     request: Request;
     setRequest: (req: Request) => void;
     requestsViewConfig: RequestsViewConfig;
+
+    imOpen: (setOpen: React.Dispatch<React.SetStateAction<boolean>>) => void;
 }) {
     const [editMode, setEditMode] = useState(false);
+    const [open, setOpen] = useState(false);
     return (
-        <Collapsible className="border-b-1 border-b-black wrap-anywhere">
+        <Collapsible
+            className="border-b-1 border-b-black wrap-anywhere"
+            open={open}
+            onOpenChange={(op: boolean) => {
+                if (op) {
+                    props.imOpen(setOpen);
+                }
+                setOpen(op);
+            }}
+        >
             <CollapsibleTrigger className="w-full bg-gray-200">
                 <div className="relative flex flex-row w-full pt-4 pb-4">
-                    {/* <p
-                        className="flex-1"
-                        style={{
-                            color: props.request.secure ? "#0b5c00" : "#5c0300",
-                        }}
+                    <ParagraphView
+                        hide={props.requestsViewConfig.hideDate}
+                        className="text-sm"
                     >
-                        {props.request.secure ? "HTTPS" : "HTTP"}
-                    </p> */}
-                    <p className="flex-1 ml-1 text-sm">
                         {props.request.datetime}
-                    </p>
-                    <p className="flex-1 ml-1 text-center">
+                    </ParagraphView>
+                    <ParagraphView
+                        hide={props.requestsViewConfig.hideHostCollapsed}
+                    >
                         {props.request.host}
-                    </p>
+                    </ParagraphView>
+                    <ParagraphView
+                        hide={props.requestsViewConfig.hideClientApplication}
+                    >
+                        {props.request.clientApplication}
+                    </ParagraphView>
                     <StateView
                         proxy={props.proxy}
                         id={props.request.id}
                         state={props.request.state}
                         setEditMode={setEditMode}
+                        hide={props.requestsViewConfig.hideState}
                     />
-                    {/* <p className="flex-1 ml-1 mr-1">{props.request.clientIP}</p> */}
                 </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="bg-gray-300 max-h-[50vh] overflow-y-auto">
@@ -74,7 +88,7 @@ export function RequestView(props: {
                     {props.request.error != undefined &&
                     !props.requestsViewConfig.hideError ? (
                         <p>
-                            <span className="text-red-700">Error</span>:{" "}
+                            <span className="text-red-700">Error</span>:
                             {props.request.error}
                         </p>
                     ) : (
@@ -404,10 +418,14 @@ function StateView(props: {
     id: string;
     state: string;
     setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+    hide: boolean;
 }) {
+    if (props.hide) {
+        return <></>;
+    }
     if (props.state == "Waiting Approval") {
         return (
-            <div className="flex-1 flex flex-row">
+            <div className="flex-1 flex flex-row content-center items-center justify-center">
                 <button
                     className="bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
                     onClick={(e) => {
@@ -596,5 +614,21 @@ function BodyView(props: {
                 ) : null}{" "}
             </div>
         </div>
+    );
+}
+
+function ParagraphView(props: {
+    children?: React.ReactNode;
+    hide: boolean;
+    className?: string;
+}) {
+    console.log(props);
+    if (props.hide) {
+        return <></>;
+    }
+    return (
+        <p className={"flex-1 text-center" + props.className}>
+            {props.children != "" ? props.children : <>-</>}
+        </p>
     );
 }

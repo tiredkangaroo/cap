@@ -36,8 +36,9 @@ export interface Config {
 export interface Request {
     id: string;
     datetime: string;
-    secure: boolean;
+    secureState: "HTTP (Insecure)" | "HTTPS (Secure)" | "HTTPS (with MITM)";
     clientIP: string;
+    clientApplication: string;
     clientAuthorization: string;
     clientAuthorizationUser?: string;
     clientAuthorizationPassword?: string;
@@ -58,9 +59,10 @@ export interface Request {
     bytesTransferred?: number;
 
     state:
+        | "Created"
         | "Processing"
         | "Waiting Approval"
-        | "Approval Timeout"
+        // | "Approval Timeout"
         | "Canceled"
         | "Done"
         | "Error";
@@ -68,6 +70,11 @@ export interface Request {
 }
 
 export interface RequestsViewConfig {
+    hideDate: boolean;
+    hideHostCollapsed: boolean;
+    hideClientApplication: boolean;
+    hideState: boolean;
+
     hideError: boolean;
     hideID: boolean;
     hideHost: boolean; // not implemented yet

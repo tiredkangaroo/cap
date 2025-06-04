@@ -29,6 +29,7 @@ export class ClientWS {
         switch (action) {
             case "NEW": {
                 const data = rawdata as Request;
+                data.state = "Created";
                 // Check if the request already exists
                 const existingIndex = requests.findIndex(
                     (r) => r.id === data.id,
@@ -73,12 +74,12 @@ export class ClientWS {
                     body: string | null;
                     bytesTransferred: number;
                 };
-                console.log("76", data);
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
                 );
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
+                    request.state = "Processing";
                     request.method = data.method;
                     request.path = data.path;
                     request.query = data.query;
