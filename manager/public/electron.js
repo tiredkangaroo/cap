@@ -38,6 +38,16 @@ async function createWindow() {
         },
     });
 
+    win.setMinimumSize(300, 680);
+    // win.on("will-resize", (ev, newBounds) => {
+    //     const oldBounds = win.getBounds();
+    //     if (newBounds.width < 300 || newBounds.height < 680) {
+    //         ev.preventDefault();
+    //         win.setBounds(oldBounds);
+    //         return;
+    //     }
+    // });
+
     if (process.env.DEBUG == "true") {
         await waitForPort(PORT, CHECK_INTERVAL);
         // this is the url for the vite server

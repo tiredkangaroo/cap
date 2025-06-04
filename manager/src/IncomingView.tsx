@@ -27,7 +27,7 @@ export function IncomingView(props: {
         React.SetStateAction<boolean>
     > | null = null;
     return (
-        <div className="flex flex-col w-full h-full pb-3">
+        <div className="flex flex-col w-full h-full">
             <div className="flex flex-row w-full">
                 <h1 className="ml-2 text-2xl font-bold mb-2">
                     Incoming Requests
@@ -63,28 +63,30 @@ export function IncomingView(props: {
                     <></>
                 )}
             </div>
-            <div className="w-full overflow-y-auto h-[80vh]">
-                {/* NOTE: ui should auto scroll to the bottom most point of where a request has opened IF it overflows its larger container */}
-                {requests.map((request, index) => (
-                    <RequestView
-                        key={index}
-                        proxy={props.proxy}
-                        request={request}
-                        requestsViewConfig={props.requestsViewConfig}
-                        setRequest={(req: Request) => {
-                            const newRequests = [...requests];
-                            newRequests[index] = req;
-                            setRequests(newRequests);
-                        }}
-                        imOpen={(s) => {
-                            // im open im open no zawg ur not
-                            if (currentCollapsibleSetOpen !== null) {
-                                currentCollapsibleSetOpen(false);
-                            }
-                            currentCollapsibleSetOpen = s;
-                        }}
-                    />
-                ))}
+            <div className="flex w-full h-[calc(100vh-25vh)] overflow-y-auto mb-2">
+                <div className="w-full overflow-y-auto h-full">
+                    {/* NOTE: ui should auto scroll to the bottom most point of where a request has opened IF it overflows its larger container */}
+                    {requests.map((request, index) => (
+                        <RequestView
+                            key={index}
+                            proxy={props.proxy}
+                            request={request}
+                            requestsViewConfig={props.requestsViewConfig}
+                            setRequest={(req: Request) => {
+                                const newRequests = [...requests];
+                                newRequests[index] = req;
+                                setRequests(newRequests);
+                            }}
+                            imOpen={(s) => {
+                                // im open im open no zawg ur not
+                                if (currentCollapsibleSetOpen !== null) {
+                                    currentCollapsibleSetOpen(false);
+                                }
+                                currentCollapsibleSetOpen = s;
+                            }}
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     );
