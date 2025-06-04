@@ -41,7 +41,7 @@ export function IncomingView(props: {
                     Clear
                 </button>
             </div>
-            <div className="mt-2 flex flex-row w-full space-y-2 text-center bg-gray-300 pt-1">
+            <div className="mt-2 flex flex-row w-full space-y-2 text-center bg-gray-700 pt-1 text-white">
                 {!props.requestsViewConfig.hideDate ? (
                     <p className="flex-1">Date</p>
                 ) : (

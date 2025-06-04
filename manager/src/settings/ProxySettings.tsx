@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Proxy } from "./api";
+import { Proxy } from "@/api/api";
 import { CheckField, InputField } from "./SettingsFields";
-import { Config } from "./types";
+import { Config } from "@/types";
 
 export function ProxySettingsView(props: { proxy: Proxy }) {
     const [proxyConfig, setProxyConfig] = useState<Config>(props.proxy!.config);

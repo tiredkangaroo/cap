@@ -33,6 +33,41 @@ type Request struct {
 	clientProcessID     int
 	clientProcessName   string
 
+	times map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
+	// read formats rules:
+	// - ms capped out at 999 ms
+	// - s capped out at 59 s -> moved to x minutes y seconds
+	// - minutes capped out at 59 minutes -> moved to x hours y minutes
+
+	// draft time breakdowns
+	//
+	// HTTP time breakdown:
+	// - request init time: time when the request was received and initialized (Initialization)
+	// - read request time: time taken to read the request from the client (Read Request)
+	// - request parse time: time taken to parse the request (this includes parsing the headers and body) (Request Parse)
+	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
+	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
+	// - request perform time: time taken to perform the request to the target server + get the response) (Request Perform)
+	// - response dump time: time taken to dump the response (if configured) (Response Dump)
+	// - response write time: time taken to write the response back to the client (Response Write)
+
+	// HTTPS time breakdown:
+	// - request init time: time when the request was received and initialized (Initialization)
+	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
+	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
+	// - reads/writes: from the first read/write op to the last read/write op (Tunnelling)
+
+	// HTTPS with MITM time breakdown:
+	// - request init time: time when the request was received and initialized (Initialization)
+	// - cert generation time / cache load time: time taken to generate/cache load the certificate for the request (this includes putting into cache) (Certificate Generation)
+	// - tls handshake time: time taken to perform the TLS handshake with the client (TLS Handshake)
+	// - read request time: time taken to read the request from the client (Read Request)
+	// - request parse time: time taken to parse the request (this includes parsing the headers and body) (Request Parse)
+	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
+	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
+	// - request perform time: time taken to perform the request to the target server + get the response (Request Perform)
+	// - response write time: time taken to write the response back to the client (Response Write)
+
 	req  *http.Request
 	resp *http.Response
 

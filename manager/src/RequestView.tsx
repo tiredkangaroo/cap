@@ -8,7 +8,7 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 
-import { Children, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 
 const stateColors: Record<string, string> = {
