@@ -74,6 +74,8 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	if !config.DefaultConfig.MITM {
 		return r.handleNoMITM(m)
+	} else if c == nil {
+		return fmt.Errorf("mitm is enabled, but certificate service is unavailable")
 	}
 
 	// after the success response, a handshake will occur and the user will

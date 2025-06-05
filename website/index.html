@@ -3,13 +3,83 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="style.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap"
+            rel="stylesheet"
+        />
         <script src="https://cdn.tailwindcss.com"></script>
+        <script src="main.js"></script>
         <title>cap</title>
     </head>
-    <body
-        class="bg-[#e6f5ff] bg-[url(assets/cap.png)] bg-[length:200px_200px] bg-space-lg bg-repeat-space w-full h-full"
-    >
-        <h1 class="mt-1 text-center text-6xl">cap</h1>
-        <!-- <img src="assets/cap.png" /> -->
+    <body class="w-full h-full" style="font-family: &quot;Roboto Slab&quot;">
+        <div class="w-full flex flex-row justify-center">
+            <h1 class="mt-1 text-center text-6xl">cap</h1>
+            <img class="w-20" src="assets/cap.png" />
+        </div>
+        <p class="mt-2 text-center">fast and configurable proxy with MITM</p>
+        <div class="ml-2">
+            <h1 class="text-3xl">Install</h1>
+            <div class="ml-6 instruction gap-6 flex flex-col">
+                <div>
+                    <p class="text-lg">Clone the repository</p>
+                    <pre class="code">
+git clone https://github.com/tiredkangaroo/bigproxy.git</pre
+                    >
+                </div>
+                <p class="text-lg">
+                    Change the working directory to the Git Repository folder
+                </p>
+                <div>
+                    <p class="text-lg">
+                        Install dependencies (you must have
+                        <a href="https://go.dev" class="">golang</a> and node +
+                        npm)
+                    </p>
+                    <pre class="code">
+go mod tidy && npm i --prefix manager</pre
+                    >
+                </div>
+                <div>
+                    <p class="text-lg">Set the Environment Variables</p>
+                    <div class="flex flex-col gap-4 w-full">
+                        <div class="flex flex-row">
+                            <pre class="flex-1">PROXY_CACERT</pre>
+                            <p class="flex-1">
+                                Relative (from the running directory) or
+                                absolute path to the PEM-encoded X509 CA
+                                certificate file.
+                            </p>
+                        </div>
+                        <div class="flex flex-row">
+                            <pre class="flex-1">PROXY_CAKEY</pre>
+                            <p class="flex-1">
+                                Relative (from the running directory) or
+                                absolute path to the PEM-encoded PKCS8 CA key
+                                file.
+                            </p>
+                        </div>
+                        <div class="flex flex-row">
+                            <pre class="flex-1">PROXY_CONFIG_FILE</pre>
+                            <p class="flex-1">
+                                Relative (from the running directory) or
+                                absolute path to the save location for the proxy
+                                configuration file. The program must be allowed
+                                r/w access.
+                            </p>
+                        </div>
+                        <!-- <div class="ml-auto mr-4">
+                            <p>ca </p>
+                        </div> -->
+                    </div>
+                </div>
+                <div>
+                    <p class="text-lg">Run the project</p>
+                    <pre class="code">go run make.go run</pre>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

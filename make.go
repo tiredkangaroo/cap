@@ -57,10 +57,10 @@ func init() {
 func main() {
 	switch command {
 	case CommandRunDebug:
-		enforceEnv()
+		// enforceEnv()
 		runDebug()
 	case CommandRun:
-		enforceEnv()
+		// enforceEnv()
 		run()
 	case CommandCompile:
 		compile()

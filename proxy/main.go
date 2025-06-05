@@ -33,10 +33,5 @@ func main() {
 	go startControlServer(m)
 
 	ph := new(ProxyHandler)
-	if err := ph.Init(); err != nil {
-		slog.Error("initializing proxy handler", "err", err.Error())
-		return
-	}
-
 	ph.ListenAndServe(m)
 }

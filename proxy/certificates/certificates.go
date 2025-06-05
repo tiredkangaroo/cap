@@ -40,6 +40,12 @@ type Certificates struct {
 // variable PROXY_CAKEY. It parses the certificate and key and stores them in
 // the caCert and caKey fields respectively.
 func (c *Certificates) Init() error {
+	proxyCACert := os.Getenv("PROXY_CACERT")
+	proxyCAKey := os.Getenv("PROXY_CAKEY")
+
+	if proxyCACert == "" || proxyCAKey == "" {
+		return fmt.Errorf("environment variables PROXY_CACERT and PROXY_CAKEY must be set")
+	}
 	rawproxyCACert, err := os.ReadFile(os.Getenv("PROXY_CACERT"))
 	if err != nil {
 		return fmt.Errorf("proxy cacert readfile: %w", err)

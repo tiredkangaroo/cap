@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"os"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -60,25 +59,24 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (c *ProxyHandler) Init() error {
 	c.certifcates = new(certificate.Certificates)
 	if err := c.certifcates.Init(); err != nil {
-		return err
+		slog.Warn("initializing certificates (mitm cannot be used)", "err", err.Error())
+		c.certifcates = nil
+		config.DefaultConfig.MITM = false
 	}
 	return nil
 }
 
-func (c *ProxyHandler) ListenAndServe(m *Manager) {
+func (c *ProxyHandler) ListenAndServe(m *Manager) error {
 	ph := new(ProxyHandler)
-	ph.certifcates = new(certificate.Certificates)
-	ph.m = m
-
-	if err := ph.certifcates.Init(); err != nil {
-		slog.Error("initializing certificates", "err", err.Error())
-		config.DefaultConfig.MITM = false // NOTE: add errors when trying to set MITM true when initialization fails
+	if err := ph.Init(); err != nil {
+		return err
 	}
+	ph.m = m
 
 	if err := http.ListenAndServe(":8000", ph); err != nil {
 		slog.Error("fatal proxy server", "err", err.Error())
-		os.Exit(1)
+		return err
 	} else {
-		os.Exit(0)
+		return nil
 	}
 }

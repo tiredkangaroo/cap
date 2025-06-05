@@ -88,7 +88,7 @@ export function RequestView(props: {
                     {props.request.error != undefined &&
                     !props.requestsViewConfig.hideError ? (
                         <p>
-                            <span className="text-red-700">Error</span>:
+                            <span className="text-red-700">Error</span>:{" "}
                             {props.request.error}
                         </p>
                     ) : (

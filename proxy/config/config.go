@@ -56,6 +56,10 @@ func init() {
 	DefaultConfig.Debug = os.Getenv("DEBUG") == "true"
 
 	filename := os.Getenv(proxy_config_file)
+	if filename == "" {
+		slog.Warn("no proxy config file specified, using config.json as default")
+		filename = "config.json"
+	}
 
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -74,6 +78,10 @@ func setConfigFromFile(file *os.File, config *Config) error {
 	rf, err := io.ReadAll(file)
 	if err != nil {
 		return err
+	}
+
+	if len(rf) == 0 {
+		return nil // empty config file, nothing to do
 	}
 
 	err = json.Unmarshal(rf, config)
