@@ -66,6 +66,9 @@ export interface Request {
         | "Canceled"
         | "Done"
         | "Error";
+
+    times?: Record<string, number>;
+    timesOrder?: Array<string>;
     error?: string;
 }
 
@@ -91,3 +94,37 @@ export interface RequestsViewConfig {
     hideResponseBody: boolean;
     hideBytesTransferred: boolean;
 }
+
+export const TimesOrders = [
+    [
+        // HTTP
+        "init",
+        "prep_request",
+        "approval_wait",
+        "perform_delay",
+        "request_perform",
+        "response_dump",
+        "response_write",
+    ],
+    [
+        // HTTPS
+        "init",
+        "proxy_response",
+        "approval_wait",
+        "perform_delay",
+        "dial_host",
+        "tunnel_read_write",
+    ],
+    [
+        // HTTPS with MITM
+        "init",
+        "certgen_tlshandshake",
+        "read_parse_request",
+        "prep_request",
+        "approval_wait",
+        "perform_delay",
+        "request_perform",
+        "response_dump",
+        "response_write",
+    ],
+];

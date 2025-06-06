@@ -33,8 +33,10 @@ type Request struct {
 	clientProcessID     int
 	clientProcessName   string
 
-	times map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
-	// read formats rules:
+	times_order int                      // http - 0, https - 1, https-mitm - 2
+	times       map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
+
+	// time formats rules:
 	// - ms capped out at 999 ms
 	// - s capped out at 59 s -> moved to x minutes y seconds
 	// - minutes capped out at 59 minutes -> moved to x hours y minutes
@@ -42,31 +44,35 @@ type Request struct {
 	// draft time breakdowns
 	//
 	// HTTP time breakdown:
-	// - request init time: time when the request was received and initialized (Initialization)
-	// - read request time: time taken to read the request from the client (Read Request)
-	// - request parse time: time taken to parse the request (this includes parsing the headers and body) (Request Parse)
-	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
-	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
-	// - request perform time: time taken to perform the request to the target server + get the response) (Request Perform)
-	// - response dump time: time taken to dump the response (if configured) (Response Dump)
-	// - response write time: time taken to write the response back to the client (Response Write)
+	// - request init time: time when the request was received and initialized (init)
+	// - prep request time: time taken to prep the request (prep_request)
+	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (approval_wait)
+	// - perform delay time: time taken to perform the request (if any delay is configured) (perform_delay)
+	// - request perform time: time taken to perform the request to the target server + get the response) (request_perform)
+	// - response dump time: time taken to dump the response (if configured) (response_dump)
+	// - response write time: time taken to write the response back to the client (response_write)
+	// - total time: total time taken for the request (total)
 
 	// HTTPS time breakdown:
-	// - request init time: time when the request was received and initialized (Initialization)
-	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
-	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
-	// - reads/writes: from the first read/write op to the last read/write op (Tunnelling)
+	// - request init time: time when the request was received and initialized (init)
+	// - proxy response time: time taken to send the expected proxy response back to the client (proxy_response)
+	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (approval_wait)
+	// - perform delay time: time taken to perform the request (if any delay is configured) (perform_delay)
+	// - dial host time: time taken to dial the host (dial_host)
+	// - reads/writes: from the first read/write op to the last read/write op (tunnel_read_write)
+	// - total time: total time taken for the request (total)
 
 	// HTTPS with MITM time breakdown:
 	// - request init time: time when the request was received and initialized (Initialization)
-	// - cert generation time / cache load time: time taken to generate/cache load the certificate for the request (this includes putting into cache) (Certificate Generation)
-	// - tls handshake time: time taken to perform the TLS handshake with the client (TLS Handshake)
-	// - read request time: time taken to read the request from the client (Read Request)
-	// - request parse time: time taken to parse the request (this includes parsing the headers and body) (Request Parse)
+	// - cert gen + tls handshake time: time taken to generate cert and perform the TLS handshake with the client (certgen_tlshandshake)
+	// - read request + parse time: time taken to read and parse the request (this includes parsing the headers and body) (read_parse_request)
+	// - prep request time: time taken to prep the request (prep_request)
 	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
 	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
 	// - request perform time: time taken to perform the request to the target server + get the response (Request Perform)
+	// - response dump time: time taken to dump the response (if configured) (Response Dump)
 	// - response write time: time taken to write the response back to the client (Response Write)
+	// - total time: total time taken for the request (total)
 
 	req  *http.Request
 	resp *http.Response
@@ -98,6 +104,16 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
 
+	r.times = make(map[string]time.Duration)
+	// NOTE: mitm config can change in the middle of the request (this shouldn't be allowed)
+	if r.secure && config.DefaultConfig.MITM {
+		r.times_order = 2
+	} else if r.secure {
+		r.times_order = 1
+	} else {
+		r.times_order = 0
+	}
+
 	getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
 
 	return nil
@@ -106,7 +122,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
-
+	s := time.Now()
 	// toURL is used to convert the host to a valid URL.
 	newURL, err := toURL(r.req.Host, r.secure)
 	if err != nil {
@@ -125,22 +141,32 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
+	r.times["prep_request"] = time.Since(s)
 	if config.DefaultConfig.RequireApproval {
+		s := time.Now()
 		if !m.RecieveApproval(r) {
 			return nil, nil, ErrPerformStop
 		}
-	}
-	if config.DefaultConfig.PerformDelay != 0 {
-		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)
+		r.times["approval_wait"] = time.Since(s)
 	}
 
+	if config.DefaultConfig.PerformDelay != 0 {
+		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
+		time.Sleep(duration)
+		r.times["perform_delay"] = duration
+	}
+
+	s = time.Now()
 	// do the request
 	resp, err := http.DefaultClient.Do(r.req)
+	r.times["request_perform"] = time.Since(s)
 	if err != nil {
 		return nil, nil, fmt.Errorf("req do error: %w", err)
 	}
 
+	s = time.Now()
 	data, err := httputil.DumpResponse(resp, true)
+	r.times["response_dump"] = time.Since(s)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dump server response: %w", err)
 	}

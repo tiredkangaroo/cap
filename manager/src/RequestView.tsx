@@ -10,6 +10,7 @@ import {
 
 import { useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
+import { Timeline } from "./Timeline";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -274,6 +275,11 @@ export function RequestView(props: {
                         editMode={editMode}
                         disableEdits={true}
                     ></FieldView>
+                    <Timeline
+                        times={props.request.times}
+                        order={props.request.timesOrder}
+                        className="mt-2"
+                    />
                 </div>
             </CollapsibleContent>
         </Collapsible>

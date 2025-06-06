@@ -33,13 +33,13 @@ func getClientProcessInfo(clientIP string, pid *int, name *string) {
 		// fmt.Println("net split")
 		return
 	}
-	// NOTE: make matching ip configurable
+	// NOTE: make matching ip configurable; add switcg case
 	if ip != "::1" && ip != "localhost" && ip != "127.0.0.1" && ip != myLocalIP {
 		// fmt.Println("req not from localhost", ip)
 		return
 	}
 	switch runtime.GOOS {
-	case "darwin":
+	case "darwin", "linux":
 		*pid, *name = getMacLinuxProcessInfo(port)
 	}
 }

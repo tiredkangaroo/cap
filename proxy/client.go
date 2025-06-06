@@ -102,6 +102,8 @@ func (c *Manager) SendDone(req *Request) {
 	c.writeJSON("DONE", map[string]any{
 		"id":               req.id,
 		"bytesTransferred": req.BytesTransferred(),
+		"times":            req.times,
+		"timesOrder":       req.times_order,
 	})
 }
 

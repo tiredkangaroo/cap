@@ -1,4 +1,4 @@
-import { Request } from "@/types";
+import { Request, TimesOrders } from "@/types";
 
 interface IDMessage {
     id: string;
@@ -191,6 +191,8 @@ export class ClientWS {
                 const data = rawdata as {
                     id: string;
                     bytesTransferred: number;
+                    times: Record<string, number>; // number is in ns
+                    timesOrder: number; // order of the times
                 };
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
@@ -198,6 +200,8 @@ export class ClientWS {
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
                     request.state = "Done";
+                    request.times = data.times;
+                    request.timesOrder = TimesOrders[data.timesOrder];
                     request.bytesTransferred = data.bytesTransferred;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);

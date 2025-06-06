@@ -5,3 +5,4 @@ proxy/config.json
 testserver/localhost.crt
 testserver/localhost.key
 testserver/localhost.csr
+config.json

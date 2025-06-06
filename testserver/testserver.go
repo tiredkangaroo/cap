@@ -49,7 +49,7 @@ func main() {
 		}
 	}()
 	go func() {
-		if err := http.ListenAndServe(":6202", new(HackHandler)); err != nil {
+		if err := http.ListenAndServeTLS(":6202", "localhost.crt", "localhost.key", new(HackHandler)); err != nil {
 			log.Fatalf("http server error: %v", err)
 		}
 	}()

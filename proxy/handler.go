@@ -41,6 +41,8 @@ var (
 func (r *Request) handleHTTP(m *Manager) error {
 	m.SendRequest(r)
 
+	r.times["init"] = time.Since(r.datetime)
+
 	// perform the request
 	resp, raw, err := r.Perform(m)
 	if err != nil {
@@ -50,9 +52,14 @@ func (r *Request) handleHTTP(m *Manager) error {
 
 	m.SendResponse(r)
 
-	if _, err = r.conn.Write(raw); err != nil {
+	s := time.Now()
+	_, err = r.conn.Write(raw)
+	r.times["response_write"] = time.Since(s)
+	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
 	}
+	r.times["total"] = time.Since(r.datetime)
+
 	return nil
 }
 
@@ -67,7 +74,9 @@ func (r *Request) handleHTTP(m *Manager) error {
 // (5) The proxy sends the response back to the client.
 func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
+	r.times["init"] = time.Since(r.datetime)
 	_, err := r.conn.Write(ResponseRawSuccess)
+	r.times["proxy_response"] = time.Since(r.datetime)
 	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
 	}
@@ -82,13 +91,20 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	// send the ACTUAL request
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
+	s := time.Now()
 	tlsconn, err := c.TLSConn(r.conn, r.req.URL.Hostname())
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
+	if err := tlsconn.Handshake(); err != nil {
+		return fmt.Errorf("tls handshake: %w", err)
+	}
+	r.times["certgen_tlshandshake"] = time.Since(s)
 
+	s = time.Now()
 	buf := bufio.NewReader(tlsconn)
 	finalReq, err := http.ReadRequest(buf)
+	r.times["read_parse_request"] = time.Since(s)
 	if err != nil {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
@@ -104,10 +120,13 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	m.SendResponse(r)
 
+	s = time.Now()
 	_, err = tlsconn.Write(raw)
+	r.times["response_write"] = time.Since(s)
 	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
 	}
+	r.times["total"] = time.Since(r.datetime)
 
 	return nil
 }
@@ -116,23 +135,30 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 // tunnel.
 func (r *Request) handleNoMITM(m *Manager) error {
 	// this code will need to be combined because it's the same in Perform and here in tunneling
-	if config.DefaultConfig.PerformDelay != 0 {
-		time.Sleep(time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond)
-	}
 	if config.DefaultConfig.RequireApproval {
+		s := time.Now()
 		if !m.RecieveApproval(r) {
 			return ErrPerformStop
 		}
+		r.times["approval_wait"] = time.Since(s)
+	}
+	if config.DefaultConfig.PerformDelay != 0 {
+		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
+		time.Sleep(duration)
+		r.times["perform_delay"] = duration
 	}
 
+	s := time.Now()
 	hconn, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
 		return fmt.Errorf("dial host: %w", err)
 	}
+	r.times["dial_host"] = time.Since(s)
 
 	// me gusta context :)
 	ctx, cancel := context.WithCancel(context.Background())
 
+	s = time.Now()
 	m.SendTunnel(r)
 	go func() {
 		defer cancel()
@@ -151,8 +177,11 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	}()
 
 	<-ctx.Done()
+	r.times["tunnel_read_write"] = time.Since(s)
 
 	m.SendDone(r)
+
+	r.times["total"] = time.Since(r.datetime)
 
 	return nil
 }
