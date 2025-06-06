@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 )
 
 var (
@@ -33,8 +34,11 @@ type Request struct {
 	clientProcessID     int
 	clientProcessName   string
 
-	times_order int                      // http - 0, https - 1, https-mitm - 2
-	times       map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
+	timing    *timing.Timing
+	totalTime time.Duration
+
+	// times_order int                      // http - 0, https - 1, https-mitm - 2
+	// times       map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
 
 	// time formats rules:
 	// - ms capped out at 999 ms
@@ -45,11 +49,14 @@ type Request struct {
 	//
 	// HTTP time breakdown:
 	// - request init time: time when the request was received and initialized (init)
+
+	// perform:
 	// - prep request time: time taken to prep the request (prep_request)
 	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (approval_wait)
 	// - perform delay time: time taken to perform the request (if any delay is configured) (perform_delay)
 	// - request perform time: time taken to perform the request to the target server + get the response) (request_perform)
 	// - response dump time: time taken to dump the response (if configured) (response_dump)
+	//
 	// - response write time: time taken to write the response back to the client (response_write)
 	// - total time: total time taken for the request (total)
 
@@ -66,11 +73,14 @@ type Request struct {
 	// - request init time: time when the request was received and initialized (Initialization)
 	// - cert gen + tls handshake time: time taken to generate cert and perform the TLS handshake with the client (certgen_tlshandshake)
 	// - read request + parse time: time taken to read and parse the request (this includes parsing the headers and body) (read_parse_request)
+	//
+	// perform:
 	// - prep request time: time taken to prep the request (prep_request)
 	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
 	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
 	// - request perform time: time taken to perform the request to the target server + get the response (Request Perform)
 	// - response dump time: time taken to dump the response (if configured) (Response Dump)
+	//
 	// - response write time: time taken to write the response back to the client (Response Write)
 	// - total time: total time taken for the request (total)
 
@@ -81,6 +91,13 @@ type Request struct {
 }
 
 func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
+	// NOTE: mitm config can change in the middle of the request (it shouldn't be able to change behavior of the request after init)
+	r.req = req
+	r.secure = r.req.Method == http.MethodConnect
+	r.timing = timing.New(r.secure, config.DefaultConfig.MITM)
+	tdone := r.timing.Start(timing.TimeRequestInit)
+	defer tdone()
+
 	r.datetime = time.Now()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -98,21 +115,9 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 		u: conn,
 	}
 
-	r.req = req
-	r.secure = r.req.Method == http.MethodConnect
 	r.host = r.req.Host
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
-
-	r.times = make(map[string]time.Duration)
-	// NOTE: mitm config can change in the middle of the request (this shouldn't be allowed)
-	if r.secure && config.DefaultConfig.MITM {
-		r.times_order = 2
-	} else if r.secure {
-		r.times_order = 1
-	} else {
-		r.times_order = 0
-	}
 
 	getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
 
@@ -122,7 +127,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
-	s := time.Now()
+	prepRequestDone := r.timing.Start(timing.TimePrepRequest)
 	// toURL is used to convert the host to a valid URL.
 	newURL, err := toURL(r.req.Host, r.secure)
 	if err != nil {
@@ -141,32 +146,33 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
-	r.times["prep_request"] = time.Since(s)
+	prepRequestDone()
 	if config.DefaultConfig.RequireApproval {
-		s := time.Now()
+		approvalWaitDone := r.timing.Start(timing.TimeWaitApproval)
 		if !m.RecieveApproval(r) {
 			return nil, nil, ErrPerformStop
 		}
-		r.times["approval_wait"] = time.Since(s)
+		approvalWaitDone()
 	}
 
 	if config.DefaultConfig.PerformDelay != 0 {
+		performDelayDone := r.timing.Start(timing.TimeDelayPeform)
 		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
 		time.Sleep(duration)
-		r.times["perform_delay"] = duration
+		performDelayDone()
 	}
 
-	s = time.Now()
+	requestPerformDone := r.timing.Start(timing.TimeRequestPerform)
 	// do the request
 	resp, err := http.DefaultClient.Do(r.req)
-	r.times["request_perform"] = time.Since(s)
+	requestPerformDone()
 	if err != nil {
 		return nil, nil, fmt.Errorf("req do error: %w", err)
 	}
 
-	s = time.Now()
+	responseDumpDone := r.timing.Start(timing.TimeDumpResponse)
 	data, err := httputil.DumpResponse(resp, true)
-	r.times["response_dump"] = time.Since(s)
+	responseDumpDone()
 	if err != nil {
 		return nil, nil, fmt.Errorf("dump server response: %w", err)
 	}

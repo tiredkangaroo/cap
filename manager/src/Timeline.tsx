@@ -1,8 +1,10 @@
 import { Fragment } from "react/jsx-runtime";
+import { getTimingName, Timing } from "./timing";
 
 export function Timeline(props: {
-    times?: Record<string, number>;
-    order?: Array<string>;
+    times?: Record<Timing, number>;
+    order?: Array<Timing>;
+    total?: number;
     className: string;
 }) {
     const { times, order, className } = props;
@@ -20,7 +22,7 @@ export function Timeline(props: {
         "#7d7d7a",
     ];
 
-    if (!times || !order || order.length === 0) {
+    if (!times || !order || !props.total || order.length === 0) {
         return (
             <div className={`w-full bg-black text-white p-2 ${className}`}>
                 No data
@@ -28,15 +30,13 @@ export function Timeline(props: {
         );
     }
 
-    const total = times["total"] ?? 1; // prevent divide by zero
-
     return (
         <div
             className={`flex flex-row h-8 w-full bg-black overflow-hidden rounded ${className}`}
         >
             {order.map((key, i) => {
                 const time = times[key];
-                const widthPercent = (time / total) * 100;
+                const widthPercent = (time / props.total!) * 100;
                 console.log(times, key, time, nsToReadable(time));
 
                 if (time === undefined) {
@@ -48,13 +48,13 @@ export function Timeline(props: {
                         style={{
                             width: `${widthPercent}%`,
                             backgroundColor: colors[i % colors.length],
-                            minWidth: "50px", // Ensure visibility
+                            minWidth: "10px", // Ensure visibility
                         }}
                         className="flex items-center justify-center overflow-hidden text-xs text-black font-semibold px-1"
-                        title={`${key} - ${nsToReadable(time)}, ${widthPercent.toFixed(1)}%`}
+                        title={`${getTimingName(key)} - ${nsToReadable(time)}, ${widthPercent.toFixed(1)}%`}
                     >
                         <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                            {key} ({nsToReadable(time)},{" "}
+                            {getTimingName(key)} ({nsToReadable(time)},{" "}
                             {widthPercent.toFixed(1)}%)
                         </span>
                     </div>

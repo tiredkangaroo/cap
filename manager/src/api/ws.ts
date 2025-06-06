@@ -1,4 +1,5 @@
-import { Request, TimesOrders } from "@/types";
+import { Request } from "@/types";
+import { TimesOrders } from "@/timing";
 
 interface IDMessage {
     id: string;
@@ -191,8 +192,8 @@ export class ClientWS {
                 const data = rawdata as {
                     id: string;
                     bytesTransferred: number;
-                    times: Record<string, number>; // number is in ns
-                    timesOrder: number; // order of the times
+                    timing: Record<string, Record<string, number> | number>;
+                    timing_total: number;
                 };
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
@@ -200,9 +201,15 @@ export class ClientWS {
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
                     request.state = "Done";
-                    request.times = data.times;
-                    request.timesOrder = TimesOrders[data.timesOrder];
-                    request.bytesTransferred = data.bytesTransferred;
+                    request.times = convertTimesToNNRepresentation(
+                        data.timing.times as Record<string, number>,
+                    );
+                    request.timesOrder =
+                        TimesOrders[data.timing.order as number];
+                    request.totalTime = data.timing_total;
+                    // request.times = data.times;
+                    // request.timesOrder = TimesOrders[data.timesOrder];
+                    // request.bytesTransferred = data.bytesTransferred;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
                 }
@@ -260,4 +267,14 @@ function clientAuthorizationToUserPass(
     const decoded = atob(base64);
     const [user, password] = decoded.split(":");
     return [user, password];
+}
+
+function convertTimesToNNRepresentation(
+    times: Record<string, number>,
+): Record<number, number> {
+    const newTimes: Record<number, number> = {};
+    for (const [key, value] of Object.entries(times)) {
+        newTimes[parseInt(key)] = value;
+    }
+    return newTimes;
 }

@@ -278,6 +278,7 @@ export function RequestView(props: {
                     <Timeline
                         times={props.request.times}
                         order={props.request.timesOrder}
+                        total={props.request.totalTime}
                         className="mt-2"
                     />
                 </div>

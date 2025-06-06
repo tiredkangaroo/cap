@@ -1,3 +1,4 @@
+import { Timing } from "@/timing";
 // Config is the configuration for the proxy.
 export interface Config {
     // RealIPHeader is a boolean that determines whether the proxy should add the IP
@@ -67,8 +68,10 @@ export interface Request {
         | "Done"
         | "Error";
 
-    times?: Record<string, number>;
-    timesOrder?: Array<string>;
+    times?: Record<number, number>;
+    totalTime?: number;
+    timesOrder?: Timing[];
+
     error?: string;
 }
 
@@ -94,37 +97,3 @@ export interface RequestsViewConfig {
     hideResponseBody: boolean;
     hideBytesTransferred: boolean;
 }
-
-export const TimesOrders = [
-    [
-        // HTTP
-        "init",
-        "prep_request",
-        "approval_wait",
-        "perform_delay",
-        "request_perform",
-        "response_dump",
-        "response_write",
-    ],
-    [
-        // HTTPS
-        "init",
-        "proxy_response",
-        "approval_wait",
-        "perform_delay",
-        "dial_host",
-        "tunnel_read_write",
-    ],
-    [
-        // HTTPS with MITM
-        "init",
-        "certgen_tlshandshake",
-        "read_parse_request",
-        "prep_request",
-        "approval_wait",
-        "perform_delay",
-        "request_perform",
-        "response_dump",
-        "response_write",
-    ],
-];
