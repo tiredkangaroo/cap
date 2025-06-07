@@ -276,9 +276,8 @@ export function RequestView(props: {
                         disableEdits={true}
                     ></FieldView>
                     <Timeline
-                        times={props.request.times}
-                        order={props.request.timesOrder}
-                        total={props.request.totalTime}
+                        timing={props.request.timing}
+                        totalTime={props.request.timing_total}
                         className="mt-2"
                     />
                 </div>

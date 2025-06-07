@@ -68,9 +68,8 @@ export interface Request {
         | "Done"
         | "Error";
 
-    times?: Record<number, number>;
-    totalTime?: number;
-    timesOrder?: Timing[];
+    timing?: Timing;
+    timing_total?: number;
 
     error?: string;
 }

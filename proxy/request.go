@@ -95,16 +95,20 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.req = req
 	r.secure = r.req.Method == http.MethodConnect
 	r.timing = timing.New(r.secure, config.DefaultConfig.MITM)
-	tdone := r.timing.Start(timing.TimeRequestInit)
-	defer tdone()
+
+	r.timing.Start(timing.TimeRequestInit)
+	defer r.timing.Stop()
 
 	r.datetime = time.Now()
+
+	r.timing.Substart(timing.SubtimeUUID)
 	id, err := uuid.NewRandom()
 	if err != nil {
 		slog.Error("uuid error", "err", err.Error())
 		r.id = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
 	}
 	r.id = id.String()
+	r.timing.Substop()
 
 	// hijack the connection
 	conn, err := hijack(w)
@@ -119,7 +123,9 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
 
+	r.timing.Substart(timing.SubtimeGetClientProcessInfo)
 	getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
+	r.timing.Substop()
 
 	return nil
 }
@@ -127,7 +133,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
-	prepRequestDone := r.timing.Start(timing.TimePrepRequest)
+	r.timing.Start(timing.TimePrepRequest)
 	// toURL is used to convert the host to a valid URL.
 	newURL, err := toURL(r.req.Host, r.secure)
 	if err != nil {
@@ -146,33 +152,33 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 		r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
 	}
 
-	prepRequestDone()
+	r.timing.Stop()
 	if config.DefaultConfig.RequireApproval {
-		approvalWaitDone := r.timing.Start(timing.TimeWaitApproval)
+		r.timing.Start(timing.TimeWaitApproval)
 		if !m.RecieveApproval(r) {
 			return nil, nil, ErrPerformStop
 		}
-		approvalWaitDone()
+		r.timing.Stop()
 	}
 
 	if config.DefaultConfig.PerformDelay != 0 {
-		performDelayDone := r.timing.Start(timing.TimeDelayPeform)
+		r.timing.Start(timing.TimeDelayPeform)
 		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
 		time.Sleep(duration)
-		performDelayDone()
+		r.timing.Stop()
 	}
 
-	requestPerformDone := r.timing.Start(timing.TimeRequestPerform)
+	r.timing.Start(timing.TimeRequestPerform)
 	// do the request
 	resp, err := http.DefaultClient.Do(r.req)
-	requestPerformDone()
+	r.timing.Stop()
 	if err != nil {
 		return nil, nil, fmt.Errorf("req do error: %w", err)
 	}
 
-	responseDumpDone := r.timing.Start(timing.TimeDumpResponse)
+	r.timing.Start(timing.TimeDumpResponse)
 	data, err := httputil.DumpResponse(resp, true)
-	responseDumpDone()
+	r.timing.Stop()
 	if err != nil {
 		return nil, nil, fmt.Errorf("dump server response: %w", err)
 	}

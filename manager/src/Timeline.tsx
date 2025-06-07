@@ -1,30 +1,33 @@
-import { Fragment } from "react/jsx-runtime";
-import { getTimingName, Timing } from "./timing";
+import { Timing, MajorTime } from "./timing";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "./components/ui/hover-card";
+
+const colors = [
+    "#fa5b50",
+    "#acf797",
+    "#9ceeff",
+    "#b39ff5",
+    "#ffb8f1",
+    "#7a485f",
+    "#48507a",
+    "#487a4f",
+    "#7a7848",
+    "#7d7d7a",
+];
 
 export function Timeline(props: {
-    times?: Record<Timing, number>;
-    order?: Array<Timing>;
-    total?: number;
-    className: string;
+    totalTime?: number;
+    timing?: Timing;
+    className?: string;
 }) {
-    const { times, order, className } = props;
-
-    const colors = [
-        "#fa5b50",
-        "#acf797",
-        "#9ceeff",
-        "#b39ff5",
-        "#ffb8f1",
-        "#7a485f",
-        "#48507a",
-        "#487a4f",
-        "#7a7848",
-        "#7d7d7a",
-    ];
-
-    if (!times || !order || !props.total || order.length === 0) {
+    if (!props.timing || !props.totalTime) {
         return (
-            <div className={`w-full bg-black text-white p-2 ${className}`}>
+            <div
+                className={`w-full bg-black text-white p-2 ${props.className}`}
+            >
                 No data
             </div>
         );
@@ -32,35 +35,74 @@ export function Timeline(props: {
 
     return (
         <div
-            className={`flex flex-row h-8 w-full bg-black overflow-hidden rounded ${className}`}
+            className={`flex flex-row w-[calc(100%-1rem)] bg-black overflow-hidden rounded ${props.className}`}
         >
-            {order.map((key, i) => {
-                const time = times[key];
-                const widthPercent = (time / props.total!) * 100;
-                console.log(times, key, time, nsToReadable(time));
-
-                if (time === undefined) {
-                    return <Fragment key={key}></Fragment>;
-                }
+            {props.timing.majorTimeKeys.map((majorKey, i) => {
+                const majorValue = props.timing!.majorTimeValues[i];
+                const widthPercent =
+                    (majorValue.duration / props.totalTime!) * 100;
                 return (
-                    <div
-                        key={key}
-                        style={{
-                            width: `${widthPercent}%`,
-                            backgroundColor: colors[i % colors.length],
-                            minWidth: "10px", // Ensure visibility
-                        }}
-                        className="flex items-center justify-center overflow-hidden text-xs text-black font-semibold px-1"
-                        title={`${getTimingName(key)} - ${nsToReadable(time)}, ${widthPercent.toFixed(1)}%`}
-                    >
-                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                            {getTimingName(key)} ({nsToReadable(time)},{" "}
-                            {widthPercent.toFixed(1)}%)
-                        </span>
-                    </div>
+                    <TimeView
+                        idx={i}
+                        majorKey={majorKey}
+                        majorValue={majorValue}
+                        widthPercent={widthPercent}
+                    />
                 );
             })}
         </div>
+    );
+}
+
+function TimeView(props: {
+    idx: number;
+    majorKey: string;
+    majorValue: MajorTime;
+    widthPercent: number;
+}) {
+    return (
+        <HoverCard>
+            <HoverCardTrigger
+                className="w-full flex flex-row wrap-break-word h-8 items-center justify-center overflow-hidden text-xs text-black font-semibold px-1"
+                style={{
+                    width: `${props.widthPercent}%`,
+                    backgroundColor: colors[props.idx % colors.length],
+                    minWidth: "25px", // Ensure visibility
+                }}
+            >
+                <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                    {props.majorKey} ({nsToReadable(props.majorValue.duration)},{" "}
+                    {props.widthPercent.toFixed(1)}%)
+                </span>
+                {/* </div> */}
+            </HoverCardTrigger>
+            <HoverCardContent>
+                <h1 className="text-md font-semibold">
+                    {props.majorKey} ({props.widthPercent.toFixed(2)}%){" "}
+                </h1>
+                {props.majorValue.minorTimeKeys ? (
+                    <div className="flex flex-col mt-2">
+                        {props.majorValue.minorTimeKeys.map((minorKey, i) => {
+                            const minorValue =
+                                props.majorValue.minorTimeValues![i];
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex flex-row items-center justify-between"
+                                >
+                                    <span className="text-sm">{minorKey}:</span>
+                                    <span className="text-sm">
+                                        {nsToReadable(minorValue.duration)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <></>
+                )}
+            </HoverCardContent>
+        </HoverCard>
     );
 }
 
