@@ -45,7 +45,7 @@ func getClientProcessInfo(clientIP string, pid *int, name *string) {
 }
 
 func getMacLinuxProcessInfo(port string) (pid int, pname string) {
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("lsof -i :%s", port))
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("lsof -i :%s -F c", port))
 	out, err := cmd.Output()
 	if err != nil {
 		// fmt.Println("lsof error:", err)
@@ -53,31 +53,20 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 	}
 
 	lines := strings.Split(string(out), "\n")
-	if len(lines) < 3 {
+	if len(lines) < 4 || (len(lines)-1)%3 != 0 {
 		// fmt.Println("lsof output too short:", len(lines))
 		return 0, ""
 	}
 
-	// fmt.Println("output\n", strings.Join(lines, "\n"))
-	pid, pname = getProcessFromLsofOutputLine(lines[1], myPID)
-	if pid != 0 {
-		return pid, pname
+	for i, line := range lines {
+		if line[0] != 'c' {
+			continue
+		}
+		pid, err := strconv.Atoi(lines[i-1][1:]) // previous line 'p[PID]' - remove 'p' prefix
+		if err == nil && pid != myPID {
+			return pid, line[1:] // remove 'c' prefix
+		}
 	}
-	return getProcessFromLsofOutputLine(lines[2], myPID)
-}
-
-func getProcessFromLsofOutputLine(out string, proxyPID int) (pid int, pname string) {
-	parts := strings.Fields(out)
-	if len(parts) < 2 {
-		return 0, ""
-	}
-
-	var err error
-	pid, err = strconv.Atoi(parts[1])
-	// fmt.Println("76", parts[0], pid, proxyPID)
-	if err == nil && pid != proxyPID {
-		return pid, parts[0]
-	}
-
+	// fmt.Println("no matching process found")
 	return 0, ""
 }
