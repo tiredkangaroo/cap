@@ -73,6 +73,7 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	r.host = r.req.Host
+
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
 

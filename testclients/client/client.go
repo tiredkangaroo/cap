@@ -9,15 +9,19 @@ import (
 )
 
 var URLS = []string{
-	"http://example.com",
 	"https://example.com",
+	"http://localhost:6200",
+	"http://localhost:6200",
+	"http://example.com",
+	"https://localhost:6201",
 	"http://google.com",
+	"https://localhost:6201",
 	"https://google.com",
-	"http://localhost:6200",
-	"http://localhost:6200",
 	"https://localhost:6201",
-	"https://localhost:6201",
-	"https://localhost:6201",
+	"https://apple.com",
+	"https://yahoo.com",
+	"https://example.org",
+	"https://api.github.com",
 }
 
 var PROXY_URL, _ = url.Parse("http://localhost:8000")

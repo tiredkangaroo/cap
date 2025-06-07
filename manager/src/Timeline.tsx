@@ -6,16 +6,23 @@ import {
 } from "./components/ui/hover-card";
 
 const colors = [
-    "#fa5b50",
-    "#acf797",
-    "#9ceeff",
-    "#b39ff5",
-    "#ffb8f1",
-    "#7a485f",
-    "#48507a",
-    "#487a4f",
-    "#7a7848",
-    "#7d7d7a",
+    "#fa7a7a",
+    "#7afab2",
+    "#7aadfa",
+    "#fac57a",
+    "#967afa",
+    "#fa7aed",
+    "#f8fa7a",
+
+    // "#acf797",
+    // "#9ceeff",
+    // "#b39ff5",
+    // "#ffb8f1",
+    // "#7a485f",
+    // "#48507a",
+    // "#487a4f",
+    // "#7a7848",
+    // "#7d7d7a",
 ];
 
 export function Timeline(props: {

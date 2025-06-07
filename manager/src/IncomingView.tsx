@@ -66,7 +66,7 @@ export function IncomingView(props: {
                     Clear Requests
                 </button> */}
             </div>
-            <div className="flex flex-row gap-6 ml-2 mt-2">
+            <div className="flex flex-row gap-6 ml-2">
                 <FilterSelects
                     requests={requests}
                     filter={filter}
@@ -107,7 +107,7 @@ export function IncomingView(props: {
                     <></>
                 )}
             </div>
-            <div className="flex w-full h-[calc(100vh-25vh)] overflow-y-auto mb-2">
+            <div className="flex w-full h-[calc(100vh-29vh)] overflow-y-auto mb-2">
                 <div className="w-full overflow-y-auto h-full">
                     {/* NOTE: ui should auto scroll to the bottom most point of where a request has opened IF it overflows its larger container */}
                     {currentlyShownRequests.map((request, index) => (
@@ -148,8 +148,8 @@ function FilterSelects(props: {
     >;
 }) {
     return (
-        <div className="flex flex-row gap-8">
-            {Object.entries(props.filter).map(([key, _]) => {
+        <div className="flex flex-row gap-10">
+            {Object.entries(props.filter).map(([key, currentValue]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
                 const uniqueValues = [
                     ...new Set(
@@ -159,10 +159,8 @@ function FilterSelects(props: {
                     ),
                 ].filter((v) => v !== undefined && v !== null);
 
-                const currentValue = props.filter[key];
-
                 return (
-                    <div className="flex flex-row gap-3 items-center" key={key}>
+                    <div className="flex flex-row gap-1 items-center" key={key}>
                         <Select
                             key={currentValue ?? "unset"} // 🔁 key forces remount
                             value={currentValue}
@@ -190,16 +188,20 @@ function FilterSelects(props: {
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <button
-                            onClick={() => {
-                                props.setFilter((prev) => ({
-                                    ...prev,
-                                    [key]: undefined,
-                                }));
-                            }}
-                        >
-                            <IoMdClose />
-                        </button>
+                        {currentValue !== undefined && currentValue !== "" ? (
+                            <button
+                                onClick={() => {
+                                    props.setFilter((prev) => ({
+                                        ...prev,
+                                        [key]: undefined,
+                                    }));
+                                }}
+                            >
+                                <IoMdClose />
+                            </button>
+                        ) : (
+                            <></>
+                        )}
                     </div>
                 );
             })}
