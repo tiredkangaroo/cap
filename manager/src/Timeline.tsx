@@ -80,6 +80,9 @@ function TimeView(props: {
                 <h1 className="text-md font-semibold">
                     {props.majorKey} ({props.widthPercent.toFixed(2)}%){" "}
                 </h1>
+                <p className="text-gray-500">
+                    {nsToReadable(props.majorValue.duration)}
+                </p>
                 {props.majorValue.minorTimeKeys ? (
                     <div className="flex flex-col mt-2">
                         {props.majorValue.minorTimeKeys.map((minorKey, i) => {

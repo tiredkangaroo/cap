@@ -37,53 +37,6 @@ type Request struct {
 	timing    *timing.Timing
 	totalTime time.Duration
 
-	// times_order int                      // http - 0, https - 1, https-mitm - 2
-	// times       map[string]time.Duration // this is logged in ns because that's how time.Duration does it, the ui will make it in the most readable format
-
-	// time formats rules:
-	// - ms capped out at 999 ms
-	// - s capped out at 59 s -> moved to x minutes y seconds
-	// - minutes capped out at 59 minutes -> moved to x hours y minutes
-
-	// draft time breakdowns
-	//
-	// HTTP time breakdown:
-	// - request init time: time when the request was received and initialized (init)
-
-	// perform:
-	// - prep request time: time taken to prep the request (prep_request)
-	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (approval_wait)
-	// - perform delay time: time taken to perform the request (if any delay is configured) (perform_delay)
-	// - request perform time: time taken to perform the request to the target server + get the response) (request_perform)
-	// - response dump time: time taken to dump the response (if configured) (response_dump)
-	//
-	// - response write time: time taken to write the response back to the client (response_write)
-	// - total time: total time taken for the request (total)
-
-	// HTTPS time breakdown:
-	// - request init time: time when the request was received and initialized (init)
-	// - proxy response time: time taken to send the expected proxy response back to the client (proxy_response)
-	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (approval_wait)
-	// - perform delay time: time taken to perform the request (if any delay is configured) (perform_delay)
-	// - dial host time: time taken to dial the host (dial_host)
-	// - reads/writes: from the first read/write op to the last read/write op (tunnel_read_write)
-	// - total time: total time taken for the request (total)
-
-	// HTTPS with MITM time breakdown:
-	// - request init time: time when the request was received and initialized (Initialization)
-	// - cert gen + tls handshake time: time taken to generate cert and perform the TLS handshake with the client (certgen_tlshandshake)
-	// - read request + parse time: time taken to read and parse the request (this includes parsing the headers and body) (read_parse_request)
-	//
-	// perform:
-	// - prep request time: time taken to prep the request (prep_request)
-	// - wait approval time: time taken to wait for the approval from the client (if approval is configured) (Approval Wait)
-	// - perform delay time: time taken to perform the request (if any delay is configured) (Perform Delay)
-	// - request perform time: time taken to perform the request to the target server + get the response (Request Perform)
-	// - response dump time: time taken to dump the response (if configured) (Response Dump)
-	//
-	// - response write time: time taken to write the response back to the client (Response Write)
-	// - total time: total time taken for the request (total)
-
 	req  *http.Request
 	resp *http.Response
 
