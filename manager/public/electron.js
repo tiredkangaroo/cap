@@ -38,7 +38,8 @@ async function createWindow() {
         },
     });
 
-    win.setMinimumSize(300, 680);
+    win.setMinimumSize(755, 865);
+    win.setMaximumSize(10000, 2700); // only really setting a maximum height
     // win.on("will-resize", (ev, newBounds) => {
     //     const oldBounds = win.getBounds();
     //     if (newBounds.width < 300 || newBounds.height < 680) {

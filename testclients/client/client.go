@@ -22,6 +22,7 @@ var URLS = []string{
 	"https://yahoo.com",
 	"https://example.org",
 	"https://api.github.com",
+	"https://not-a-real-host.localhost:0000",
 }
 
 var PROXY_URL, _ = url.Parse("http://localhost:8000")

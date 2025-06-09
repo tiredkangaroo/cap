@@ -54,19 +54,14 @@ export function IncomingView(props: {
     > | null = null;
 
     return (
-        <div className="flex flex-col w-full h-full">
-            <div className="flex flex-row w-full">
+        <div className="w-full h-full flex flex-col">
+            {/* Header */}
+            <div className="h-10 flex flex-row w-full">
                 <h1 className="ml-2 text-2xl font-bold mb-2">Requests</h1>
-                {/* <button
-                    className="bg-gray-900 pl-3 pr-3 ml-auto mr-2 w-48 min-h-8 h-max text-white"
-                    onClick={() => {
-                        setRequests([]);
-                    }}
-                >
-                    Clear Requests
-                </button> */}
             </div>
-            <div className="flex flex-row gap-6 ml-2">
+
+            {/* Filters */}
+            <div className="h-8 flex flex-row gap-6 ml-2">
                 <FilterSelects
                     requests={requests}
                     filter={filter}
@@ -85,31 +80,26 @@ export function IncomingView(props: {
                     Clear Filters
                 </button>
             </div>
-            <div className="mt-2 flex flex-row w-full space-y-2 text-center bg-gray-700 pt-1 text-white">
-                {!props.requestsViewConfig.hideDate ? (
+
+            {/* Table Headers */}
+            <div className="h-8 mt-2 flex flex-row w-full text-center bg-gray-700 pt-1 text-white">
+                {!props.requestsViewConfig.hideDate && (
                     <p className="flex-1">Date</p>
-                ) : (
-                    <></>
                 )}
-                {!props.requestsViewConfig.hideHostCollapsed ? (
+                {!props.requestsViewConfig.hideHostCollapsed && (
                     <p className="flex-1">Host</p>
-                ) : (
-                    <></>
                 )}
-                {!props.requestsViewConfig.hideClientApplication ? (
-                    <p className="flex-1">Client Application</p>
-                ) : (
-                    <></>
+                {!props.requestsViewConfig.hideClientApplication && (
+                    <p className="flex-1">Client App</p>
                 )}
-                {!props.requestsViewConfig.hideState ? (
+                {!props.requestsViewConfig.hideState && (
                     <p className="flex-1">State</p>
-                ) : (
-                    <></>
                 )}
             </div>
-            <div className="flex w-full h-[calc(100vh-29vh)] overflow-y-auto mb-2">
-                <div className="w-full overflow-y-auto h-full">
-                    {/* NOTE: ui should auto scroll to the bottom most point of where a request has opened IF it overflows its larger container */}
+
+            <div className="h-[calc(100vh-13%-123px)] flex flex-col">
+                {/* Scrollable Request List */}
+                <div className="overflow-y-auto h-max">
                     {currentlyShownRequests.map((request, index) => (
                         <RequestView
                             key={index}
@@ -119,14 +109,12 @@ export function IncomingView(props: {
                             setRequest={(req: Request) => {
                                 const newRequests = [...requests];
                                 const idx = requests.findIndex(
-                                    (v) => v.id == req.id,
+                                    (v) => v.id === req.id,
                                 );
                                 requests[idx] = req;
-
                                 setRequests(newRequests);
                             }}
                             imOpen={(s) => {
-                                // im open im open no zawg ur not
                                 if (currentCollapsibleSetOpen !== null) {
                                     currentCollapsibleSetOpen(false);
                                 }
@@ -134,6 +122,11 @@ export function IncomingView(props: {
                             }}
                         />
                     ))}
+                </div>
+
+                {/* Bottom Section - Always visible */}
+                <div className="fixed mt-auto bottom-0 w-full h-[calc(5%)] bg-gray-900 flex items-center justify-center shrink-0">
+                    good morning
                 </div>
             </div>
         </div>
