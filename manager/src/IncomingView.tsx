@@ -149,8 +149,15 @@ function FilterSelects(props: {
 }) {
     return (
         <div className="flex flex-row gap-10">
-            {Object.entries(props.filter).map(([key, currentValue]) => {
+            {Object.entries(props.filter).map(([key, _]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
+
+                const countFilter = { ...props.filter, [key]: undefined };
+                const [countSource, __] = getCurrentlyShownRequests(
+                    props.requests,
+                    countFilter,
+                );
+
                 const uniqueValues = [
                     ...new Set(
                         props.requests.map(
@@ -159,11 +166,39 @@ function FilterSelects(props: {
                     ),
                 ].filter((v) => v !== undefined && v !== null);
 
+                // Count occurrences in countSource
+                const counts: Record<string, number> = countSource.reduce(
+                    (acc, item) => {
+                        const value = item[key as keyof Request];
+                        if (value !== undefined && value !== null) {
+                            const stringValue = String(value);
+                            acc[stringValue] = (acc[stringValue] || 0) + 1;
+                        }
+                        return acc;
+                    },
+                    {} as Record<string, number>,
+                );
+
+                // Build a sorted array of [key, count] tuples based on uniqueValues
+                const sorted = uniqueValues
+                    .map((value) => {
+                        const stringValue = String(value);
+                        return [stringValue, counts[stringValue] || 0] as [
+                            string,
+                            number,
+                        ];
+                    })
+                    .sort((a, b) => b[1] - a[1]);
+
+                // Convert back to a Record<string, number>
+                const result: Record<string, number> =
+                    Object.fromEntries(sorted);
+
                 return (
                     <div className="flex flex-row gap-1 items-center" key={key}>
                         <Select
-                            key={currentValue ?? "unset"} // 🔁 key forces remount
-                            value={currentValue}
+                            key={`${props.filter}-${props.filter[key]}-${key}`}
+                            value={props.filter[key] || undefined}
                             onValueChange={(v) => {
                                 props.setFilter((prev) => ({
                                     ...prev,
@@ -177,18 +212,16 @@ function FilterSelects(props: {
                             <SelectContent>
                                 <SelectGroup>
                                     <SelectLabel>{verboseKey}</SelectLabel>
-                                    {uniqueValues.map((value, index) => (
-                                        <SelectItem
-                                            key={index}
-                                            value={String(value)}
-                                        >
-                                            {String(value)}
+                                    {Object.keys(result).map((key, index) => (
+                                        <SelectItem key={index} value={key}>
+                                            {key} ({result[key]})
                                         </SelectItem>
                                     ))}
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        {currentValue !== undefined && currentValue !== "" ? (
+                        {props.filter[key] !== undefined &&
+                        props.filter[key] !== "" ? (
                             <button
                                 onClick={() => {
                                     props.setFilter((prev) => ({

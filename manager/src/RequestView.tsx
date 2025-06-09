@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
+import { nsToReadable } from "./utils";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -275,11 +276,21 @@ export function RequestView(props: {
                         editMode={editMode}
                         disableEdits={true}
                     ></FieldView>
-                    <Timeline
-                        timing={props.request.timing}
-                        totalTime={props.request.timing_total}
-                        className="mt-2"
-                    />
+                    {props.request.timing && props.request.timing_total ? (
+                        <>
+                            <h1 className="text-lg mt-4">
+                                <b>Timeline</b> (
+                                {nsToReadable(props.request.timing_total)})
+                            </h1>
+                            <Timeline
+                                timing={props.request.timing}
+                                totalTime={props.request.timing_total}
+                                className="mt-2"
+                            />
+                        </>
+                    ) : (
+                        <></>
+                    )}
                 </div>
             </CollapsibleContent>
         </Collapsible>
