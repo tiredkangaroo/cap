@@ -18,10 +18,11 @@
         <div class="w-full flex flex-row justify-center">
             <h1 class="mt-1 text-center text-6xl">cap</h1>
             <img class="w-20" src="assets/cap.png" />
+            <img class="w-8 h-8 mt-auto mb-auto" src="assets/octocat.png" />
         </div>
         <p class="mt-2 text-center">fast and configurable proxy with MITM</p>
         <div class="ml-2">
-            <h1 class="text-3xl">Install</h1>
+            <h1 class="text-3xl">Install (MacOS)</h1>
             <div class="ml-6 instruction gap-6 flex flex-col">
                 <div>
                     <p class="text-lg">Clone the repository</p>
@@ -43,41 +44,14 @@ go mod tidy && npm i --prefix manager</pre
                     >
                 </div>
                 <div>
-                    <p class="text-lg">Set the Environment Variables</p>
-                    <div class="flex flex-col gap-4 w-full">
-                        <div class="flex flex-row">
-                            <pre class="flex-1">PROXY_CACERT</pre>
-                            <p class="flex-1">
-                                Relative (from the running directory) or
-                                absolute path to the PEM-encoded X509 CA
-                                certificate file.
-                            </p>
-                        </div>
-                        <div class="flex flex-row">
-                            <pre class="flex-1">PROXY_CAKEY</pre>
-                            <p class="flex-1">
-                                Relative (from the running directory) or
-                                absolute path to the PEM-encoded PKCS8 CA key
-                                file.
-                            </p>
-                        </div>
-                        <div class="flex flex-row">
-                            <pre class="flex-1">PROXY_CONFIG_FILE</pre>
-                            <p class="flex-1">
-                                Relative (from the running directory) or
-                                absolute path to the save location for the proxy
-                                configuration file. The program must be allowed
-                                r/w access.
-                            </p>
-                        </div>
-                        <!-- <div class="ml-auto mr-4">
-                            <p>ca </p>
-                        </div> -->
-                    </div>
+                    <p class="text-lg">Build the project app</p>
+                    <pre class="code">go run make.go app</pre>
                 </div>
                 <div>
-                    <p class="text-lg">Run the project</p>
-                    <pre class="code">go run make.go run</pre>
+                    <p class="text-lg">Run 'cap.app'</p>
+                </div>
+                <div>
+                    <p class="text-3xl">success!</p>
                 </div>
             </div>
         </div>
