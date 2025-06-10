@@ -1,5 +1,7 @@
 {
-    "name": "manager",
+    "name": "cap",
+    "description": "CAP Desktop is an application.",
+    "author": "Ajitesh Kumar",
     "private": true,
     "version": "0.0.0",
     "type": "module",
@@ -20,7 +22,6 @@
         "@tailwindcss/vite": "^4.1.6",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "electron": "^36.2.0",
         "lucide-react": "^0.510.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
@@ -29,6 +30,8 @@
         "tailwindcss": "^4.1.6"
     },
     "devDependencies": {
+        "electron": "^36.2.0",
+        "electron-builder": "^26.0.12",
         "@eslint/js": "^9.25.0",
         "@types/react": "^19.1.2",
         "@types/react-dom": "^19.1.2",

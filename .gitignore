@@ -6,3 +6,4 @@ testserver/localhost.crt
 testserver/localhost.key
 testserver/localhost.csr
 config.json
+cap.app

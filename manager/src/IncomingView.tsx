@@ -32,7 +32,7 @@ export function IncomingView(props: {
     // currentlyShownRequests is used to show requests that are currently shown in the view. It may or may not be the same as
     // requests, depending on whether the user has filtered or sorted the requests. It is possible to check deviation with
     // isShownDeviated.
-    const [currentlyShownRequests, isShownDeviated] = getCurrentlyShownRequests(
+    const [currentlyShownRequests, _] = getCurrentlyShownRequests(
         requests,
         filter,
     );

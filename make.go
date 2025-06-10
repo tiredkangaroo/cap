@@ -23,6 +23,7 @@ const (
 	CommandRunDebug
 	CommandRun
 	CommandCompile
+	CommandApp
 )
 
 var command Command
@@ -49,8 +50,10 @@ func init() {
 		command = CommandRun
 	case "compile":
 		command = CommandCompile
+	case "app":
+		command = CommandApp
 	default:
-		slog.Error("Invalid command. Use debug, run, or compile.")
+		slog.Error("Invalid command. Use debug, run, compile, or app.")
 	}
 }
 
@@ -64,6 +67,8 @@ func main() {
 		run()
 	case CommandCompile:
 		compile()
+	case CommandApp:
+		app()
 	default:
 		fmt.Println("Invalid command. Use -debug, -run, or -compile.")
 	}
@@ -155,6 +160,7 @@ func cmd(id, command string) {
 	}
 	if err := c.Wait(); err != nil {
 		fmt.Printf("cmd (%s) wait failed: %s\n", id, err.Error())
+		runtime.Goexit()
 	}
 }
 
@@ -203,6 +209,15 @@ func handleSignals(cleanup func()) {
 		cleanup()
 		os.Exit(1)
 	}()
+}
+
+func app() {
+	cmd("01", "npm run build --prefix ./manager --outDir vitedist")
+	cmd("02", "go build -o ./proxy/proxy-app ./proxy")
+	cmd("03", "cd manager && npx electron-builder build")
+	cmd("04", "cp ./proxy/proxy-app ./manager/dist/mac-arm64/cap.app/Contents/Resources")
+	cmd("05", "cp -R ./manager/vitedist ./manager/dist/mac-arm64/cap.app/Contents/Resources/dist")
+	cmd("06", "cp -R ./manager/dist/mac-arm64/cap.app .")
 }
 
 func run() {

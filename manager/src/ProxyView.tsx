@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Proxy } from "./api/api";
 import { IncomingView } from "./IncomingView";
@@ -8,12 +8,12 @@ import { Config } from "./types";
 import { SettingsDialog } from "./settings/SettingsDialog";
 
 export function ProxyView() {
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [proxy, _] = useState<Proxy | null>(
+    const [proxy, setProxy] = useState<Proxy | null>(
         new Proxy("Proxy 1", "http://localhost:8001"),
     );
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const newControlURLRef = useRef<HTMLInputElement | null>(null);
     const [requestsViewConfig, setRequestsViewConfig] = useState({
         hideDate: false,
         hideHostCollapsed: false,
@@ -51,6 +51,28 @@ export function ProxyView() {
         return (
             <div className="flex flex-col justify-center items-center w-full h-full">
                 <h1 className="text-4xl font-bold mb-1">No Proxy</h1>
+                <div className="flex flex-row w-full justify-center items-center">
+                    <input
+                        ref={newControlURLRef}
+                        className="mt-4 border-1 border-black p-3 min-w-12 w-[30%]"
+                        autoFocus={true}
+                        placeholder="Control URL"
+                    ></input>
+                    {/* capture erros with new proxy (connection issue etc) */}
+                    <button
+                        className="ml-2 mt-auto mb-2 border-1 border-white bg-black text-white px-3 py-1 rounded-sm"
+                        onClick={() => {
+                            setProxy(
+                                new Proxy(
+                                    "Proxy 1",
+                                    newControlURLRef.current!.value!,
+                                ),
+                            );
+                        }}
+                    >
+                        Connect
+                    </button>
+                </div>
             </div>
         );
     }

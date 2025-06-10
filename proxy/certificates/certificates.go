@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net"
 	"os"
@@ -43,14 +44,21 @@ func (c *Certificates) Init() error {
 	proxyCACert := os.Getenv("PROXY_CACERT")
 	proxyCAKey := os.Getenv("PROXY_CAKEY")
 
-	if proxyCACert == "" || proxyCAKey == "" {
-		return fmt.Errorf("environment variables PROXY_CACERT and PROXY_CAKEY must be set")
+	// default values for the CA certificate and key will be used when the user can manually drop in proxy cacert and cakey
+	// files
+	if proxyCACert == "" {
+		proxyCACert = "certs/ca.crt"
+		slog.Warn("PROXY_CACERT environment variable is not set, using default: certs/ca.crt")
 	}
-	rawproxyCACert, err := os.ReadFile(os.Getenv("PROXY_CACERT"))
+	if proxyCAKey == "" {
+		proxyCAKey = "certs/ca.key"
+		slog.Warn("PROXY_CAKEY environment variable is not set, using default: certs/ca.key")
+	}
+	rawproxyCACert, err := os.ReadFile(proxyCACert)
 	if err != nil {
 		return fmt.Errorf("proxy cacert readfile: %w", err)
 	}
-	rawproxyCAKey, err := os.ReadFile(os.Getenv("PROXY_CAKEY"))
+	rawproxyCAKey, err := os.ReadFile(proxyCAKey)
 	if err != nil {
 		return fmt.Errorf("proxy cakey readfile: %w", err)
 	}

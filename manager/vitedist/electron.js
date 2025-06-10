@@ -1,5 +1,5 @@
 import { app, BrowserWindow } from "electron";
-import { exec, execFile } from "child_process";
+import { exec } from "child_process";
 import path from "path";
 
 const PORT = 5173;
@@ -58,10 +58,7 @@ async function createWindow() {
         win.loadURL("http://localhost:5173");
     } else {
         // this is the url for the production build
-        // app/Content/Resources/app.asar/../proxy-app
-        // app/Content/Resources/app.asar/../dist/index.html
-        execFile("../proxy-app");
-        win.loadFile("../dist/index.html");
+        win.loadFile("dist/index.html");
     }
 }
 
