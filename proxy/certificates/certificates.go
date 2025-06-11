@@ -47,11 +47,11 @@ func (c *Certificates) Init() error {
 	// default values for the CA certificate and key will be used when the user can manually drop in proxy cacert and cakey
 	// files
 	if proxyCACert == "" {
-		proxyCACert = "certs/ca.crt"
+		proxyCACert = "./certs/ca.crt"
 		slog.Warn("PROXY_CACERT environment variable is not set, using default: certs/ca.crt")
 	}
 	if proxyCAKey == "" {
-		proxyCAKey = "certs/ca.key"
+		proxyCAKey = "./certs/ca.key"
 		slog.Warn("PROXY_CAKEY environment variable is not set, using default: certs/ca.key")
 	}
 	rawproxyCACert, err := os.ReadFile(proxyCACert)
