@@ -21,6 +21,8 @@ export function IncomingView(props: {
     requestsViewConfig: RequestsViewConfig;
 }) {
     const [requests, setRequests] = useState<Array<Request>>([]);
+    const [pageNumber, setPageNumber] = useState<number>(0);
+    const [resultsPerPage, setResultsPerPage] = useState<number>(15);
 
     // filter is used to filter the requests shown in the view.
     const [filter, setFilter] = useState<Record<string, string | undefined>>({
@@ -49,9 +51,17 @@ export function IncomingView(props: {
         props.proxy.requests = requests;
     }, [requests]);
 
+    // FIXME: the currently open one will change if a new request comes in
     let currentCollapsibleSetOpen: React.Dispatch<
         React.SetStateAction<boolean>
     > | null = null;
+
+    // this can happen on filter adj or results per page change
+    if (
+        pageNumber > Math.ceil(currentlyShownRequests.length / resultsPerPage)
+    ) {
+        setPageNumber(0);
+    }
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -80,9 +90,12 @@ export function IncomingView(props: {
                     Clear Filters
                 </button>
             </div>
+            <div className="ml-2 min-h-fit py-1 text-gray-500">
+                {currentlyShownRequests.length} results
+            </div>
 
             {/* Table Headers */}
-            <div className="h-8 mt-2 flex flex-row w-full text-center bg-gray-700 pt-1 text-white">
+            <div className="h-8 flex flex-row w-full text-center bg-gray-700 pt-1 text-white">
                 {!props.requestsViewConfig.hideDate && (
                     <p className="flex-1">Date</p>
                 )}
@@ -100,35 +113,166 @@ export function IncomingView(props: {
             <div className="h-[calc(100vh-13%-123px)] flex flex-col">
                 {/* Scrollable Request List */}
                 <div className="overflow-y-auto h-max">
-                    {currentlyShownRequests.map((request, index) => (
-                        <RequestView
-                            key={index}
-                            proxy={props.proxy}
-                            request={request}
-                            requestsViewConfig={props.requestsViewConfig}
-                            setRequest={(req: Request) => {
-                                const newRequests = [...requests];
-                                const idx = requests.findIndex(
-                                    (v) => v.id === req.id,
-                                );
-                                requests[idx] = req;
-                                setRequests(newRequests);
-                            }}
-                            imOpen={(s) => {
-                                if (currentCollapsibleSetOpen !== null) {
-                                    currentCollapsibleSetOpen(false);
-                                }
-                                currentCollapsibleSetOpen = s;
-                            }}
-                        />
-                    ))}
+                    {currentlyShownRequests
+                        .slice(
+                            pageNumber * resultsPerPage,
+                            pageNumber * resultsPerPage + resultsPerPage,
+                        )
+                        .map((request) => {
+                            const index = requests.findIndex(
+                                (v) => v.id === request.id,
+                            );
+                            return (
+                                <RequestView
+                                    key={index}
+                                    proxy={props.proxy}
+                                    request={request}
+                                    requestsViewConfig={
+                                        props.requestsViewConfig
+                                    }
+                                    setRequest={(req: Request) => {
+                                        const newRequests = [...requests];
+                                        const idx = requests.findIndex(
+                                            (v) => v.id === req.id,
+                                        );
+                                        requests[idx] = req;
+                                        setRequests(newRequests);
+                                    }}
+                                    imOpen={(s) => {
+                                        if (
+                                            currentCollapsibleSetOpen !== null
+                                        ) {
+                                            currentCollapsibleSetOpen(false);
+                                        }
+                                        currentCollapsibleSetOpen = s;
+                                    }}
+                                />
+                            );
+                        })}
                 </div>
 
+                <div className="mt-10"></div>
                 {/* Bottom Section - Always visible */}
-                <div className="fixed mt-auto bottom-0 w-full h-[calc(5%)] bg-gray-900 flex items-center justify-center shrink-0">
-                    good morning
+                <div className="fixed mt-auto bottom-0 w-full h-[calc(5%)] bg-gray-900 flex flex-row items-center justify-between shrink-0">
+                    <Pagination
+                        requests={requests}
+                        currentlyShownRequests={currentlyShownRequests}
+                        pageNumber={pageNumber}
+                        setPageNumber={setPageNumber}
+                        resultsPerPage={resultsPerPage}
+                    />
+                    <div className="flex flex-row text-white text-sm items-center mr-2">
+                        Results per page:
+                        <Select
+                            value={resultsPerPage.toString() ?? "15"}
+                            onValueChange={(v) => {
+                                setResultsPerPage(parseInt(v) ?? 15);
+                            }}
+                        >
+                            <SelectTrigger className="ml-4 border-white text-white min-w-[150px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="text-black">
+                                {["10", "15", "25", "50", "75", "100"].map(
+                                    (v) => (
+                                        <SelectItem
+                                            className="text-black"
+                                            value={v}
+                                        >
+                                            {v}
+                                        </SelectItem>
+                                    ),
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function Pagination(props: {
+    requests: Array<Request>;
+    currentlyShownRequests: Array<Request>;
+    pageNumber: number;
+    setPageNumber: React.Dispatch<React.SetStateAction<number>>;
+    resultsPerPage: number;
+}) {
+    const totalPages = Math.ceil(
+        props.currentlyShownRequests.length / props.resultsPerPage,
+    );
+
+    const current = props.pageNumber;
+    const pagesToShow: number[] = [];
+
+    if (totalPages <= 5) {
+        // Show all pages if <= 5
+        for (let i = 0; i < totalPages; i++) {
+            pagesToShow.push(i);
+        }
+    } else {
+        if (current <= 2) {
+            // Near the start
+            pagesToShow.push(0, 1, 2, 3, totalPages - 1);
+        } else if (current >= totalPages - 3) {
+            // Near the end
+            pagesToShow.push(
+                0,
+                totalPages - 4,
+                totalPages - 3,
+                totalPages - 2,
+                totalPages - 1,
+            );
+        } else {
+            // Middle
+            pagesToShow.push(
+                0,
+                current - 1,
+                current,
+                current + 1,
+                totalPages - 1,
+            );
+        }
+    }
+
+    // ensure uniqueness and sort
+    const uniquePages = Array.from(new Set(pagesToShow)).sort((a, b) => a - b);
+
+    function PaginationItem({ v }: { v: number }) {
+        return (
+            <a
+                key={v}
+                className="cursor-pointer px-2"
+                style={{
+                    textDecoration: v === current ? "underline" : "none",
+                }}
+                onClick={() => props.setPageNumber(v)}
+            >
+                {v + 1}
+            </a>
+        );
+    }
+
+    return (
+        <div
+            className="flex flex-row gap-2 ml-4 text-white"
+            key={`${props.requests.length}-${props.pageNumber}`}
+        >
+            {uniquePages.map((v, i) => {
+                let ellipses = false;
+                if (i > 0) {
+                    const prev = uniquePages[i - 1];
+                    ellipses = v - prev > 1;
+                }
+
+                return (
+                    <>
+                        {ellipses ? <span>..</span> : <></>}
+                        <PaginationItem key={v} v={v} />
+                    </>
+                );
+            })}
         </div>
     );
 }
@@ -238,7 +382,7 @@ function getCurrentlyShownRequests(
     requests: Array<Request>,
     filter: Record<string, string | undefined>,
 ): [Array<Request>, boolean] {
-    let currentlyShownRequests = requests;
+    let currentlyShownRequests = requests.reverse();
 
     if (filter.clientApplication) {
         currentlyShownRequests = currentlyShownRequests.filter(
