@@ -60,13 +60,13 @@ async function createWindow() {
         // this is the url for the production build
         // app/Content/Resources/app.asar/../proxy-app
         // app/Content/Resources/app.asar/../dist/index.html
+
+        // add better error handling; kill all procs on err
         execFile(
             "bash",
             ["-c", new URL("../../proxy-app", import.meta.url).pathname],
             (err, stdout, stderr) => {
-                if (err) {
-                    throw err;
-                }
+                console.log("err", err);
                 console.log("stdout", stdout);
                 console.error("stderr", stderr);
             },

@@ -199,7 +199,6 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		} `json:"request"`
 	}
 	updatedMessage, err := expectJSON[updatedMessageType](data)
-	fmt.Println("177", updatedMessage)
 	if err != nil {
 		// handle error: invalid message format
 		return
@@ -212,7 +211,6 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		// handle error: request not found
 		return
 	}
-	fmt.Println("200 old", req.req)
 	if req.req.Body != nil {
 		req.req.Body.Close() // close the old body if it exists
 	}
@@ -225,7 +223,6 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 	req.req.URL.Path = updatedMessage.Request.Path
 	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
 
-	fmt.Println("213", req.req)
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

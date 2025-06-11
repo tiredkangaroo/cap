@@ -28,7 +28,7 @@ func (cr *CustomConn) Close() error {
 	if err != nil {
 		return err
 	}
-	cr.u = nil // prevent further use
+	// removed nil assignment to prevent nil pointer dereference (not too sure why it is happening)
 	return nil
 }
 
