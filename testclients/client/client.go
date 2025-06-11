@@ -21,7 +21,6 @@ var URLS = []string{
 	"https://apple.com",
 	"https://yahoo.com",
 	"https://example.org",
-	"https://api.github.com",
 	"https://not-a-real-host.localhost:0000",
 }
 
@@ -50,7 +49,9 @@ func main() {
 				slog.Error("error creating request", "error", err, "url", url)
 				continue
 			}
-			http.DefaultClient.Do(req)
+			if _, err := http.DefaultClient.Do(req); err != nil {
+				slog.Error("do error", "url", url, "err", err)
+			}
 		}
 	}
 }
