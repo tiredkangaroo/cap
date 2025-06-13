@@ -132,14 +132,24 @@ export class ClientWS {
                 break;
             }
             case "ERROR": {
-                const data = rawdata as { id: string; error: string };
+                const data = rawdata as {
+                    id: string;
+                    error: string;
+                    bytesTransferred: number;
+                    timing: Timing;
+                    timing_total: number;
+                };
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
                 );
                 if (requestIndex !== -1) {
                     const request = requests[requestIndex];
                     request.state = "Error";
+                    request.bytesTransferred = data.bytesTransferred;
+                    request.timing_total = data.timing_total;
+                    request.timing = data.timing;
                     request.error = data.error;
+                    console.log(data.timing, data.timing_total);
                     requests[requestIndex] = request;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);

@@ -98,19 +98,23 @@ func (c *Manager) SendResponse(req *Request) {
 	})
 }
 
+// NOTE: add timing_total to timing.export
 func (c *Manager) SendDone(req *Request) {
 	c.writeJSON("DONE", map[string]any{
 		"id":               req.id,
 		"bytesTransferred": req.BytesTransferred(),
 		"timing":           req.timing.Export(),
-		"timing_total":     req.totalTime,
+		"timing_total":     req.timing.Total(),
 	})
 }
 
 func (c *Manager) SendError(req *Request, err error) {
 	c.writeJSON("ERROR", map[string]any{
-		"id":    req.id,
-		"error": err.Error(),
+		"id":               req.id,
+		"error":            err.Error(),
+		"bytesTransferred": req.BytesTransferred(), //NOTE: field not handled yet
+		"timing":           req.timing.Export(),
+		"timing_total":     req.timing.Total(),
 	})
 }
 

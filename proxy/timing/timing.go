@@ -89,6 +89,15 @@ func (t *Timing) Export() map[string]any {
 	}
 }
 
+func (t *Timing) Total() time.Duration {
+	if len(t.majorTimeValues) == 0 {
+		return 0
+	}
+	first := t.majorTimeValues[0]
+	last := t.majorTimeValues[len(t.majorTimeValues)-1]
+	return last.start.Add(last.Duration).Sub(first.start)
+}
+
 func New(secure, mitm bool) *Timing {
 	t := &Timing{
 		majorTimeKeys:   make([]Time, 0, 4),

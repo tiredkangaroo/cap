@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { IoMdClose } from "react-icons/io";
 
 import { Request, RequestsViewConfig } from "./types";
@@ -176,6 +176,7 @@ export function IncomingView(props: {
                                 {["10", "15", "25", "50", "75", "100"].map(
                                     (v) => (
                                         <SelectItem
+                                            key={v}
                                             className="text-black"
                                             value={v}
                                         >
@@ -267,10 +268,10 @@ function Pagination(props: {
                 }
 
                 return (
-                    <>
+                    <Fragment key={v}>
                         {ellipses ? <span>..</span> : <></>}
                         <PaginationItem key={v} v={v} />
-                    </>
+                    </Fragment>
                 );
             })}
         </div>

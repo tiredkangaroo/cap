@@ -58,8 +58,6 @@ func (r *Request) handleHTTP(m *Manager) error {
 		return fmt.Errorf("connection write: %w", err)
 	}
 
-	r.totalTime = time.Since(r.datetime)
-
 	return nil
 }
 
@@ -126,7 +124,6 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
 	}
-	r.totalTime = time.Since(r.datetime)
 
 	return nil
 }
@@ -181,7 +178,6 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	r.timing.Stop()
 
 	m.SendDone(r)
-	r.totalTime = time.Since(r.datetime)
 
 	return nil
 }

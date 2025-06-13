@@ -1,6 +1,7 @@
 import { downloadBody, downloadRequest } from "./downloadRequest";
 import { Request, RequestsViewConfig } from "./types";
 import { Proxy } from "./api/api";
+import { CiLock, CiUnlock } from "react-icons/ci";
 
 import {
     Collapsible,
@@ -53,7 +54,14 @@ export function RequestView(props: {
                     <ParagraphView
                         hide={props.requestsViewConfig.hideHostCollapsed}
                     >
-                        {props.request.host}
+                        <div className="flex flex-row justify-center items-center gap-2 text-md">
+                            {props.request.host}
+                            {props.request.secureState !== "HTTP (Insecure)" ? (
+                                <CiLock className="text-green-700" />
+                            ) : (
+                                <CiUnlock className="text-red-700" />
+                            )}
+                        </div>
                     </ParagraphView>
                     <ParagraphView
                         hide={props.requestsViewConfig.hideClientApplication}
@@ -644,8 +652,8 @@ function ParagraphView(props: {
         return <></>;
     }
     return (
-        <p className={"flex-1 text-center" + props.className}>
+        <div className={"flex-1 text-center" + props.className}>
             {props.children != "" ? props.children : <>-</>}
-        </p>
+        </div>
     );
 }

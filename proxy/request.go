@@ -34,8 +34,7 @@ type Request struct {
 	clientProcessID     int
 	clientProcessName   string
 
-	timing    *timing.Timing
-	totalTime time.Duration
+	timing *timing.Timing
 
 	req  *http.Request
 	resp *http.Response

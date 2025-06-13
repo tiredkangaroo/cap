@@ -1,1 +1,0 @@
-{"debug":true,"real_ip_header":true,"certificate_lifetime":7200,"mitm":true,"provide_request_body":true,"provide_response_body":true,"perform_delay":0,"require_approval":false}
