@@ -298,11 +298,11 @@ function FilterSelects(props: {
 
                 const uniqueValues = [
                     ...new Set(
-                        props.requests.map(
-                            (item) => item[key as keyof Request],
-                        ),
+                        props.requests.map((item) => {
+                            return item[key as keyof Request];
+                        }),
                     ),
-                ].filter((v) => v !== undefined && v !== null);
+                ].filter((v) => v !== undefined && v !== null && v !== "");
 
                 // Count occurrences in countSource
                 const counts: Record<string, number> = countSource.reduce(

@@ -7,20 +7,19 @@ import {
 import { nsToReadable } from "./utils";
 
 const colors = [
-    "#fa7a7a",
-    "#7afab2",
-    "#7aadfa",
-    "#fac57a",
-    "#967afa",
-    "#fa7aed",
-    "#f8fa7a",
+    "#ffc1ab",
+    "#adc7ff",
+    "#ffadf1",
+    "#fa3c5f",
+    "#e6d7f5",
+    "#d7d8de",
+    "#defc97",
 
     // "#acf797",
     // "#9ceeff",
     // "#b39ff5",
     // "#ffb8f1",
     // "#7a485f",
-    // "#48507a",
     // "#487a4f",
     // "#7a7848",
     // "#7d7d7a",
@@ -41,6 +40,7 @@ export function Timeline(props: {
         );
     }
 
+    let percents = 0;
     return (
         <div
             className={`flex flex-row w-[calc(100%-1rem)] bg-black overflow-hidden rounded ${props.className}`}
@@ -49,6 +49,7 @@ export function Timeline(props: {
                 const majorValue = props.timing!.majorTimeValues[i];
                 const widthPercent =
                     (majorValue.duration / props.totalTime!) * 100;
+                percents += widthPercent;
                 return (
                     <TimeView
                         idx={i}
@@ -58,6 +59,16 @@ export function Timeline(props: {
                     />
                 );
             })}
+            <TimeView
+                idx={props.timing.majorTimeKeys.length}
+                majorKey="Misc."
+                majorValue={{
+                    duration: (100 - percents) * props.totalTime!,
+                    minorTimeKeys: [],
+                    minorTimeValues: [],
+                }}
+                widthPercent={100 - percents}
+            />
         </div>
     );
 }

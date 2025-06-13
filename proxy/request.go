@@ -76,9 +76,11 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.clientIP = r.req.RemoteAddr
 	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
 
-	r.timing.Substart(timing.SubtimeGetClientProcessInfo)
-	getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
-	r.timing.Substop()
+	if config.DefaultConfig.GetClientProcessInfo {
+		r.timing.Substart(timing.SubtimeGetClientProcessInfo)
+		getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
+		r.timing.Substop()
+	}
 
 	return nil
 }

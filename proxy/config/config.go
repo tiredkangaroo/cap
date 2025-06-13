@@ -50,6 +50,14 @@ type Config struct {
 	// This is useful for debugging purposes, such as inspecting the request before it is performed,
 	// or for security purposes, such as ensuring that the request is safe to perform.
 	RequireApproval bool `json:"require_approval"`
+
+	// GetClientProcessInfo is a boolean that determines whether the proxy should provide information about the
+	// client process that made the request. This includes the process ID and the name of the application.
+	//
+	// This can be useful for both debugging and production purposes, however this operation take a significant
+	// amount of time to perform, since it requires the proxy to query the operating system by running shell
+	// commands for the process information.
+	GetClientProcessInfo bool `json:"get_client_process_info"`
 }
 
 func init() {

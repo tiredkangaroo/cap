@@ -32,6 +32,10 @@ export interface Config {
 
     // require_approval is a boolean that determines whether the proxy should require approval for each request.
     require_approval: boolean;
+
+    // get_client_process_info is a boolean that determines whether the proxy should provide information
+    // about the client process. Getting this information takes time.
+    get_client_process_info: boolean;
 }
 
 export interface Request {

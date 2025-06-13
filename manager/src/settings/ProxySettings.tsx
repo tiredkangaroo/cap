@@ -114,6 +114,20 @@ export function ProxySettingsView(props: { proxy: Proxy }) {
                 the request before proceeding. This is useful for debugging and
                 security purposes.
             </CheckField>
+
+            <CheckField
+                name="Client Process Info"
+                defaultChecked={proxyConfig.get_client_process_info}
+                onChange={(v: boolean) => {
+                    proxyConfig.get_client_process_info = v;
+                    props.proxy!.setConfig(proxyConfig);
+                    setProxyConfig({ ...proxyConfig });
+                }}
+            >
+                Client process info allows the proxy to provide information
+                about the client process. This information can prove to be
+                useful, however it takes a significant amount of time to gather.
+            </CheckField>
         </div>
     );
 }
