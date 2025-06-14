@@ -13,9 +13,7 @@ import (
 func startControlServer(m *Manager) {
 	// Start the control server
 	http.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
-		if config.DefaultConfig.Debug {
-			setCORSHeaders(w)
-		}
+		setCORSHeaders(w)
 
 		data, err := json.Marshal(config.DefaultConfig)
 		if err != nil {
@@ -30,9 +28,7 @@ func startControlServer(m *Manager) {
 	})
 
 	http.HandleFunc("POST /config", func(w http.ResponseWriter, r *http.Request) {
-		if config.DefaultConfig.Debug {
-			setCORSHeaders(w)
-		}
+		setCORSHeaders(w)
 
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -78,6 +74,62 @@ func startControlServer(m *Manager) {
 			}
 		}()
 	})
+	http.HandleFunc("POST /repeat/:id", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		id := r.PathValue("id")
+		// prevent resource exhaustion by limiting the size of the request body (but it likely won't be an issue because
+		// this control server isn't outward facing)
+		if id == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing id parameter"))
+			return
+		}
+
+		req, err := m.queries.GetRequestByID(r.Context(), id)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("request not found"))
+			return
+		}
+
+		// we will add init steps here to create a new request
+		// and then we'll use our designated handlers (get kind to choose which handler to use)
+
+		jsonData, err := json.Marshal(req)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to marshal request data"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonData)
+	})
+
+	http.HandleFunc("GET /request/{id}", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		id := r.PathValue("id")
+		if id == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing id parameter"))
+			return
+		}
+		req, err := m.queries.GetRequestByID(r.Context(), id)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("request not found"))
+			return
+		}
+		data, err := json.Marshal(req)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to marshal request data"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	})
 
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
 		setCORSHeaders(w)
@@ -91,6 +143,9 @@ func startControlServer(m *Manager) {
 }
 
 func setCORSHeaders(w http.ResponseWriter) {
+	if !config.DefaultConfig.Debug {
+		return
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Request-Method", "POST, GET, OPTIONS")
 	w.Header().Set("Access-Control-Max-Age", "300")

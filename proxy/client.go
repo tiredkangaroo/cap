@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/bigproxy/proxy/db"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -29,6 +30,7 @@ import (
 // (proxy -> client) ERROR <id, err>
 
 type Manager struct {
+	queries *db.Queries
 	wsConns []*websocket.Conn
 
 	approvalWaiters     map[string]*Request
@@ -100,6 +102,8 @@ func (c *Manager) SendResponse(req *Request) {
 
 // NOTE: add timing_total to timing.export
 func (c *Manager) SendDone(req *Request) {
+	ctx := context.Background()
+	c.queries.CreateRequest(ctx, requestToParams(req, nil))
 	c.writeJSON("DONE", map[string]any{
 		"id":               req.id,
 		"bytesTransferred": req.BytesTransferred(),
@@ -109,6 +113,8 @@ func (c *Manager) SendDone(req *Request) {
 }
 
 func (c *Manager) SendError(req *Request, err error) {
+	ctx := context.Background()
+	c.queries.CreateRequest(ctx, requestToParams(req, err))
 	c.writeJSON("ERROR", map[string]any{
 		"id":               req.id,
 		"error":            err.Error(),

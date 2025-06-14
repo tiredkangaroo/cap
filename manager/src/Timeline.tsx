@@ -14,15 +14,6 @@ const colors = [
     "#e6d7f5",
     "#d7d8de",
     "#defc97",
-
-    // "#acf797",
-    // "#9ceeff",
-    // "#b39ff5",
-    // "#ffb8f1",
-    // "#7a485f",
-    // "#487a4f",
-    // "#7a7848",
-    // "#7d7d7a",
 ];
 
 export function Timeline(props: {
@@ -61,9 +52,9 @@ export function Timeline(props: {
             })}
             <TimeView
                 idx={props.timing.majorTimeKeys.length}
-                majorKey="Misc."
+                majorKey="Miscellaneous"
                 majorValue={{
-                    duration: (100 - percents) * props.totalTime!,
+                    duration: ((100 - percents) / 100) * props.totalTime!,
                     minorTimeKeys: [],
                     minorTimeValues: [],
                 }}

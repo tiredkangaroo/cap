@@ -7,3 +7,4 @@ testserver/localhost.key
 testserver/localhost.csr
 config.json
 cap.app
+cap.db

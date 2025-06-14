@@ -21,9 +21,18 @@ var (
 	ErrPerformStop = errors.New("perform stopped")
 )
 
+type Kind = int64
+
+const (
+	RequestKindHTTP      Kind = iota // HTTP
+	RequestKindHTTPS                 // HTTPS
+	RequestKindHTTPSMITM             // HTTPS with MITM
+)
+
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
 	id       string
+	kind     Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
 	datetime time.Time
 	host     string
 	conn     net.Conn
@@ -47,6 +56,14 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.req = req
 	r.secure = r.req.Method == http.MethodConnect
 	r.timing = timing.New(r.secure, config.DefaultConfig.MITM)
+
+	if r.secure && config.DefaultConfig.MITM {
+		r.kind = 2 // HTTPS with MITM
+	} else if r.secure {
+		r.kind = 1 // HTTPS
+	} else {
+		r.kind = 0 // HTTP
+	}
 
 	r.timing.Start(timing.TimeRequestInit)
 	defer r.timing.Stop()
@@ -150,6 +167,7 @@ func (r *Request) BytesTransferred() int64 {
 // does not allow for the body to be read. If the body cannot be read for any another reason, it returns a
 // nil byte slice.
 func (r *Request) body() []byte {
+	// this is resource heavy, but if we're doing it, might as well just use sync.Once
 	var bodyData []byte
 	var err error
 	if config.DefaultConfig.ProvideRequestBody {

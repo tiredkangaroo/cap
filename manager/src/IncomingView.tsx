@@ -151,7 +151,7 @@ export function IncomingView(props: {
                         })}
                 </div>
 
-                <div className="mt-10"></div>
+                <div className="mt-8"></div>
                 {/* Bottom Section - Always visible */}
                 <div className="fixed mt-auto bottom-0 w-full h-[calc(5%)] bg-gray-900 flex flex-row items-center justify-between shrink-0">
                     <Pagination
