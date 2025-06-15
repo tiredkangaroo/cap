@@ -48,8 +48,9 @@ type Request struct {
 
 	timing *timing.Timing
 
-	req  *http.Request
-	resp *http.Response
+	req     *http.Request
+	reqBody []byte
+	resp    *http.Response
 
 	errorText string // NOTE: only populated at db, prolly should change that
 
@@ -172,6 +173,10 @@ func (r *Request) BytesTransferred() int64 {
 // does not allow for the body to be read. If the body cannot be read for any another reason, it returns a
 // nil byte slice.
 func (r *Request) body() []byte {
+	if r.reqBody != nil {
+		// if the body is already read, return it
+		return r.reqBody
+	}
 	// this is resource heavy, but if we're doing it, might as well just use sync.Once
 	var bodyData []byte
 	var err error
@@ -182,6 +187,7 @@ func (r *Request) body() []byte {
 			bodyData = nil
 		}
 		r.req.Body = io.NopCloser(bytes.NewBuffer(bodyData)) // make sure the body can be read again
+		r.reqBody = bodyData                                 // store the body data for later use
 	} else {
 		bodyData = nil
 	}

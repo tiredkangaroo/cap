@@ -74,6 +74,11 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 			}
 		}()
 	})
+
+	// http.HandleFunc("GET /response", func (w http.ResponseWriter, r *http.Request) {
+
+	// })
+
 	http.HandleFunc("GET /repeat/{id}", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w)
 		id := r.PathValue("id")
