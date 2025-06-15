@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -51,12 +51,13 @@ func (c *Manager) AcceptWS(w http.ResponseWriter, r *http.Request) (*websocket.C
 
 func (c *Manager) SendNew(req *Request) {
 	var secureState string
-	if req.Secure && config.DefaultConfig.MITM {
-		secureState = "HTTPS (with MITM)"
-	} else if req.Secure {
-		secureState = "HTTPS (Secure)"
-	} else {
+	switch req.Kind {
+	case RequestKindHTTP:
 		secureState = "HTTP (Insecure)"
+	case RequestKindHTTPS:
+		secureState = "HTTPS (Secure)"
+	case RequestKindHTTPSMITM:
+		secureState = "HTTPS (with MITM)"
 	}
 	c.writeJSON("NEW", map[string]any{
 		"id":                  req.ID,
@@ -101,7 +102,9 @@ func (c *Manager) SendResponse(req *Request) {
 
 // NOTE: add timing_total to timing.export
 func (c *Manager) SendDone(req *Request) {
-	c.db.SaveRequest(req, nil)
+	if err := c.db.SaveRequest(req, nil); err != nil {
+		slog.Error("saving done request to database", "err", err.Error(), "request_id", req.ID)
+	}
 	c.writeJSON("DONE", map[string]any{
 		"id":               req.ID,
 		"bytesTransferred": req.BytesTransferred(),
@@ -111,7 +114,9 @@ func (c *Manager) SendDone(req *Request) {
 }
 
 func (c *Manager) SendError(req *Request, err error) {
-	c.db.SaveRequest(req, err)
+	if e := c.db.SaveRequest(req, err); e != nil {
+		slog.Error("saving erroneous request to database", "err", e.Error(), "request_id", req.ID)
+	}
 	c.writeJSON("ERROR", map[string]any{
 		"id":               req.ID,
 		"error":            err.Error(),

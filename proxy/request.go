@@ -31,7 +31,8 @@ const (
 
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
-	Kind   Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
+	Kind Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
+	// this attribute should be renamed for its purpose
 	Secure bool
 
 	ID       string
@@ -49,6 +50,8 @@ type Request struct {
 
 	req  *http.Request
 	resp *http.Response
+
+	errorText string // NOTE: only populated at db, prolly should change that
 
 	approveResponseFunc func(approved bool)
 }
@@ -109,7 +112,7 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
 	r.timing.Start(timing.TimePrepRequest)
 	// toURL is used to convert the host to a valid URL.
-	newURL, err := toURL(r.req.Host, r.Secure, r.req.URL.Scheme)
+	newURL, err := toURL(r.req.Host, r.Secure)
 	if err != nil {
 		return nil, nil, fmt.Errorf("malformed url (toURL): %w", err)
 	}
@@ -235,5 +238,6 @@ func (r *Request) JSON() map[string]any {
 			"headers":    r.resp.Header,
 			"body":       string(r.respbody()),
 		},
+		"error": r.errorText,
 	}
 }

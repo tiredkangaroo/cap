@@ -78,7 +78,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	var requestBody []byte
 	var responseHeaders []byte
 	var responseBody []byte
-	var errText sql.Null[string]
+	var errText sql.NullString
 	var requrl string
 
 	err := row.Scan(
@@ -111,6 +111,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	req.req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 	req.resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	req.req.URL, _ = url.Parse(requrl)
+	req.errorText = errText.String
 	// NOTE: handle error text here
 
 	return req, nil
@@ -142,34 +143,52 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	} else {
 		args = append(args, nil)
 	}
-	if req.req != nil {
-		query += `,
+
+	// request
+	query += `,
 		reqMethod,
 		reqURL,
 		reqHeaders,
 		reqBody`
-		body := req.body()
-		if body == nil {
-			body = []byte("")
+	if req.req != nil {
+		reqbody := req.body()
+		if reqbody == nil {
+			reqbody = []byte("")
 		}
 		args = append(args,
 			req.req.Method,
 			req.req.URL.String(),
 			marshal(req.req.Header),
-			body,
+			reqbody,
+		)
+	} else {
+		args = append(args,
+			"",           // Method
+			"",           // URL
+			[]byte("{}"), // Headers
+			[]byte(""),   // Body
 		)
 	}
+
+	// response
+	query += `,
+		respStatusCode,
+		respHeaders,
+		respBody`
 	if req.resp != nil {
 		args = append(args,
 			req.resp.StatusCode,
 			marshal(req.resp.Header),
 			marshal(req.respbody()),
 		)
-		query += `,
-		respStatusCode,
-		respHeaders,
-		respBody`
+	} else {
+		args = append(args,
+			0,            // StatusCode
+			[]byte("{}"), // Headers
+			[]byte(""),   // Body
+		)
 	}
+
 	query += `) VALUES (`
 	for i := range len(args) {
 		query += "?"

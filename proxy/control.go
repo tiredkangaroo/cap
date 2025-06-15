@@ -94,9 +94,9 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		// and then we'll use our designated handlers (get kind to choose which handler to use)
 
 		newReq := new(Request)
+		*newReq = *req
 		newReq.req = req.req.Clone(r.Context())
 		newReq.req.Host = req.Host
-		newReq.req.URL = req.req.URL
 		if err := newReq.Init(w, newReq.req); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("failed to initialize request"))
@@ -104,6 +104,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 			return
 		}
 		defer newReq.conn.Close()
+		newReq.Kind = req.Kind
 		// newReq.Secure = req.Kind == RequestKindHTTPS || req.Kind == RequestKindHTTPSMITM
 		ph.serveAfterInit(newReq)
 	})
