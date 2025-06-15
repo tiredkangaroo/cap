@@ -1,18 +1,14 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
-
-	"github.com/tiredkangaroo/bigproxy/proxy/db"
 )
 
 // toURL converts a string to a URL. If the string does not start with "http://" or
@@ -76,51 +72,7 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 	return 0, ""
 }
 
-func NullString(s string) sql.NullString {
-	return sql.NullString{
-		String: s,
-		Valid:  s != "",
-	}
-}
-
-func NullInt64(i int) sql.NullInt64 {
-	return sql.NullInt64{
-		Int64: int64(i),
-		Valid: true,
-	}
-}
-
-func headersToBytes(headers http.Header) []byte {
-	data, _ := json.Marshal(headers)
-	return data
-}
-
-func requestToParams(r *Request, err error) db.CreateRequestParams {
-	c := db.CreateRequestParams{
-		ID:                  r.id,
-		Kind:                int64(r.kind),
-		Datetime:            r.datetime,
-		Host:                r.host,
-		Clientip:            r.clientIP,
-		Clientauthorization: r.clientAuthorization,
-		Clientprocessname:   NullString(r.clientProcessName),
-	}
-	if r.req != nil {
-		c.Requestmethod = NullString(r.req.Method)
-		c.Requesturl = NullString(r.req.URL.String())
-		c.Requestheaders = headersToBytes(r.req.Header)
-		c.Requestbody = r.body()
-	}
-	if r.resp != nil {
-		c.Responsestatus = NullInt64(r.resp.StatusCode)
-		c.Responseheaders = headersToBytes(r.resp.Header)
-		c.Responsebody = r.respbody()
-	}
-	if err != nil {
-		c.Error = sql.NullString{
-			String: err.Error(),
-			Valid:  true,
-		}
-	}
-	return c
+func marshal(data any) []byte {
+	m, _ := json.Marshal(data)
+	return m
 }

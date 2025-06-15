@@ -31,17 +31,19 @@ const (
 
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
-	id       string
-	kind     Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
-	datetime time.Time
-	host     string
-	conn     net.Conn
-	secure   bool
+	Kind   Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
+	Secure bool
 
-	clientIP            string
-	clientAuthorization string
-	clientProcessID     int
-	clientProcessName   string
+	ID       string
+	Datetime time.Time
+	Host     string
+
+	conn net.Conn
+
+	ClientIP            string
+	ClientAuthorization string
+	ClientProcessID     int
+	ClientProcessName   string
 
 	timing *timing.Timing
 
@@ -54,29 +56,29 @@ type Request struct {
 func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	// NOTE: mitm config can change in the middle of the request (it shouldn't be able to change behavior of the request after init)
 	r.req = req
-	r.secure = r.req.Method == http.MethodConnect
-	r.timing = timing.New(r.secure, config.DefaultConfig.MITM)
+	r.Secure = r.req.Method == http.MethodConnect
+	r.timing = timing.New(r.Secure, config.DefaultConfig.MITM)
 
-	if r.secure && config.DefaultConfig.MITM {
-		r.kind = 2 // HTTPS with MITM
-	} else if r.secure {
-		r.kind = 1 // HTTPS
+	if r.Secure && config.DefaultConfig.MITM {
+		r.Kind = 2 // HTTPS with MITM
+	} else if r.Secure {
+		r.Kind = 1 // HTTPS
 	} else {
-		r.kind = 0 // HTTP
+		r.Kind = 0 // HTTP
 	}
 
 	r.timing.Start(timing.TimeRequestInit)
 	defer r.timing.Stop()
 
-	r.datetime = time.Now()
+	r.Datetime = time.Now()
 
 	r.timing.Substart(timing.SubtimeUUID)
 	id, err := uuid.NewRandom()
 	if err != nil {
 		slog.Error("uuid error", "err", err.Error())
-		r.id = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
+		r.ID = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
 	}
-	r.id = id.String()
+	r.ID = id.String()
 	r.timing.Substop()
 
 	// hijack the connection
@@ -88,14 +90,14 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 		u: conn,
 	}
 
-	r.host = r.req.Host
+	r.Host = r.req.Host
 
-	r.clientIP = r.req.RemoteAddr
-	r.clientAuthorization = r.req.Header.Get("Proxy-Authorization")
+	r.ClientIP = r.req.RemoteAddr
+	r.ClientAuthorization = r.req.Header.Get("Proxy-Authorization")
 
 	if config.DefaultConfig.GetClientProcessInfo {
 		r.timing.Substart(timing.SubtimeGetClientProcessInfo)
-		getClientProcessInfo(r.clientIP, &r.clientProcessID, &r.clientProcessName)
+		getClientProcessInfo(r.ClientIP, &r.ClientProcessID, &r.ClientProcessName)
 		r.timing.Substop()
 	}
 
@@ -107,7 +109,7 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
 	r.timing.Start(timing.TimePrepRequest)
 	// toURL is used to convert the host to a valid URL.
-	newURL, err := toURL(r.req.Host, r.secure)
+	newURL, err := toURL(r.req.Host, r.Secure)
 	if err != nil {
 		return nil, nil, fmt.Errorf("malformed url (toURL): %w", err)
 	}
@@ -208,4 +210,29 @@ func (r *Request) respbody() []byte {
 		bodyData = nil
 	}
 	return bodyData
+}
+
+func (r *Request) JSON() map[string]any {
+	return map[string]any{
+		"id":                  r.ID,
+		"kind":                r.Kind,
+		"datetime":            r.Datetime.Format(time.RFC3339),
+		"host":                r.Host,
+		"clientIP":            r.ClientIP,
+		"clientAuthorization": r.ClientAuthorization,
+		"clientProcessID":     r.ClientProcessID,
+		"clientProcessName":   r.ClientProcessName,
+		"request": map[string]any{
+			"method":  r.req.Method,
+			"path":    r.req.URL.Path,
+			"query":   r.req.URL.Query(),
+			"headers": r.req.Header,
+			"body":    string(r.body()),
+		},
+		"response": map[string]any{
+			"statusCode": r.resp.StatusCode,
+			"headers":    r.resp.Header,
+			"body":       string(r.respbody()),
+		},
+	}
 }

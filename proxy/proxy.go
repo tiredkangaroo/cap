@@ -37,7 +37,7 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.m.SendNew(req)
 
 	var err error
-	if req.secure { // we're handling an HTTPS connection here
+	if req.Secure { // we're handling an HTTPS connection here
 		err = req.handleHTTPS(c.m, c.certifcates)
 	} else {
 		// we're handling an HTTP connection here

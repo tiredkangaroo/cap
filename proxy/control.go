@@ -85,25 +85,15 @@ func startControlServer(m *Manager) {
 			return
 		}
 
-		req, err := m.queries.GetRequestByID(r.Context(), id)
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("request not found"))
-			return
-		}
+		// req, err := m.queries.GetRequestByID(r.Context(), id)
+		// if err != nil {
+		// 	w.WriteHeader(http.StatusNotFound)
+		// 	w.Write([]byte("request not found"))
+		// 	return
+		// }
 
 		// we will add init steps here to create a new request
 		// and then we'll use our designated handlers (get kind to choose which handler to use)
-
-		jsonData, err := json.Marshal(req)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("failed to marshal request data"))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsonData)
 	})
 
 	http.HandleFunc("GET /request/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -114,16 +104,18 @@ func startControlServer(m *Manager) {
 			w.Write([]byte("missing id parameter"))
 			return
 		}
-		req, err := m.queries.GetRequestByID(r.Context(), id)
+		req, err := m.db.GetRequestByID(id)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("request not found"))
+			slog.Error("failed to get request by ID", "id", id, "err", err.Error())
 			return
 		}
-		data, err := json.Marshal(req)
+		data, err := json.Marshal(req.JSON())
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("failed to marshal request data"))
+			slog.Error("failed to marshal request data", "id", id, "err", err.Error())
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

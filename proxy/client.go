@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
-	"github.com/tiredkangaroo/bigproxy/proxy/db"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -30,7 +29,7 @@ import (
 // (proxy -> client) ERROR <id, err>
 
 type Manager struct {
-	queries *db.Queries
+	db      *Database
 	wsConns []*websocket.Conn
 
 	approvalWaiters     map[string]*Request
@@ -52,28 +51,28 @@ func (c *Manager) AcceptWS(w http.ResponseWriter, r *http.Request) (*websocket.C
 
 func (c *Manager) SendNew(req *Request) {
 	var secureState string
-	if req.secure && config.DefaultConfig.MITM {
+	if req.Secure && config.DefaultConfig.MITM {
 		secureState = "HTTPS (with MITM)"
-	} else if req.secure {
+	} else if req.Secure {
 		secureState = "HTTPS (Secure)"
 	} else {
 		secureState = "HTTP (Insecure)"
 	}
 	c.writeJSON("NEW", map[string]any{
-		"id":                  req.id,
-		"datetime":            req.datetime,
-		"host":                req.host,
+		"id":                  req.ID,
+		"datetime":            req.Datetime,
+		"host":                req.Host,
 		"secureState":         secureState,
-		"clientIP":            req.clientIP,
-		"clientAuthorization": req.clientAuthorization,
-		"clientProcessID":     req.clientProcessID,
-		"clientApplication":   req.clientProcessName,
+		"clientIP":            req.ClientIP,
+		"clientAuthorization": req.ClientAuthorization,
+		"clientProcessID":     req.ClientProcessID,
+		"clientApplication":   req.ClientProcessName,
 	})
 }
 
 func (c *Manager) SendTunnel(req *Request) {
 	c.writeJSON("TUNNEL", IDMessage{
-		ID: req.id,
+		ID: req.ID,
 	})
 }
 
@@ -81,7 +80,7 @@ func (c *Manager) SendRequest(req *Request) {
 	// NOTE: HTTP requests will have a 0 bytesTransferred value because the request is read before the connection is hijacked and
 	// made custom.
 	c.writeJSON("REQUEST", map[string]any{
-		"id":               req.id,
+		"id":               req.ID,
 		"method":           req.req.Method,
 		"path":             req.req.URL.Path,
 		"query":            req.req.URL.Query(),
@@ -93,7 +92,7 @@ func (c *Manager) SendRequest(req *Request) {
 
 func (c *Manager) SendResponse(req *Request) {
 	c.writeJSON("RESPONSE", map[string]any{
-		"id":         req.id,
+		"id":         req.ID,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
 		"body":       string(req.respbody()),
@@ -102,10 +101,9 @@ func (c *Manager) SendResponse(req *Request) {
 
 // NOTE: add timing_total to timing.export
 func (c *Manager) SendDone(req *Request) {
-	ctx := context.Background()
-	c.queries.CreateRequest(ctx, requestToParams(req, nil))
+	c.db.SaveRequest(req, nil)
 	c.writeJSON("DONE", map[string]any{
-		"id":               req.id,
+		"id":               req.ID,
 		"bytesTransferred": req.BytesTransferred(),
 		"timing":           req.timing.Export(),
 		"timing_total":     req.timing.Total(),
@@ -113,10 +111,9 @@ func (c *Manager) SendDone(req *Request) {
 }
 
 func (c *Manager) SendError(req *Request, err error) {
-	ctx := context.Background()
-	c.queries.CreateRequest(ctx, requestToParams(req, err))
+	c.db.SaveRequest(req, err)
 	c.writeJSON("ERROR", map[string]any{
-		"id":               req.id,
+		"id":               req.ID,
 		"error":            err.Error(),
 		"bytesTransferred": req.BytesTransferred(), //NOTE: field not handled yet
 		"timing":           req.timing.Export(),
@@ -130,7 +127,7 @@ func (c *Manager) RecieveApproval(req *Request) (approved bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c.approvalWaitersRWMu.Lock()
-	c.approvalWaiters[req.id] = req
+	c.approvalWaiters[req.ID] = req
 	c.approvalWaitersRWMu.Unlock()
 
 	req.approveResponseFunc = func(approval bool) {
@@ -138,17 +135,17 @@ func (c *Manager) RecieveApproval(req *Request) (approved bool) {
 		approved = approval
 		if approved {
 			c.writeJSON("APPROVAL-RECIEVED", IDMessage{
-				ID: req.id,
+				ID: req.ID,
 			})
 		} else {
 			c.writeJSON("APPROVAL-CANCELED", IDMessage{
-				ID: req.id,
+				ID: req.ID,
 			})
 		}
 	}
 
 	c.writeJSON("APPROVAL-WAIT", IDMessage{
-		ID: req.id,
+		ID: req.ID,
 	})
 
 	<-ctx.Done()
