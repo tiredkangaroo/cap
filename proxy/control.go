@@ -10,7 +10,7 @@ import (
 	"github.com/tiredkangaroo/websocket"
 )
 
-func startControlServer(m *Manager) {
+func startControlServer(m *Manager, ph *ProxyHandler) {
 	// Start the control server
 	http.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w)
@@ -74,7 +74,7 @@ func startControlServer(m *Manager) {
 			}
 		}()
 	})
-	http.HandleFunc("POST /repeat/:id", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /repeat/{id}", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w)
 		id := r.PathValue("id")
 		// prevent resource exhaustion by limiting the size of the request body (but it likely won't be an issue because
@@ -84,16 +84,28 @@ func startControlServer(m *Manager) {
 			w.Write([]byte("missing id parameter"))
 			return
 		}
-
-		// req, err := m.queries.GetRequestByID(r.Context(), id)
-		// if err != nil {
-		// 	w.WriteHeader(http.StatusNotFound)
-		// 	w.Write([]byte("request not found"))
-		// 	return
-		// }
-
+		req, err := m.db.GetRequestByID(id)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("request not found"))
+			return
+		}
 		// we will add init steps here to create a new request
 		// and then we'll use our designated handlers (get kind to choose which handler to use)
+
+		newReq := new(Request)
+		newReq.req = req.req.Clone(r.Context())
+		newReq.req.Host = req.Host
+		newReq.req.URL = req.req.URL
+		if err := newReq.Init(w, newReq.req); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to initialize request"))
+			slog.Error("failed to initialize request", "id", id, "err", err.Error())
+			return
+		}
+		defer newReq.conn.Close()
+		// newReq.Secure = req.Kind == RequestKindHTTPS || req.Kind == RequestKindHTTPSMITM
+		ph.serveAfterInit(newReq)
 	})
 
 	http.HandleFunc("GET /request/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +138,30 @@ func startControlServer(m *Manager) {
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
 		setCORSHeaders(w)
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		cookie, err := r.Cookie("CAP-PROXIED-HOST")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("you're probably here by mistake"))
+			return
+		}
+		if cookie.Value == "" {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("you're probably here by mistake"))
+			return
+		}
+		newReq := new(Request)
+		newReq.req.Host = cookie.Value
+		newReq.req.URL = r.URL
+		if err := newReq.Init(w, newReq.req); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to initialize request"))
+			return
+		}
+		ph.ServeHTTP(w, r)
 	})
 
 	err := http.ListenAndServe(":8001", nil)

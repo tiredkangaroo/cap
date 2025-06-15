@@ -17,9 +17,11 @@ import (
 //
 // This function is used to ensure that the URL is in a valid format before
 // performing any net/http Do operations.
-func toURL(s string, https bool) (*url.URL, error) {
+func toURL(s string, https bool, scheme string) (*url.URL, error) {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
-		if https {
+		if scheme != "" {
+			s = scheme + "://" + s
+		} else if https {
 			s = "https://" + s
 		} else {
 			s = "http://" + s

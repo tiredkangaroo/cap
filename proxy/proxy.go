@@ -34,6 +34,10 @@ func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req.Init(w, r)
 	defer req.conn.Close()
 
+	c.serveAfterInit(req)
+}
+
+func (c *ProxyHandler) serveAfterInit(req *Request) {
 	c.m.SendNew(req)
 
 	var err error
@@ -67,13 +71,12 @@ func (c *ProxyHandler) Init() error {
 }
 
 func (c *ProxyHandler) ListenAndServe(m *Manager) error {
-	ph := new(ProxyHandler)
-	if err := ph.Init(); err != nil {
+	if err := c.Init(); err != nil {
 		return err
 	}
-	ph.m = m
+	c.m = m
 
-	if err := http.ListenAndServe(":8000", ph); err != nil {
+	if err := http.ListenAndServe(":8000", c); err != nil {
 		slog.Error("fatal proxy server", "err", err.Error())
 		return err
 	} else {

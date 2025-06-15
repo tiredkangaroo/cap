@@ -109,7 +109,7 @@ func (r *Request) Perform(m *Manager) (*http.Response, []byte, error) {
 	// might be too resource heavy to do it this way
 	r.timing.Start(timing.TimePrepRequest)
 	// toURL is used to convert the host to a valid URL.
-	newURL, err := toURL(r.req.Host, r.Secure)
+	newURL, err := toURL(r.req.Host, r.Secure, r.req.URL.Scheme)
 	if err != nil {
 		return nil, nil, fmt.Errorf("malformed url (toURL): %w", err)
 	}
@@ -223,6 +223,7 @@ func (r *Request) JSON() map[string]any {
 		"clientProcessID":     r.ClientProcessID,
 		"clientProcessName":   r.ClientProcessName,
 		"request": map[string]any{
+			"url":     r.req.URL.String(),
 			"method":  r.req.Method,
 			"path":    r.req.URL.Path,
 			"query":   r.req.URL.Query(),

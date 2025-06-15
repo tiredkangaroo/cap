@@ -31,9 +31,8 @@ func (d *Database) Init() error {
 		clientIP TEXT NOT NULL,
 		clientAuthorization TEXT,
 		clientProcessName TEXT NOT NULL,
+		reqURL TEXT NOT NULL,
 		reqMethod TEXT NOT NULL,
-		reqPath TEXT NOT NULL,
-		reqQuery BLOB NOT NULL,
 		reqHeaders BLOB NOT NULL,
 		reqBody BLOB NOT NULL,
 		respStatusCode INTEGER NOT NULL,
@@ -58,8 +57,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		clientAuthorization,
 		clientProcessName,
 		reqMethod,
-		reqPath,
-		reqQuery,
+		reqURL,
 		reqHeaders,
 		reqBody,
 		respStatusCode,
@@ -81,6 +79,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	var responseHeaders []byte
 	var responseBody []byte
 	var errText sql.Null[string]
+	var requrl string
 
 	err := row.Scan(
 		&req.ID,
@@ -91,8 +90,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		&req.ClientAuthorization,
 		&req.ClientProcessName,
 		&req.req.Method,
-		&req.req.URL.Path,
-		&requestQuery,
+		&requrl,
 		&requestHeaders,
 		&requestBody,
 		&req.resp.StatusCode,
@@ -112,6 +110,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	json.Unmarshal(responseHeaders, &req.resp.Header)
 	req.req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 	req.resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
+	req.req.URL, _ = url.Parse(requrl)
 	// NOTE: handle error text here
 
 	return req, nil
@@ -144,19 +143,21 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		args = append(args, nil)
 	}
 	if req.req != nil {
-		args = append(args,
-			req.req.Method,
-			req.req.URL.Path,
-			marshal(req.req.URL.Query()),
-			marshal(req.req.Header),
-			req.body(),
-		)
 		query += `,
 		reqMethod,
-		reqPath,
-		reqQuery,
+		reqURL,
 		reqHeaders,
 		reqBody`
+		body := req.body()
+		if body == nil {
+			body = []byte("")
+		}
+		args = append(args,
+			req.req.Method,
+			req.req.URL.String(),
+			marshal(req.req.Header),
+			body,
+		)
 	}
 	if req.resp != nil {
 		args = append(args,

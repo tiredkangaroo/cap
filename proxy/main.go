@@ -45,8 +45,7 @@ func main() {
 		db:                  db,
 	}
 
-	go startControlServer(m)
-
 	ph := new(ProxyHandler)
+	go startControlServer(m, ph)
 	ph.ListenAndServe(m)
 }
