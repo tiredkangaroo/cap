@@ -27,7 +27,9 @@ export function IncomingView(props: {
 
     const [pageNumber, setPageNumber] = useState<number>(0);
     const [resultsPerPage, setResultsPerPage] = useState<number>(15);
+    // NOTE: possible remove totalPages for totalResults only and using ceil division
     const totalPages = useRef<number>(0);
+    const totalResults = useRef<number>(0);
 
     // filter is used to filter the requests shown in the view.
     const [filter, setFilter] = useState<Record<string, string | undefined>>({
@@ -45,7 +47,7 @@ export function IncomingView(props: {
 
     useEffect(() => {
         const h = async () => {
-            const [cR, tP] = await getCurrentlyShownRequests(
+            const [cR, tP, tC] = await getCurrentlyShownRequests(
                 pageNumber,
                 resultsPerPage,
                 requests,
@@ -54,6 +56,7 @@ export function IncomingView(props: {
             );
             setCurrentlyShownRequests(cR);
             totalPages.current = tP;
+            totalResults.current = tC;
         };
         h();
     }, [
@@ -69,10 +72,8 @@ export function IncomingView(props: {
         props.proxy.requests = requests;
     }, [props.proxy, requests]);
 
-    // FIXME: the currently open one will change if a new request comes in
-    let currentCollapsibleSetOpen: React.Dispatch<
-        React.SetStateAction<boolean>
-    > | null = null;
+    const [currentRequestCollapsibleOpen, setCurrentRequestCollapsibleOpen] =
+        useState<string | undefined>(undefined);
 
     useEffect(() => {
         // this can happen on filter adj or results per page change
@@ -109,7 +110,7 @@ export function IncomingView(props: {
                 </button>
             </div>
             <div className="ml-2 min-h-fit py-1 text-gray-500">
-                {currentlyShownRequests.length} results
+                {totalResults.current} results
             </div>
 
             {/* Table Headers */}
@@ -153,13 +154,20 @@ export function IncomingView(props: {
                                         requests[idx] = req;
                                         setRequests(newRequests);
                                     }}
-                                    imOpen={(s) => {
-                                        if (
-                                            currentCollapsibleSetOpen !== null
-                                        ) {
-                                            currentCollapsibleSetOpen(false);
+                                    open={
+                                        request.id ===
+                                        currentRequestCollapsibleOpen
+                                    }
+                                    setOpen={(o: boolean) => {
+                                        if (o) {
+                                            setCurrentRequestCollapsibleOpen(
+                                                request.id,
+                                            );
+                                        } else {
+                                            setCurrentRequestCollapsibleOpen(
+                                                undefined,
+                                            );
                                         }
-                                        currentCollapsibleSetOpen = s;
                                     }}
                                 />
                             );
@@ -399,12 +407,13 @@ async function getCurrentlyShownRequests(
     requests: Array<Request>,
     proxy: Proxy,
     filter: Record<string, string | undefined>,
-): Promise<[Array<Request>, number]> {
+    // currentlyShownRequests, totalPages, totalResults
+): Promise<[Array<Request>, number, number]> {
     let dbCurrentlyShownRequests: Array<Request> = [];
     let dbTotalPages = 0;
+    let dbTotalCount = 0;
     try {
         console.log(pageNumber, resultsPerPage);
-        let dbTotalCount = 0;
         [dbCurrentlyShownRequests, dbTotalCount] =
             await proxy.getRequestsWithFilter(
                 filter,
@@ -451,5 +460,10 @@ async function getCurrentlyShownRequests(
         totalPages = Math.ceil(currentlyShownRequests.length / resultsPerPage);
     }
 
-    return [currentlyShownRequests, totalPages];
+    let totalCount = dbTotalCount;
+    if (currentlyShownRequests.length > dbTotalCount) {
+        totalCount = currentlyShownRequests.length;
+    }
+
+    return [currentlyShownRequests, totalPages, totalCount];
 }

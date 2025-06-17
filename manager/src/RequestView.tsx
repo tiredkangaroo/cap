@@ -28,19 +28,16 @@ export function RequestView(props: {
     setRequest: (req: Request) => void;
     requestsViewConfig: RequestsViewConfig;
 
-    imOpen: (setOpen: React.Dispatch<React.SetStateAction<boolean>>) => void;
+    open: boolean;
+    setOpen: (o: boolean) => void;
 }) {
     const [editMode, setEditMode] = useState(false);
-    const [open, setOpen] = useState(false);
     return (
         <Collapsible
             className="border-b-1 border-b-black wrap-anywhere"
-            open={open}
-            onOpenChange={(op: boolean) => {
-                if (op) {
-                    props.imOpen(setOpen);
-                }
-                setOpen(op);
+            open={props.open}
+            onOpenChange={(o) => {
+                props.setOpen(o);
             }}
         >
             <CollapsibleTrigger className="w-full bg-gray-200">
@@ -95,7 +92,7 @@ export function RequestView(props: {
                     />
                 </div>
                 <div className="ml-2 pt-2 pb-1">
-                    {props.request.error != undefined &&
+                    {props.request.error &&
                     !props.requestsViewConfig.hideError ? (
                         <p>
                             <span className="text-red-700">Error</span>:{" "}
