@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/websocket"
@@ -129,7 +130,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 			slog.Error("failed to get request by ID", "id", id, "err", err.Error())
 			return
 		}
-		data, err := json.Marshal(req.JSON())
+		data, err := json.Marshal(req)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("failed to marshal request data"))
@@ -144,6 +145,90 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 	http.HandleFunc("OPTIONS /", func(w http.ResponseWriter, _ *http.Request) {
 		setCORSHeaders(w)
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// Deprecated
+	http.HandleFunc("GET /requests", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		query := r.URL.Query()
+		offset := query.Get("offset")
+		limit := query.Get("limit")
+
+		if offset == "" || limit == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing offset and/or limit parameter"))
+			return
+		}
+		offsetInt, err := strconv.Atoi(offset)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("invalid offset parameter"))
+			return
+		}
+		limitInt, err := strconv.Atoi(limit)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("invalid limit parameter"))
+			return
+		}
+		if limitInt <= 0 || offsetInt < 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("offset must be > 0 and limit must be > 0"))
+			return
+		}
+		requests, err := m.db.GetRequestsMatchingFilter(Filter{}, offsetInt, limitInt)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to get requests"))
+			slog.Error("failed to get requests", "err", err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(requests))
+	})
+
+	http.HandleFunc("GET /requestsMatchingFilter", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+
+		query := r.URL.Query()
+		offset := query.Get("offset")
+		limit := query.Get("limit")
+
+		offsetInt, err := strconv.Atoi(offset)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("invalid offset parameter"))
+			return
+		}
+		limitInt, err := strconv.Atoi(limit)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("invalid limit parameter"))
+			return
+		}
+		if limitInt <= 0 || offsetInt < 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("offset must be > 0 and limit must be > 0"))
+			return
+		}
+
+		filter := Filter{
+			ClientProcessName: query.Get("clientProcessName"),
+			Host:              query.Get("host"),
+		}
+
+		requests, err := m.db.GetRequestsMatchingFilter(filter, offsetInt, limitInt)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("failed to get requests"))
+			slog.Error("failed to get requests matching filter", "err", err.Error())
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(requests))
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

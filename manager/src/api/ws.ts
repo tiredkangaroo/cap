@@ -46,7 +46,7 @@ export class ClientWS {
                         `Request with ID ${data.id} already exists, updating it.`,
                     );
                 } else {
-                    requests.push(data);
+                    requests = [data, ...requests]; // add request at the start because newest requests are first
                 }
 
                 break;
@@ -213,9 +213,6 @@ export class ClientWS {
                     request.state = "Done";
                     request.timing_total = data.timing_total;
                     request.timing = data.timing;
-                    // request.times = data.times;
-                    // request.timesOrder = TimesOrders[data.timesOrder];
-                    // request.bytesTransferred = data.bytesTransferred;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);
                 }

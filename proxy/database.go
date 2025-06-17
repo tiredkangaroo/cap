@@ -13,6 +13,14 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// NOTE: bytes transferred
+
+type Filter struct {
+	ClientProcessName string `json:"clientApplication,omitempty"`
+	Host              string `json:"host,omitempty"`
+	State             string `json:"state,omitempty"`
+}
+
 type Database struct {
 	u *sql.DB
 }
@@ -47,26 +55,9 @@ func (d *Database) Init() error {
 	return nil
 }
 
-func (d *Database) GetRequestByID(id string) (*Request, error) {
-	query := `SELECT
-		id,
-		kind,
-		datetime,
-		host,
-		clientIP,
-		clientAuthorization,
-		clientProcessName,
-		reqMethod,
-		reqURL,
-		reqHeaders,
-		reqBody,
-		respStatusCode,
-		respHeaders,
-		respBody,
-		error
-	FROM requests WHERE id = ?`
-	row := d.u.QueryRow(query, id)
-
+func (d *Database) scanSingleRequest(row interface {
+	Scan(dest ...any) error
+}) (*Request, error) {
 	req := new(Request)
 	req.req = new(http.Request)
 	req.req.URL = new(url.URL)
@@ -112,9 +103,134 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	req.resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	req.req.URL, _ = url.Parse(requrl)
 	req.errorText = errText.String
-	// NOTE: handle error text here
-
 	return req, nil
+}
+
+func (d *Database) GetRequestByID(id string) (*Request, error) {
+	query := `SELECT
+		id,
+		kind,
+		datetime,
+		host,
+		clientIP,
+		clientAuthorization,
+		clientProcessName,
+		reqMethod,
+		reqURL,
+		reqHeaders,
+		reqBody,
+		respStatusCode,
+		respHeaders,
+		respBody,
+		error
+	FROM requests WHERE id = ?`
+	row := d.u.QueryRow(query, id)
+	return d.scanSingleRequest(row)
+}
+
+// Deprecated: use GetRequestsMatchingFilter with an empty filter and args instead.
+func (d *Database) GetRequests(offset, limit int) ([]*Request, error) {
+	query := `SELECT
+		id,
+		kind,
+		datetime,
+		host,
+		clientIP,
+		clientAuthorization,
+		clientProcessName,
+		reqMethod,
+		reqURL,
+		reqHeaders,
+		reqBody,
+		respStatusCode,
+		respHeaders,
+		respBody,
+		error
+	FROM requests ORDER BY datetime DESC LIMIT ? OFFSET ?`
+	rows, err := d.u.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("GetRequests: %w", err)
+	}
+	defer rows.Close()
+	requests := make([]*Request, 0, limit)
+	for rows.Next() {
+		req, err := d.scanSingleRequest(rows)
+		if err != nil {
+			return nil, fmt.Errorf("GetRequests: scan single request: %w", err)
+		}
+		requests = append(requests, req)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("GetRequests: rows error: %w", err)
+	}
+	return requests, nil
+}
+
+func (d *Database) GetCountRequests() (int, error) {
+	query := `SELECT COUNT(*) FROM requests;`
+	row := d.u.QueryRow(query)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("GetCountRequests: %w", err)
+	}
+	return count, nil
+}
+
+func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Request, error) {
+	query := `SELECT
+		id,
+		kind,
+		datetime,
+		host,
+		clientIP,
+		clientAuthorization,
+		clientProcessName,
+		reqMethod,
+		reqURL,
+		reqHeaders,
+		reqBody,
+		respStatusCode,
+		respHeaders,
+		respBody,
+		error
+	FROM requests`
+	filtersUsed := []string{}
+	args := []any{}
+	if f.ClientProcessName != "" {
+		filtersUsed = append(filtersUsed, "clientProcessName")
+		args = append(args, f.ClientProcessName)
+	}
+	if f.Host != "" {
+		filtersUsed = append(filtersUsed, "host")
+		args = append(args, f.Host)
+
+	}
+	// state filtering will be done on the frontend
+	if len(filtersUsed) > 0 {
+		query += " WHERE"
+	}
+	for i, filter := range filtersUsed {
+		query += fmt.Sprintf(" %s=?", filter)
+		if i != len(filtersUsed)-1 {
+			query += " AND"
+		}
+	}
+	query += " ORDER BY datetime DESC LIMIT ? OFFSET ?;"
+	args = append(args, limit, offset)
+	rows, err := d.u.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get requests with matching filter (query: %s): %w", query, err)
+	}
+	reqs := make([]*Request, 0, limit)
+	for rows.Next() {
+		req, err := d.scanSingleRequest(rows)
+		if err != nil {
+			return nil, fmt.Errorf("get requests with matching filter (scan): %w", err)
+		}
+		reqs = append(reqs, req)
+	}
+	return reqs, nil
 }
 
 func (d *Database) SaveRequest(req *Request, err error) error {

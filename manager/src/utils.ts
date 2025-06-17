@@ -23,3 +23,14 @@ export function nsToReadable(ns: number): string {
     const remainingSeconds = Math.round(seconds % 60);
     return `${minutes} min ${remainingSeconds} sec`;
 }
+
+export function objectToQueryString(
+    obj: Record<string, string | number | boolean | undefined>,
+): string {
+    return Object.entries(obj)
+        .map(
+            ([key, value]) =>
+                `${encodeURIComponent(key)}=${encodeURIComponent(value || "")}`,
+        )
+        .join("&");
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,13 +22,26 @@ var (
 	ErrPerformStop = errors.New("perform stopped")
 )
 
-type Kind = int64
+type Kind int64
 
 const (
 	RequestKindHTTP      Kind = iota // HTTP
 	RequestKindHTTPS                 // HTTPS
 	RequestKindHTTPSMITM             // HTTPS with MITM
 )
+
+func (k Kind) String() string {
+	switch k {
+	case RequestKindHTTP:
+		return "HTTP (Insecure)"
+	case RequestKindHTTPS:
+		return "HTTPS (Secure)"
+	case RequestKindHTTPSMITM:
+		return "HTTPS (with MITM)"
+	default:
+		return "Unknown"
+	}
+}
 
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
@@ -221,29 +235,36 @@ func (r *Request) respbody() []byte {
 	return bodyData
 }
 
-func (r *Request) JSON() map[string]any {
-	return map[string]any{
+func (r *Request) MarshalJSON() ([]byte, error) {
+	var state string
+	if r.errorText != "" {
+		state = "Error"
+	} else {
+		state = "Done"
+	}
+	return json.Marshal(map[string]any{
 		"id":                  r.ID,
-		"kind":                r.Kind,
 		"datetime":            r.Datetime.Format(time.RFC3339),
-		"host":                r.Host,
+		"secureState":         r.Kind.String(),
 		"clientIP":            r.ClientIP,
+		"clientApplication":   r.ClientProcessName,
 		"clientAuthorization": r.ClientAuthorization,
-		"clientProcessID":     r.ClientProcessID,
-		"clientProcessName":   r.ClientProcessName,
-		"request": map[string]any{
-			"url":     r.req.URL.String(),
-			"method":  r.req.Method,
-			"path":    r.req.URL.Path,
-			"query":   r.req.URL.Query(),
-			"headers": r.req.Header,
-			"body":    string(r.body()),
-		},
+		"host":                r.Host,
+
+		"url":     r.req.URL.String(), // NOTE: not included in frontend's types.ts, but it will be useful (maybe, maybe not, who is to tell)
+		"method":  r.req.Method,
+		"path":    r.req.URL.Path,
+		"query":   r.req.URL.Query(),
+		"headers": r.req.Header,
+		"body":    string(r.body()),
+
 		"response": map[string]any{
 			"statusCode": r.resp.StatusCode,
 			"headers":    r.resp.Header,
 			"body":       string(r.respbody()),
 		},
+
+		"state": state,
 		"error": r.errorText,
-	}
+	})
 }

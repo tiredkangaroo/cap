@@ -21,6 +21,9 @@ export function IncomingView(props: {
     requestsViewConfig: RequestsViewConfig;
 }) {
     const [requests, setRequests] = useState<Array<Request>>([]);
+    const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
+        Array<Request>
+    >([]);
     const [pageNumber, setPageNumber] = useState<number>(0);
     const [resultsPerPage, setResultsPerPage] = useState<number>(15);
 
@@ -31,13 +34,19 @@ export function IncomingView(props: {
         state: undefined,
     });
 
-    // currentlyShownRequests is used to show requests that are currently shown in the view. It may or may not be the same as
-    // requests, depending on whether the user has filtered or sorted the requests. It is possible to check deviation with
-    // isShownDeviated.
-    const [currentlyShownRequests, _] = getCurrentlyShownRequests(
-        requests,
-        filter,
-    );
+    useEffect(() => {
+        console.log("helo");
+        const h = async () => {
+            console.log(props.proxy);
+            const [cR, _] = await getCurrentlyShownRequests(
+                props.proxy,
+                requests,
+                filter,
+            );
+            setCurrentlyShownRequests(cR);
+        };
+        h();
+    }, [props.proxy, props.proxy.loaded, requests, filter]);
 
     useEffect(() => {
         props.proxy.manageRequests(() => {
@@ -74,6 +83,7 @@ export function IncomingView(props: {
             <div className="h-8 flex flex-row gap-6 ml-2">
                 <FilterSelects
                     requests={requests}
+                    currentlyShownRequests={currentlyShownRequests}
                     filter={filter}
                     setFilter={setFilter}
                 />
@@ -160,6 +170,7 @@ export function IncomingView(props: {
                         pageNumber={pageNumber}
                         setPageNumber={setPageNumber}
                         resultsPerPage={resultsPerPage}
+                        proxy={props.proxy}
                     />
                     <div className="flex flex-row text-white text-sm items-center mr-2">
                         Results per page:
@@ -199,6 +210,7 @@ function Pagination(props: {
     pageNumber: number;
     setPageNumber: React.Dispatch<React.SetStateAction<number>>;
     resultsPerPage: number;
+    proxy: Proxy;
 }) {
     const totalPages = Math.ceil(
         props.currentlyShownRequests.length / props.resultsPerPage,
@@ -255,6 +267,12 @@ function Pagination(props: {
         );
     }
 
+    useEffect(() => {
+        if (current === totalPages - 1) {
+            props.proxy.load();
+        }
+    }, [current, totalPages]);
+
     return (
         <div
             className="flex flex-row gap-2 ml-4 text-white"
@@ -280,6 +298,7 @@ function Pagination(props: {
 
 function FilterSelects(props: {
     requests: Array<Request>;
+    currentlyShownRequests: Array<Request>;
     filter: Record<string, string | undefined>;
     setFilter: React.Dispatch<
         React.SetStateAction<Record<string, string | undefined>>
@@ -291,10 +310,7 @@ function FilterSelects(props: {
                 const verboseKey = camelCaseToCapitalSpace(key);
 
                 const countFilter = { ...props.filter, [key]: undefined };
-                const [countSource, __] = getCurrentlyShownRequests(
-                    props.requests,
-                    countFilter,
-                );
+                const countSource = props.currentlyShownRequests;
 
                 const uniqueValues = [
                     ...new Set(
@@ -379,22 +395,22 @@ function FilterSelects(props: {
         </div>
     );
 }
-function getCurrentlyShownRequests(
+
+async function getCurrentlyShownRequests(
+    proxy: Proxy,
     requests: Array<Request>,
     filter: Record<string, string | undefined>,
-): [Array<Request>, boolean] {
-    let currentlyShownRequests = requests.reverse();
-
-    if (filter.clientApplication) {
-        currentlyShownRequests = currentlyShownRequests.filter(
-            (req) => req.clientApplication === filter.clientApplication,
+): Promise<[Array<Request>, boolean]> {
+    let currentlyShownRequests: Array<Request> = [];
+    try {
+        currentlyShownRequests = await proxy.getRequestsWithFilter(
+            filter,
+            0,
+            100,
         );
-    }
-
-    if (filter.host) {
-        currentlyShownRequests = currentlyShownRequests.filter(
-            (req) => req.host === filter.host,
-        );
+    } catch (error) {
+        console.error("Error getting currently shown requests:", error);
+        return [requests, false];
     }
 
     if (filter.state) {
