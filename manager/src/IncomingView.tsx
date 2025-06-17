@@ -35,7 +35,6 @@ export function IncomingView(props: {
     const [filter, setFilter] = useState<Record<string, string | undefined>>({
         clientApplication: undefined,
         host: undefined,
-        state: undefined,
     });
 
     useEffect(() => {
@@ -91,6 +90,7 @@ export function IncomingView(props: {
             {/* Filters */}
             <div className="h-8 flex flex-row gap-6 ml-2">
                 <FilterSelects
+                    proxy={props.proxy}
                     requests={requests}
                     currentlyShownRequests={currentlyShownRequests}
                     filter={filter}
@@ -301,6 +301,7 @@ function Pagination(props: {
 }
 
 function FilterSelects(props: {
+    proxy: Proxy;
     requests: Array<Request>;
     currentlyShownRequests: Array<Request>;
     filter: Record<string, string | undefined>;
@@ -308,49 +309,33 @@ function FilterSelects(props: {
         React.SetStateAction<Record<string, string | undefined>>
     >;
 }) {
+    // [filterName: {uniqueValue: # time of appearance of unique value}]
+    const [filterUniqueValuesCounts, setFilterUniqueValuesCounts] = useState<
+        Record<string, Record<string, number>>
+    >({});
+
+    useEffect(() => {
+        // NOTE: name this function something more descriptive
+        const h = async () => {
+            const result = await props.proxy.getFilterCounts();
+            setFilterUniqueValuesCounts(
+                resolveWithLocalFC(props.requests, result),
+            );
+        };
+        h();
+    }, [props.proxy, props.requests, props.currentlyShownRequests]);
+
     return (
         <div className="flex flex-row gap-10">
             {Object.entries(props.filter).map(([key, _]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
-
-                const countFilter = { ...props.filter, [key]: undefined };
-                const countSource = props.currentlyShownRequests;
-
-                const uniqueValues = [
-                    ...new Set(
-                        props.requests.map((item) => {
-                            return item[key as keyof Request];
-                        }),
-                    ),
-                ].filter((v) => v !== undefined && v !== null && v !== "");
-
-                // Count occurrences in countSource
-                const counts: Record<string, number> = countSource.reduce(
-                    (acc, item) => {
-                        const value = item[key as keyof Request];
-                        if (value !== undefined && value !== null) {
-                            const stringValue = String(value);
-                            acc[stringValue] = (acc[stringValue] || 0) + 1;
-                        }
-                        return acc;
-                    },
-                    {} as Record<string, number>,
-                );
-
-                // Build a sorted array of [key, count] tuples based on uniqueValues
-                const sorted = uniqueValues
-                    .map((value) => {
-                        const stringValue = String(value);
-                        return [stringValue, counts[stringValue] || 0] as [
-                            string,
-                            number,
-                        ];
-                    })
-                    .sort((a, b) => b[1] - a[1]);
-
-                // Convert back to a Record<string, number>
-                const result: Record<string, number> =
-                    Object.fromEntries(sorted);
+                const uniqueValuesAndCounts = filterUniqueValuesCounts[key]; // get the unique values and counts for the current filter key
+                if (!uniqueValuesAndCounts) {
+                    return <Fragment key={key}></Fragment>;
+                }
+                console.log(uniqueValuesAndCounts);
+                const uniqueValues = Object.keys(uniqueValuesAndCounts); // unique values for the current filter key
+                console.log(uniqueValues);
 
                 return (
                     <div className="flex flex-row gap-1 items-center" key={key}>
@@ -370,9 +355,9 @@ function FilterSelects(props: {
                             <SelectContent>
                                 <SelectGroup>
                                     <SelectLabel>{verboseKey}</SelectLabel>
-                                    {Object.keys(result).map((key, index) => (
+                                    {uniqueValues.map((key, index) => (
                                         <SelectItem key={index} value={key}>
-                                            {key} ({result[key]})
+                                            {key} ({uniqueValuesAndCounts[key]})
                                         </SelectItem>
                                     ))}
                                 </SelectGroup>
@@ -398,6 +383,42 @@ function FilterSelects(props: {
             })}
         </div>
     );
+}
+
+function resolveWithLocalFC(
+    requests: Array<Request>,
+    filterUniqueValuesCounts: Record<string, Record<string, number>>,
+): Record<string, Record<string, number>> {
+    Object.keys(filterUniqueValuesCounts).forEach((filterKey) => {
+        const localUniqueValuesAndCounts: Record<string, number> = {};
+
+        // Add local requests counts
+        requests.forEach((request) => {
+            const value = request[filterKey];
+            if (value !== undefined) {
+                if (localUniqueValuesAndCounts[value] === undefined) {
+                    localUniqueValuesAndCounts[value] = 0;
+                }
+                localUniqueValuesAndCounts[value] += 1;
+            }
+        });
+
+        Object.keys(localUniqueValuesAndCounts).forEach((localValue) => {
+            const count = localUniqueValuesAndCounts[localValue];
+            const dbCount = filterUniqueValuesCounts[filterKey][localValue];
+            if (dbCount == undefined) {
+                filterUniqueValuesCounts[filterKey][localValue] = count;
+            } else {
+                // NOTE: this can cause inaccuracy if requests isn't 100% deviated from the db
+                filterUniqueValuesCounts[filterKey][localValue] = Math.max(
+                    dbCount,
+                    count,
+                );
+            }
+        });
+    });
+
+    return filterUniqueValuesCounts;
 }
 
 async function getCurrentlyShownRequests(

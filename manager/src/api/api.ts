@@ -34,34 +34,16 @@ export class Proxy {
         this.loaded = true;
     }
 
-    // async load(): Promise<void> {
-    //     console.log(this.name, this.url);
-    //     const offset = this.requests.length; // storing num in a variable prevents race condition where
-    //     // the requests is changed later on, and .then() for json adds it to another plae
-    //     fetch(`${this.url}/requests?offset=${offset.toString()}&limit=100`)
-    //         .then((data) => {
-    //             if (!data.ok) {
-    //                 console.error("failed to fetch requests:", data.statusText);
-    //                 return;
-    //             }
-    //             data.json()
-    //                 .then((requests: Array<Request>) => {
-    //                     this.requests = [
-    //                         ...this.requests.slice(0, offset),
-    //                         ...requests, // why do i need to reverse here? why isn't it reversed? the server is sending them correct so is console logging the requests
-    //                         ...this.requests.slice(offset),
-    //                     ];
-    //                     this.updateCB!();
-    //                 })
-    //                 .catch((err) => {
-    //                     console.error("failed to parse requests:", err);
-    //                 });
-    //             this.updateCB!();
-    //         })
-    //         .catch((err) => {
-    //             console.error(err);
-    //         });
-    // }
+    async getFilterCounts(): Promise<Record<string, Record<string, number>>> {
+        const response = await fetch(`${this.url}/filterCounts`);
+        if (!response.ok) {
+            throw new Error(
+                `failed to fetch filter counts: ${response.statusText}`,
+            );
+        }
+        const respJSON = await response.json();
+        return respJSON;
+    }
 
     async getRequestsWithFilter(
         filter: Record<string, string | undefined>,

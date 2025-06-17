@@ -178,6 +178,45 @@ func (d *Database) GetCountRequests() (int, error) {
 	return count, nil
 }
 
+func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
+	data := make(map[string]map[string]int)
+	clientAppCounts, err := d.uniqueValuesAndCount("clientProcessName")
+	if err != nil {
+		return nil, fmt.Errorf("filter counts (clientProcessName): %w", err)
+	}
+	data["clientApplication"] = clientAppCounts
+	hostCounts, err := d.uniqueValuesAndCount("host")
+	if err != nil {
+		return nil, fmt.Errorf("filter counts (host): %w", err)
+	}
+	data["host"] = hostCounts
+	return data, nil
+}
+
+// uniqueValuesAndCount returns a map of unique values for the specified column and how many time each value appears in the requests table.
+func (d *Database) uniqueValuesAndCount(by string) (map[string]int, error) {
+	data := make(map[string]int)
+	clientAppQuery := fmt.Sprintf(`SELECT %s, COUNT(*) AS count FROM requests GROUP BY %s ORDER BY count DESC;`, by, by)
+	rows, err := d.u.Query(clientAppQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var clientProcessName string
+		var count int
+		err := rows.Scan(&clientProcessName, &count)
+		if err != nil {
+			return nil, err
+		}
+		data[clientProcessName] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 // this function executes two queries, one for paginated []Request and one for total count as if there was no limit or offset
 func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Request, int, error) {
 	// paginated query

@@ -188,6 +188,22 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 	// 	w.Write(marshal(requests))
 	// })
 
+	http.HandleFunc("GET /filterCounts", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+
+		counts, err := m.db.GetFilterCounts()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("failed to get filter counts"))
+			slog.Error("failed to get filter counts", "err", err.Error())
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(counts))
+	})
+
 	http.HandleFunc("GET /requestsMatchingFilter", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w)
 
