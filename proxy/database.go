@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -177,8 +178,10 @@ func (d *Database) GetCountRequests() (int, error) {
 	return count, nil
 }
 
-func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Request, error) {
-	query := `SELECT
+// this function executes two queries, one for paginated []Request and one for total count as if there was no limit or offset
+func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Request, int, error) {
+	// paginated query
+	queryBase := `SELECT
 		id,
 		kind,
 		datetime,
@@ -195,42 +198,60 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 		respBody,
 		error
 	FROM requests`
+
+	// count query
+	countQueryBase := `SELECT COUNT(*) FROM requests`
+
 	filtersUsed := []string{}
 	args := []any{}
+	countArgs := []any{}
+
 	if f.ClientProcessName != "" {
-		filtersUsed = append(filtersUsed, "clientProcessName")
+		filtersUsed = append(filtersUsed, "clientProcessName = ?")
 		args = append(args, f.ClientProcessName)
+		countArgs = append(countArgs, f.ClientProcessName)
 	}
 	if f.Host != "" {
-		filtersUsed = append(filtersUsed, "host")
+		filtersUsed = append(filtersUsed, "host = ?")
 		args = append(args, f.Host)
+		countArgs = append(countArgs, f.Host)
+	}
 
-	}
-	// state filtering will be done on the frontend
+	// this where clause is used for both queries and represents the filters used
+	whereClause := ""
 	if len(filtersUsed) > 0 {
-		query += " WHERE"
+		whereClause = " WHERE " + strings.Join(filtersUsed, " AND ")
 	}
-	for i, filter := range filtersUsed {
-		query += fmt.Sprintf(" %s=?", filter)
-		if i != len(filtersUsed)-1 {
-			query += " AND"
-		}
-	}
-	query += " ORDER BY datetime DESC LIMIT ? OFFSET ?;"
-	args = append(args, limit, offset)
-	rows, err := d.u.Query(query, args...)
+
+	// count query building + execution
+	var totalCount int
+	countQuery := countQueryBase + whereClause
+	err := d.u.QueryRow(countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
-		return nil, fmt.Errorf("get requests with matching filter (query: %s): %w", query, err)
+		return nil, 0, fmt.Errorf("get requests count (query: %s): %w", countQuery, err)
 	}
+
+	// paginated data query building + execution
+	query := queryBase + whereClause + " ORDER BY datetime DESC LIMIT ? OFFSET ?;"
+	args = append(args, limit, offset)
+
+	rows, err := d.u.Query(query, args...)
+	fmt.Println("Executing query:", query, "with args:", args)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get requests with matching filter (query: %s): %w", query, err)
+	}
+
+	// the requests with pagination
 	reqs := make([]*Request, 0, limit)
 	for rows.Next() {
 		req, err := d.scanSingleRequest(rows)
 		if err != nil {
-			return nil, fmt.Errorf("get requests with matching filter (scan): %w", err)
+			return nil, 0, fmt.Errorf("get requests with matching filter (scan): %w", err)
 		}
 		reqs = append(reqs, req)
 	}
-	return reqs, nil
+
+	return reqs, totalCount, nil
 }
 
 func (d *Database) SaveRequest(req *Request, err error) error {

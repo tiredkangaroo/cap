@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { IoMdClose } from "react-icons/io";
 
 import { Request, RequestsViewConfig } from "./types";
@@ -24,8 +24,10 @@ export function IncomingView(props: {
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>
     >([]);
+
     const [pageNumber, setPageNumber] = useState<number>(0);
     const [resultsPerPage, setResultsPerPage] = useState<number>(15);
+    const totalPages = useRef<number>(0);
 
     // filter is used to filter the requests shown in the view.
     const [filter, setFilter] = useState<Record<string, string | undefined>>({
@@ -35,43 +37,49 @@ export function IncomingView(props: {
     });
 
     useEffect(() => {
-        console.log("helo");
-        const h = async () => {
-            console.log(props.proxy);
-            const [cR, _] = await getCurrentlyShownRequests(
-                props.proxy,
-                requests,
-                filter,
-            );
-            setCurrentlyShownRequests(cR);
-        };
-        h();
-    }, [props.proxy, props.proxy.loaded, requests, filter]);
-
-    useEffect(() => {
         props.proxy.manageRequests(() => {
-            console.log("update cb", props.proxy.requests);
             const newObj = Object.assign([], props.proxy.requests);
             setRequests(newObj);
         });
     }, [props.proxy]);
 
     useEffect(() => {
+        const h = async () => {
+            const [cR, tP] = await getCurrentlyShownRequests(
+                pageNumber,
+                resultsPerPage,
+                requests,
+                props.proxy,
+                filter,
+            );
+            setCurrentlyShownRequests(cR);
+            totalPages.current = tP;
+        };
+        h();
+    }, [
+        pageNumber,
+        resultsPerPage,
+        props.proxy,
+        props.proxy.loaded,
+        requests,
+        filter,
+    ]);
+
+    useEffect(() => {
         props.proxy.requests = requests;
-    }, [requests]);
+    }, [props.proxy, requests]);
 
     // FIXME: the currently open one will change if a new request comes in
     let currentCollapsibleSetOpen: React.Dispatch<
         React.SetStateAction<boolean>
     > | null = null;
 
-    // this can happen on filter adj or results per page change
-    if (
-        pageNumber > Math.ceil(currentlyShownRequests.length / resultsPerPage)
-    ) {
-        setPageNumber(0);
-    }
-
+    useEffect(() => {
+        // this can happen on filter adj or results per page change
+        if (pageNumber > totalPages.current - 1) {
+            setPageNumber(0);
+        }
+    }, [pageNumber, totalPages]);
     return (
         <div className="w-full h-full flex flex-col">
             {/* Header */}
@@ -126,15 +134,12 @@ export function IncomingView(props: {
                     {currentlyShownRequests
                         .slice(
                             pageNumber * resultsPerPage,
-                            pageNumber * resultsPerPage + resultsPerPage,
+                            (pageNumber + 1) * resultsPerPage,
                         )
-                        .map((request) => {
-                            const index = requests.findIndex(
-                                (v) => v.id === request.id,
-                            );
+                        .map((request, idx) => {
                             return (
                                 <RequestView
-                                    key={index}
+                                    key={idx}
                                     proxy={props.proxy}
                                     request={request}
                                     requestsViewConfig={
@@ -170,7 +175,7 @@ export function IncomingView(props: {
                         pageNumber={pageNumber}
                         setPageNumber={setPageNumber}
                         resultsPerPage={resultsPerPage}
-                        proxy={props.proxy}
+                        totalPages={totalPages.current}
                     />
                     <div className="flex flex-row text-white text-sm items-center mr-2">
                         Results per page:
@@ -210,12 +215,9 @@ function Pagination(props: {
     pageNumber: number;
     setPageNumber: React.Dispatch<React.SetStateAction<number>>;
     resultsPerPage: number;
-    proxy: Proxy;
+    totalPages: number;
 }) {
-    const totalPages = Math.ceil(
-        props.currentlyShownRequests.length / props.resultsPerPage,
-    );
-
+    const totalPages = props.totalPages;
     const current = props.pageNumber;
     const pagesToShow: number[] = [];
 
@@ -266,12 +268,6 @@ function Pagination(props: {
             </a>
         );
     }
-
-    useEffect(() => {
-        if (current === totalPages - 1) {
-            props.proxy.load();
-        }
-    }, [current, totalPages]);
 
     return (
         <div
@@ -397,31 +393,63 @@ function FilterSelects(props: {
 }
 
 async function getCurrentlyShownRequests(
-    proxy: Proxy,
+    pageNumber: number,
+    resultsPerPage: number,
+
     requests: Array<Request>,
+    proxy: Proxy,
     filter: Record<string, string | undefined>,
-): Promise<[Array<Request>, boolean]> {
-    let currentlyShownRequests: Array<Request> = [];
+): Promise<[Array<Request>, number]> {
+    let dbCurrentlyShownRequests: Array<Request> = [];
+    let dbTotalPages = 0;
     try {
-        currentlyShownRequests = await proxy.getRequestsWithFilter(
-            filter,
-            0,
-            100,
-        );
+        console.log(pageNumber, resultsPerPage);
+        let dbTotalCount = 0;
+        [dbCurrentlyShownRequests, dbTotalCount] =
+            await proxy.getRequestsWithFilter(
+                filter,
+                0,
+                (pageNumber + 1) * resultsPerPage,
+            );
+        dbTotalPages = Math.ceil(dbTotalCount / resultsPerPage);
     } catch (error) {
-        console.error("Error getting currently shown requests:", error);
-        return [requests, false];
+        console.error("error getting db currently shown requests:", error);
     }
 
-    if (filter.state) {
-        currentlyShownRequests = currentlyShownRequests.filter(
-            (req) => req.state === filter.state,
+    let localCurrentlyShownRequests: Array<Request> = requests;
+    if (filter.clientApplication) {
+        localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
+            (req) => req.clientApplication === filter.clientApplication,
         );
     }
+    if (filter.host) {
+        localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
+            (req) => req.host === filter.host,
+        );
+    }
+    console.log(localCurrentlyShownRequests);
 
-    const isDeviated =
-        currentlyShownRequests.length !== requests.length ||
-        JSON.stringify(currentlyShownRequests) !== JSON.stringify(requests);
+    const currentlyShownRequests = [
+        // using map elimnates id dups
+        ...new Map(
+            [...dbCurrentlyShownRequests, ...localCurrentlyShownRequests].map(
+                (obj) => [obj.id, obj],
+            ),
+        ).values(),
+    ];
 
-    return [currentlyShownRequests, isDeviated];
+    currentlyShownRequests.sort((a, b) => {
+        const dateA = new Date(a.datetime).getTime();
+        const dateB = new Date(b.datetime).getTime();
+        return dateB - dateA; // Sort by date descending
+    });
+
+    let totalPages = dbTotalPages;
+    if (
+        Math.ceil(currentlyShownRequests.length / resultsPerPage) > dbTotalPages
+    ) {
+        totalPages = Math.ceil(currentlyShownRequests.length / resultsPerPage);
+    }
+
+    return [currentlyShownRequests, totalPages];
 }

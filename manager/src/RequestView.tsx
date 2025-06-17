@@ -647,7 +647,6 @@ function ParagraphView(props: {
     hide: boolean;
     className?: string;
 }) {
-    console.log(props);
     if (props.hide) {
         return <></>;
     }
