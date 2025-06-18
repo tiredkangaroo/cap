@@ -106,9 +106,7 @@ export class Proxy {
             console.error("failed to create websocket");
             return;
         }
-        this.clientWS.ws.onopen = () => {
-            console.log("WebSocket connection established");
-        };
+        this.clientWS.ws.onopen = () => {};
         this.clientWS.ws.onmessage = (event: MessageEvent) => {
             this.requests = this.clientWS.onmessage(event, this.requests);
             this.updateCB!();

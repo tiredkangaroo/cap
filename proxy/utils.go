@@ -29,21 +29,25 @@ func toURL(s string, https bool) (*url.URL, error) {
 	return url.Parse(s)
 }
 
-func getClientProcessInfo(clientIP string, pid *int, name *string) {
-	ip, port, err := net.SplitHostPort(clientIP)
-	if err != nil {
-		// fmt.Println("net split")
-		return
-	}
-	// NOTE: make matching ip configurable; add switcg case
-	if ip != "::1" && ip != "localhost" && ip != "127.0.0.1" && ip != myLocalIP {
-		// fmt.Println("req not from localhost", ip)
+func getClientProcessInfo(clientIP, clientPort string, pid *int, name *string) {
+	if clientIP != ThisDevice {
+		*pid = 0
+		*name = ""
 		return
 	}
 	switch runtime.GOOS {
 	case "darwin", "linux":
-		*pid, *name = getMacLinuxProcessInfo(port)
+		*pid, *name = getMacLinuxProcessInfo(clientPort)
 	}
+}
+
+func ipIsLocalhost(ip string) bool {
+	// NOTE: make matching ip configurable
+	switch ip {
+	case "::1", "localhost", "127.0.0.1", myLocalIP:
+		return true
+	}
+	return false
 }
 
 func getMacLinuxProcessInfo(port string) (pid int, pname string) {

@@ -649,7 +649,7 @@ function ParagraphView(props: {
     }
     return (
         <div className={"flex-1 text-center" + props.className}>
-            {props.children != "" ? props.children : <>-</>}
+            {props.children != "" ? props.children : <i>unavailable</i>}
         </div>
     );
 }

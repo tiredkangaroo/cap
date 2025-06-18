@@ -18,6 +18,8 @@ import (
 	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 )
 
+const ThisDevice string = "This Device"
+
 var (
 	ErrPerformStop = errors.New("perform stopped")
 )
@@ -56,9 +58,10 @@ type Request struct {
 	conn net.Conn
 
 	ClientIP            string
+	ClientPort          string
 	ClientAuthorization string
 	ClientProcessID     int
-	ClientProcessName   string
+	ClientApplication   string
 
 	timing *timing.Timing
 
@@ -111,11 +114,19 @@ func (r *Request) Init(w http.ResponseWriter, req *http.Request) error {
 	r.Host = r.req.Host
 
 	r.ClientIP = r.req.RemoteAddr
+	if ip, port, err := net.SplitHostPort(r.ClientIP); err == nil {
+		r.ClientIP = ip
+		r.ClientPort = port
+	}
+	if ipIsLocalhost(r.ClientIP) {
+		r.ClientIP = ThisDevice
+	}
+
 	r.ClientAuthorization = r.req.Header.Get("Proxy-Authorization")
 
 	if config.DefaultConfig.GetClientProcessInfo {
 		r.timing.Substart(timing.SubtimeGetClientProcessInfo)
-		getClientProcessInfo(r.ClientIP, &r.ClientProcessID, &r.ClientProcessName)
+		getClientProcessInfo(r.ClientIP, r.ClientPort, &r.ClientProcessID, &r.ClientApplication)
 		r.timing.Substop()
 	}
 
@@ -217,7 +228,8 @@ func (r *Request) respbody() []byte {
 		if r.resp.Header.Get("Content-Encoding") == "gzip" {
 			rd, err = gzip.NewReader(r.resp.Body)
 			if err != nil {
-				slog.Error("gzip reader error", "err", err.Error())
+				// NOTE: possible bug here
+				// slog.Error("gzip reader error", "err", err.Error())
 				rd = r.resp.Body // fallback to the original body if gzip reader fails
 			} else {
 				defer rd.Close() // ensure the gzip reader is closed after reading
@@ -247,7 +259,7 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 		"datetime":            r.Datetime.Format(time.RFC3339),
 		"secureState":         r.Kind.String(),
 		"clientIP":            r.ClientIP,
-		"clientApplication":   r.ClientProcessName,
+		"clientApplication":   r.ClientApplication,
 		"clientAuthorization": r.ClientAuthorization,
 		"host":                r.Host,
 

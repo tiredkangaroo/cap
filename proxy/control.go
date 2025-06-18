@@ -230,8 +230,9 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		}
 
 		filter := Filter{
-			ClientProcessName: query.Get("clientApplication"),
+			ClientApplication: query.Get("clientApplication"),
 			Host:              query.Get("host"),
+			ClientIP:          query.Get("clientIP"),
 		}
 
 		paginatedRequests, totalRequests, err := m.db.GetRequestsMatchingFilter(filter, offsetInt, limitInt)

@@ -25,7 +25,6 @@ export class ClientWS {
         event: MessageEvent,
         requests: Array<Request>,
     ): Array<Request> => {
-        console.log("Message received:", event.data);
         const [action, rawdata] = this.getActionData(event);
         switch (action) {
             case "NEW": {

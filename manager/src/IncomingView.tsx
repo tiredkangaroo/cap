@@ -25,17 +25,21 @@ export function IncomingView(props: {
         Array<Request>
     >([]);
 
+    // filter is used to filter the requests shown in the view.
+    const [filter, setFilter] = useState<Record<string, string | undefined>>(
+        {},
+    );
+
     const [pageNumber, setPageNumber] = useState<number>(0);
-    const [resultsPerPage, setResultsPerPage] = useState<number>(15);
+    const [resultsPerPage, setResultsPerPage] = useState<number>(
+        parseInt(localStorage.getItem("resultsPerPage") || "15"),
+    );
     // NOTE: possible remove totalPages for totalResults only and using ceil division
     const totalPages = useRef<number>(0);
     const totalResults = useRef<number>(0);
-
-    // filter is used to filter the requests shown in the view.
-    const [filter, setFilter] = useState<Record<string, string | undefined>>({
-        clientApplication: undefined,
-        host: undefined,
-    });
+    useEffect(() => {
+        localStorage.setItem("resultsPerPage", resultsPerPage.toString());
+    }, [resultsPerPage]);
 
     useEffect(() => {
         props.proxy.manageRequests(() => {
@@ -321,6 +325,17 @@ function FilterSelects(props: {
             setFilterUniqueValuesCounts(
                 resolveWithLocalFC(props.requests, result),
             );
+            if (Object.keys(props.filter).length === 0) {
+                props.setFilter(
+                    Object.keys(result).reduce(
+                        (acc, key) => {
+                            acc[key] = undefined;
+                            return acc;
+                        },
+                        {} as Record<string, string | undefined>,
+                    ),
+                );
+            }
         };
         h();
     }, [props.proxy, props.requests, props.currentlyShownRequests]);
@@ -333,9 +348,7 @@ function FilterSelects(props: {
                 if (!uniqueValuesAndCounts) {
                     return <Fragment key={key}></Fragment>;
                 }
-                console.log(uniqueValuesAndCounts);
                 const uniqueValues = Object.keys(uniqueValuesAndCounts); // unique values for the current filter key
-                console.log(uniqueValues);
 
                 return (
                     <div className="flex flex-row gap-1 items-center" key={key}>
@@ -434,7 +447,6 @@ async function getCurrentlyShownRequests(
     let dbTotalPages = 0;
     let dbTotalCount = 0;
     try {
-        console.log(pageNumber, resultsPerPage);
         [dbCurrentlyShownRequests, dbTotalCount] =
             await proxy.getRequestsWithFilter(
                 filter,
@@ -457,7 +469,6 @@ async function getCurrentlyShownRequests(
             (req) => req.host === filter.host,
         );
     }
-    console.log(localCurrentlyShownRequests);
 
     const currentlyShownRequests = [
         // using map elimnates id dups

@@ -7,13 +7,16 @@ import {
 import { nsToReadable } from "./utils";
 
 const colors = [
-    "#ffc1ab",
-    "#adc7ff",
-    "#ffadf1",
-    "#fa3c5f",
-    "#e6d7f5",
-    "#d7d8de",
-    "#defc97",
+    "#ff9999", // light red
+    "#ffe066", // light yellow
+    "#a3f7bf", // light mint green
+    "#99ddff", // light blue
+    "#dab6fc", // light purple
+    "#ffb347", // light orange
+    "#ffd3b6", // peach
+    "#b5ead7", // soft teal
+    "#ffcccb", // blush
+    "#caffbf", // light lime green
 ];
 
 export function Timeline(props: {

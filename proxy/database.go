@@ -17,9 +17,9 @@ import (
 // NOTE: bytes transferred
 
 type Filter struct {
-	ClientProcessName string `json:"clientApplication,omitempty"`
+	ClientApplication string `json:"clientApplication,omitempty"`
 	Host              string `json:"host,omitempty"`
-	State             string `json:"state,omitempty"`
+	ClientIP          string `json:"clientIP,omitempty"`
 }
 
 type Database struct {
@@ -39,7 +39,7 @@ func (d *Database) Init() error {
 		host TEXT NOT NULL,
 		clientIP TEXT NOT NULL,
 		clientAuthorization TEXT,
-		clientProcessName TEXT NOT NULL,
+		clientApplication TEXT NOT NULL,
 		reqURL TEXT NOT NULL,
 		reqMethod TEXT NOT NULL,
 		reqHeaders BLOB NOT NULL,
@@ -80,7 +80,7 @@ func (d *Database) scanSingleRequest(row interface {
 		&req.Host,
 		&req.ClientIP,
 		&req.ClientAuthorization,
-		&req.ClientProcessName,
+		&req.ClientApplication,
 		&req.req.Method,
 		&requrl,
 		&requestHeaders,
@@ -115,7 +115,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		host,
 		clientIP,
 		clientAuthorization,
-		clientProcessName,
+		clientApplication,
 		reqMethod,
 		reqURL,
 		reqHeaders,
@@ -130,86 +130,87 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 }
 
 // Deprecated: use GetRequestsMatchingFilter with an empty filter and args instead.
-func (d *Database) GetRequests(offset, limit int) ([]*Request, error) {
-	query := `SELECT
-		id,
-		kind,
-		datetime,
-		host,
-		clientIP,
-		clientAuthorization,
-		clientProcessName,
-		reqMethod,
-		reqURL,
-		reqHeaders,
-		reqBody,
-		respStatusCode,
-		respHeaders,
-		respBody,
-		error
-	FROM requests ORDER BY datetime DESC LIMIT ? OFFSET ?`
-	rows, err := d.u.Query(query, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("GetRequests: %w", err)
-	}
-	defer rows.Close()
-	requests := make([]*Request, 0, limit)
-	for rows.Next() {
-		req, err := d.scanSingleRequest(rows)
-		if err != nil {
-			return nil, fmt.Errorf("GetRequests: scan single request: %w", err)
-		}
-		requests = append(requests, req)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("GetRequests: rows error: %w", err)
-	}
-	return requests, nil
-}
-
-func (d *Database) GetCountRequests() (int, error) {
-	query := `SELECT COUNT(*) FROM requests;`
-	row := d.u.QueryRow(query)
-	var count int
-	err := row.Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("GetCountRequests: %w", err)
-	}
-	return count, nil
-}
+// func (d *Database) GetRequests(offset, limit int) ([]*Request, error) {
+// 	query := `SELECT
+// 		id,
+// 		kind,
+// 		datetime,
+// 		host,
+// 		clientIP,
+// 		clientAuthorization,
+// 		clientApplication,
+// 		reqMethod,
+// 		reqURL,
+// 		reqHeaders,
+// 		reqBody,
+// 		respStatusCode,
+// 		respHeaders,
+// 		respBody,
+// 		error
+// 	FROM requests ORDER BY datetime DESC LIMIT ? OFFSET ?`
+// 	rows, err := d.u.Query(query, limit, offset)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("GetRequests: %w", err)
+// 	}
+// 	defer rows.Close()
+// 	requests := make([]*Request, 0, limit)
+// 	for rows.Next() {
+// 		req, err := d.scanSingleRequest(rows)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("GetRequests: scan single request: %w", err)
+// 		}
+// 		requests = append(requests, req)
+// 	}
+// 	if err := rows.Err(); err != nil {
+// 		return nil, fmt.Errorf("GetRequests: rows error: %w", err)
+// 	}
+// 	return requests, nil
+// }
 
 func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
 	data := make(map[string]map[string]int)
-	clientAppCounts, err := d.uniqueValuesAndCount("clientProcessName")
+
+	clientAppCounts, err := d.uniqueValuesAndCount("clientApplication")
 	if err != nil {
-		return nil, fmt.Errorf("filter counts (clientProcessName): %w", err)
+		return nil, fmt.Errorf("filter counts (clientApplication): %w", err)
 	}
 	data["clientApplication"] = clientAppCounts
+
 	hostCounts, err := d.uniqueValuesAndCount("host")
 	if err != nil {
 		return nil, fmt.Errorf("filter counts (host): %w", err)
 	}
 	data["host"] = hostCounts
+
+	clientIPCounts, err := d.uniqueValuesAndCount("clientIP")
+	if err != nil {
+		return nil, fmt.Errorf("filter counts (host): %w", err)
+	}
+	data["clientIP"] = clientIPCounts
+
 	return data, nil
 }
 
 // uniqueValuesAndCount returns a map of unique values for the specified column and how many time each value appears in the requests table.
 func (d *Database) uniqueValuesAndCount(by string) (map[string]int, error) {
 	data := make(map[string]int)
-	clientAppQuery := fmt.Sprintf(`SELECT %s, COUNT(*) AS count FROM requests GROUP BY %s ORDER BY count DESC;`, by, by)
-	rows, err := d.u.Query(clientAppQuery)
+	query := fmt.Sprintf(`SELECT %s, COUNT(*) AS count FROM requests GROUP BY %s ORDER BY count DESC;`, by, by)
+	rows, err := d.u.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var clientProcessName string
+		var uvalue string
 		var count int
-		err := rows.Scan(&clientProcessName, &count)
+		err := rows.Scan(&uvalue, &count)
 		if err != nil {
 			return nil, err
 		}
-		data[clientProcessName] = count
+		if uvalue == "" {
+			continue // skip empty values, they are not useful for filtering (also empty values are not allowed in radix ui selects)
+		}
+		data[uvalue] = count
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -227,7 +228,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 		host,
 		clientIP,
 		clientAuthorization,
-		clientProcessName,
+		clientApplication,
 		reqMethod,
 		reqURL,
 		reqHeaders,
@@ -245,15 +246,20 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	args := []any{}
 	countArgs := []any{}
 
-	if f.ClientProcessName != "" {
-		filtersUsed = append(filtersUsed, "clientProcessName = ?")
-		args = append(args, f.ClientProcessName)
-		countArgs = append(countArgs, f.ClientProcessName)
+	if f.ClientApplication != "" {
+		filtersUsed = append(filtersUsed, "clientApplication = ?")
+		args = append(args, f.ClientApplication)
+		countArgs = append(countArgs, f.ClientApplication)
 	}
 	if f.Host != "" {
 		filtersUsed = append(filtersUsed, "host = ?")
 		args = append(args, f.Host)
 		countArgs = append(countArgs, f.Host)
+	}
+	if f.ClientIP != "" {
+		filtersUsed = append(filtersUsed, "clientIP = ?")
+		args = append(args, f.ClientIP)
+		countArgs = append(countArgs, f.ClientIP)
 	}
 
 	// this where clause is used for both queries and represents the filters used
@@ -275,7 +281,6 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	args = append(args, limit, offset)
 
 	rows, err := d.u.Query(query, args...)
-	fmt.Println("Executing query:", query, "with args:", args)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get requests with matching filter (query: %s): %w", query, err)
 	}
@@ -302,7 +307,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 
 		clientIP,
 		clientAuthorization,
-		clientProcessName,
+		clientApplication,
 
 		error`
 	args := []any{
@@ -312,7 +317,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		req.Host,
 		req.ClientIP,
 		req.ClientAuthorization,
-		req.ClientProcessName,
+		req.ClientApplication,
 	}
 	if err != nil {
 		args = append(args, err.Error())

@@ -67,7 +67,7 @@ func (c *Manager) SendNew(req *Request) {
 		"clientIP":            req.ClientIP,
 		"clientAuthorization": req.ClientAuthorization,
 		"clientProcessID":     req.ClientProcessID,
-		"clientApplication":   req.ClientProcessName,
+		"clientApplication":   req.ClientApplication,
 	})
 }
 
