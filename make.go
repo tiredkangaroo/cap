@@ -36,9 +36,6 @@ const (
 )
 
 func init() {
-	// runDebug := flag.Bool("debug", false, "Run the program (debug mode)")
-	// run := flag.Bool("run", false, "Run the program (production mode)")
-	// compile := flag.Bool("compile", false, "Compile the program")
 	flag.Parse()
 
 	cmd := flag.Arg(0)
@@ -60,10 +57,8 @@ func init() {
 func main() {
 	switch command {
 	case CommandRunDebug:
-		// enforceEnv()
 		runDebug()
 	case CommandRun:
-		// enforceEnv()
 		run()
 	case CommandCompile:
 		compile()

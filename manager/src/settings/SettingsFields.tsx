@@ -43,20 +43,4 @@ export function InputField(props: {
             ></input>
         </div>
     );
-    // return (
-    //     <div className="w-full flex flex-row text-xl mt-6">
-    //         <div className="flex-col w-[50%]">
-    //             <p className="text-xl mt-auto mb-auto">{props.name}</p>
-    //             <p className="text-sm">{props.children}</p>
-    //         </div>
-    //         <input
-    //             type={props.type}
-    //             className="mt-auto mb-auto ml-auto mr-2"
-    //             defaultValue={props.defaultValue}
-    //             onChange={(e) => {
-    //                 props.onChange(e.target.value);
-    //             }}
-    //         ></input>
-    //     </div>
-    // );
 }

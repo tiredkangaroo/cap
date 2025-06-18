@@ -15,18 +15,7 @@ import (
 	"github.com/tiredkangaroo/websocket"
 )
 
-// message defined:
-//
-// (proxy -> client) NEW <id, datetime, host, secure, clientIP, clientAuthorization>
-// (proxy -> client) REQUEST <id, method, path, query, headers, body>
-// (proxy -> client) APPROVAL-WAIT <id>
-// (client -> proxy) APPROVAL-APPROVE <id>
-// (client -> proxy) APPROVAL-CANCEL <id>
-// (proxy -> client) APPROVAL-RECIEVED <id>
-// (proxy -> client) APPROVAL-CANCELED <id>
-// (proxy -> client) RESPONSE <id, statusCode, headers, body>
-// (proxy -> client) DONE <id>
-// (proxy -> client) ERROR <id, err>
+// NOTE: rewrite out the message defined (but in a README)
 
 type Manager struct {
 	db      *Database

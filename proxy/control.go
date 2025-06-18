@@ -147,47 +147,6 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Deprecated
-	// http.HandleFunc("GET /requests", func(w http.ResponseWriter, r *http.Request) {
-	// 	setCORSHeaders(w)
-	// 	query := r.URL.Query()
-	// 	offset := query.Get("offset")
-	// 	limit := query.Get("limit")
-
-	// 	if offset == "" || limit == "" {
-	// 		w.WriteHeader(http.StatusBadRequest)
-	// 		w.Write([]byte("missing offset and/or limit parameter"))
-	// 		return
-	// 	}
-	// 	offsetInt, err := strconv.Atoi(offset)
-	// 	if err != nil {
-	// 		w.WriteHeader(http.StatusBadRequest)
-	// 		w.Write([]byte("invalid offset parameter"))
-	// 		return
-	// 	}
-	// 	limitInt, err := strconv.Atoi(limit)
-	// 	if err != nil {
-	// 		w.WriteHeader(http.StatusBadRequest)
-	// 		w.Write([]byte("invalid limit parameter"))
-	// 		return
-	// 	}
-	// 	if limitInt <= 0 || offsetInt < 0 {
-	// 		w.WriteHeader(http.StatusBadRequest)
-	// 		w.Write([]byte("offset must be > 0 and limit must be > 0"))
-	// 		return
-	// 	}
-	// 	requests, err := m.db.GetRequestsMatchingFilter(Filter{}, offsetInt, limitInt)
-	// 	if err != nil {
-	// 		w.WriteHeader(http.StatusInternalServerError)
-	// 		w.Write([]byte("failed to get requests"))
-	// 		slog.Error("failed to get requests", "err", err.Error())
-	// 		return
-	// 	}
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Write(marshal(requests))
-	// })
-
 	http.HandleFunc("GET /filterCounts", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w)
 

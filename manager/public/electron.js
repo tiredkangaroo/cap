@@ -41,14 +41,6 @@ async function createWindow() {
 
     win.setMinimumSize(755, 865);
     win.setMaximumSize(10000, 2700); // only really setting a maximum height
-    // win.on("will-resize", (ev, newBounds) => {
-    //     const oldBounds = win.getBounds();
-    //     if (newBounds.width < 300 || newBounds.height < 680) {
-    //         ev.preventDefault();
-    //         win.setBounds(oldBounds);
-    //         return;
-    //     }
-    // });
 
     console.log(import.meta.url);
 
@@ -57,10 +49,6 @@ async function createWindow() {
         // this is the url for the vite server
         win.loadURL("http://localhost:5173");
     } else {
-        // this is the url for the production build
-        // app/Content/Resources/app.asar/../proxy-app
-        // app/Content/Resources/app.asar/../dist/index.html
-
         // add better error handling; kill all procs on err
         execFile(
             "bash",

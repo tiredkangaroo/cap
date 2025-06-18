@@ -8,3 +8,4 @@ testserver/localhost.csr
 config.json
 cap.app
 cap.db
+manager/vitedist

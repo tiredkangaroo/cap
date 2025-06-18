@@ -129,44 +129,6 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	return d.scanSingleRequest(row)
 }
 
-// Deprecated: use GetRequestsMatchingFilter with an empty filter and args instead.
-// func (d *Database) GetRequests(offset, limit int) ([]*Request, error) {
-// 	query := `SELECT
-// 		id,
-// 		kind,
-// 		datetime,
-// 		host,
-// 		clientIP,
-// 		clientAuthorization,
-// 		clientApplication,
-// 		reqMethod,
-// 		reqURL,
-// 		reqHeaders,
-// 		reqBody,
-// 		respStatusCode,
-// 		respHeaders,
-// 		respBody,
-// 		error
-// 	FROM requests ORDER BY datetime DESC LIMIT ? OFFSET ?`
-// 	rows, err := d.u.Query(query, limit, offset)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("GetRequests: %w", err)
-// 	}
-// 	defer rows.Close()
-// 	requests := make([]*Request, 0, limit)
-// 	for rows.Next() {
-// 		req, err := d.scanSingleRequest(rows)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("GetRequests: scan single request: %w", err)
-// 		}
-// 		requests = append(requests, req)
-// 	}
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("GetRequests: rows error: %w", err)
-// 	}
-// 	return requests, nil
-// }
-
 func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
 	data := make(map[string]map[string]int)
 
