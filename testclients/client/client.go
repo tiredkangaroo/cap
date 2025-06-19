@@ -2,9 +2,11 @@ package main
 
 import (
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 )
 
@@ -25,6 +27,13 @@ var URLS = []string{
 }
 
 var PROXY_URL, _ = url.Parse("http://localhost:8000")
+
+func init() {
+	// randomize the URLs order
+	slices.SortFunc(URLS, func(a, b string) int {
+		return rand.Int() - rand.Int()
+	})
+}
 
 func main() {
 	times, err := strconv.Atoi(os.Getenv("X_TIMES"))
