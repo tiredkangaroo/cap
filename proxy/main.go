@@ -3,14 +3,11 @@ package main
 import (
 	_ "embed"
 
-	"database/sql"
 	"log/slog"
 	"net"
 	"os"
-	"sync"
 
 	_ "github.com/tiredkangaroo/bigproxy/proxy/config"
-	"github.com/tiredkangaroo/websocket"
 )
 
 var myLocalIP string
@@ -27,23 +24,13 @@ func init() {
 }
 
 func main() {
-	sqldb, err := sql.Open("sqlite", "cap.db")
-	if err != nil {
-		slog.Error("failed to open database", "err", err.Error())
-		return
-	}
-	db := NewDatabase(sqldb)
+	db := NewDatabase()
 	if err := db.Init(); err != nil {
 		slog.Error("failed to initialize database", "err", err.Error())
 		return
 	}
 
-	m := &Manager{
-		wsConns:             make([]*websocket.Conn, 0, 8),
-		approvalWaiters:     make(map[string]*Request, 8),
-		approvalWaitersRWMu: sync.RWMutex{},
-		db:                  db,
-	}
+	m := NewManager(db)
 
 	ph := new(ProxyHandler)
 	go startControlServer(m, ph)

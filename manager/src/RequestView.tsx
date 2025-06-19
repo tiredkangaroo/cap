@@ -46,7 +46,7 @@ export function RequestView(props: {
                         hide={props.requestsViewConfig.hideDate}
                         className="text-sm"
                     >
-                        {props.request.datetime}
+                        {formatDate(props.request.datetime)}
                     </ParagraphView>
                     <ParagraphView
                         hide={props.requestsViewConfig.hideHostCollapsed}
@@ -652,4 +652,35 @@ function ParagraphView(props: {
             {props.children != "" ? props.children : <i>unavailable</i>}
         </div>
     );
+}
+
+function formatDate(dateMS: number): string {
+    const date = new Date(dateMS);
+    const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ];
+
+    const month = months[date.getMonth()];
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    const millis = String(date.getMilliseconds()).padStart(3, "0");
+
+    const period = date.getHours() >= 12 ? "PM" : "AM";
+
+    return `${month} ${day}, ${year} ${hours}:${minutes}:${seconds}.${millis} ${period}`;
 }

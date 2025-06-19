@@ -256,7 +256,7 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(map[string]any{
 		"id":                  r.ID,
-		"datetime":            r.Datetime.Format(time.RFC3339),
+		"datetime":            r.Datetime.UnixMilli(), // unix milli for js
 		"secureState":         r.Kind.String(),
 		"clientIP":            r.ClientIP,
 		"clientApplication":   r.ClientApplication,

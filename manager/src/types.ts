@@ -40,7 +40,7 @@ export interface Config {
 
 export interface Request {
     id: string;
-    datetime: string;
+    datetime: number;
     secureState: "HTTP (Insecure)" | "HTTPS (Secure)" | "HTTPS (with MITM)";
     clientIP: string;
     clientApplication: string;

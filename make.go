@@ -69,21 +69,6 @@ func main() {
 	}
 }
 
-func enforceEnv() {
-	if os.Getenv("PROXY_CACERT") == "" {
-		fmt.Println("PROXY_CACERT environment variable is not set.")
-		os.Exit(1)
-	}
-	if os.Getenv("PROXY_CAKEY") == "" {
-		fmt.Println("PROXY_CAKEY environment variable is not set.")
-		os.Exit(1)
-	}
-	if os.Getenv("PROXY_CONFIG_FILE") == "" {
-		fmt.Println("PROXY_CONFIG_FILE environment variable is not set.")
-		os.Exit(1)
-	}
-}
-
 // ProcessGroup manages multiple child processes.
 type ProcessGroup struct {
 	cleanupOnce sync.Once

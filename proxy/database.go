@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/tiredkangaroo/bigproxy/proxy/work"
 	_ "modernc.org/sqlite"
 )
 
@@ -23,12 +24,47 @@ type Filter struct {
 }
 
 type Database struct {
-	u *sql.DB
+	b          *sql.DB
+	workerpool *work.WorkerPool
+}
+
+func (d *Database) Exec(query string, args ...any) (sql.Result, error) {
+	var result sql.Result
+	var err error
+	d.workerpool.AddWait(func() {
+		result, err = d.b.Exec(query, args...)
+	})
+	return result, err
+}
+
+func (d *Database) Query(query string, args ...any) (*sql.Rows, error) {
+	var rows *sql.Rows
+	var err error
+	d.workerpool.AddWait(func() {
+		rows, err = d.b.Query(query, args...)
+	})
+	return rows, err
+}
+
+func (d *Database) QueryRow(query string, args ...any) *sql.Row {
+	var row *sql.Row
+	d.workerpool.AddWait(func() {
+		row = d.b.QueryRow(query, args...)
+	})
+	return row
+}
+
+type DatabaseAction struct {
+	returnRows bool
+
+	args []any
 }
 
 func (d *Database) Init() error {
+	d.workerpool.Start()
+
 	var err error
-	d.u, err = sql.Open("sqlite", "cap.db")
+	d.b, err = sql.Open("sqlite", "file:cap.db?cache=shared&_journal_mode=WAL")
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}
@@ -49,7 +85,7 @@ func (d *Database) Init() error {
 		respBody BLOB NOT NULL,
 		error TEXT
 	);`
-	_, err = d.u.Exec(createRequestsTable)
+	_, err = d.Exec(createRequestsTable)
 	if err != nil {
 		return fmt.Errorf("init: failed to create requests table: %w", err)
 	}
@@ -125,7 +161,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		respBody,
 		error
 	FROM requests WHERE id = ?`
-	row := d.u.QueryRow(query, id)
+	row := d.QueryRow(query, id)
 	return d.scanSingleRequest(row)
 }
 
@@ -157,7 +193,7 @@ func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
 func (d *Database) uniqueValuesAndCount(by string) (map[string]int, error) {
 	data := make(map[string]int)
 	query := fmt.Sprintf(`SELECT %s, COUNT(*) AS count FROM requests GROUP BY %s ORDER BY count DESC;`, by, by)
-	rows, err := d.u.Query(query)
+	rows, err := d.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +269,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	// count query building + execution
 	var totalCount int
 	countQuery := countQueryBase + whereClause
-	err := d.u.QueryRow(countQuery, countArgs...).Scan(&totalCount)
+	err := d.QueryRow(countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get requests count (query: %s): %w", countQuery, err)
 	}
@@ -242,7 +278,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	query := queryBase + whereClause + " ORDER BY datetime DESC LIMIT ? OFFSET ?;"
 	args = append(args, limit, offset)
 
-	rows, err := d.u.Query(query, args...)
+	rows, err := d.Query(query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get requests with matching filter (query: %s): %w", query, err)
 	}
@@ -340,7 +376,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		}
 	}
 	query += `);`
-	_, err = d.u.Exec(query, args...)
+	_, err = d.Exec(query, args...)
 	if err != nil {
 		slog.Error("save request", "err", err.Error())
 		return fmt.Errorf("save request: %w", err)
@@ -349,6 +385,6 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	return nil
 }
 
-func NewDatabase(db *sql.DB) *Database {
-	return &Database{u: db}
+func NewDatabase() *Database {
+	return &Database{workerpool: work.NewWorkerPool(1)}
 }

@@ -4,7 +4,7 @@ import { Proxy } from "./api/api";
 import { IncomingView } from "./IncomingView";
 
 import { IoSettingsSharp } from "react-icons/io5";
-import { Config } from "./types";
+import { Config, RequestsViewConfig } from "./types";
 import { SettingsDialog } from "./settings/SettingsDialog";
 
 export function ProxyView() {
@@ -14,28 +14,40 @@ export function ProxyView() {
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const newControlURLRef = useRef<HTMLInputElement | null>(null);
-    const [requestsViewConfig, setRequestsViewConfig] = useState({
-        hideDate: false,
-        hideHostCollapsed: false,
-        hideClientApplication: false,
-        hideState: false,
+    const [requestsViewConfig, setRequestsViewConfig] =
+        // JSON.parse(null) will return null, so its ok to use a non-null assertion here since behavior will be the same
+        useState<RequestsViewConfig>(
+            JSON.parse(localStorage.getItem("requestsViewConfig")!) || {
+                hideDate: false,
+                hideHostCollapsed: false,
+                hideClientApplication: false,
+                hideState: false,
 
-        hideHost: false,
-        hideClientIP: false,
-        hideError: false,
-        hideID: false,
-        hideClientUser: false,
-        hideClientPassword: false,
-        hideMethod: false,
-        hidePath: false,
-        hideQuery: false,
-        hideRequestHeaders: false,
-        hideRequestBody: false,
-        hideResponseStatus: false,
-        hideResponseHeaders: false,
-        hideResponseBody: false,
-        hideBytesTransferred: false,
-    });
+                hideHost: false,
+                hideClientIP: false,
+                hideError: false,
+                hideID: false,
+                hideClientUser: false,
+                hideClientPassword: false,
+                hideMethod: false,
+                hidePath: false,
+                hideQuery: false,
+                hideRequestHeaders: false,
+                hideRequestBody: false,
+                hideResponseStatus: false,
+                hideResponseHeaders: false,
+                hideResponseBody: false,
+                hideBytesTransferred: false,
+            },
+        );
+
+    useEffect(() => {
+        // save requestsViewConfig to localStorage whenever it changes
+        localStorage.setItem(
+            "requestsViewConfig",
+            JSON.stringify(requestsViewConfig),
+        );
+    }, [requestsViewConfig]);
 
     //NOTE: async/await in set state functions
     useEffect(() => {

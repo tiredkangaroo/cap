@@ -11,11 +11,13 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tiredkangaroo/websocket"
 )
 
 // NOTE: rewrite out the message defined (but in a README)
+// NOTE: consider using a method where messsage sending doesn't block for too long
 
 type Manager struct {
 	db      *Database
@@ -23,6 +25,8 @@ type Manager struct {
 
 	approvalWaiters     map[string]*Request
 	approvalWaitersRWMu sync.RWMutex
+
+	jsonMessageTextQueue chan []byte
 }
 
 type IDMessage struct {
@@ -50,7 +54,7 @@ func (c *Manager) SendNew(req *Request) {
 	}
 	c.writeJSON("NEW", map[string]any{
 		"id":                  req.ID,
-		"datetime":            req.Datetime,
+		"datetime":            req.Datetime.UnixMilli(),
 		"host":                req.Host,
 		"secureState":         secureState,
 		"clientIP":            req.ClientIP,
@@ -91,15 +95,15 @@ func (c *Manager) SendResponse(req *Request) {
 
 // NOTE: add timing_total to timing.export
 func (c *Manager) SendDone(req *Request) {
-	if err := c.db.SaveRequest(req, nil); err != nil {
-		slog.Error("saving done request to database", "err", err.Error(), "request_id", req.ID)
-	}
 	c.writeJSON("DONE", map[string]any{
 		"id":               req.ID,
 		"bytesTransferred": req.BytesTransferred(),
 		"timing":           req.timing.Export(),
 		"timing_total":     req.timing.Total(),
 	})
+	if err := c.db.SaveRequest(req, nil); err != nil {
+		slog.Error("saving done request to database", "err", err.Error(), "request_id", req.ID)
+	}
 }
 
 func (c *Manager) SendError(req *Request, err error) {
@@ -251,11 +255,18 @@ func (c *Manager) getApprovalWaitingRequestFromIDMessage(data []byte) (*Request,
 
 func (c *Manager) writeJSON(action string, data any) {
 	d, _ := json.Marshal(data)
-	for _, conn := range c.wsConns {
-		conn.Write(&websocket.Message{
-			Type: websocket.MessageText,
-			Data: append([]byte(action+" "), d...),
-		})
+	c.jsonMessageTextQueue <- append([]byte(action+" "), d...)
+}
+
+func (c *Manager) workOnJSONMessageTextQueue() {
+	for data := range c.jsonMessageTextQueue {
+		for _, conn := range c.wsConns {
+			conn.Write(&websocket.Message{
+				Type: websocket.MessageText,
+				Data: data,
+			})
+		}
+		time.Sleep(time.Millisecond * 5)
 	}
 }
 
@@ -266,4 +277,15 @@ func expectJSON[T any](data []byte) (T, error) {
 		return v, err
 	}
 	return v, nil
+}
+
+func NewManager(db *Database) *Manager {
+	m := &Manager{
+		db:                   db,
+		wsConns:              make([]*websocket.Conn, 0, 8),
+		approvalWaiters:      make(map[string]*Request, 24),
+		jsonMessageTextQueue: make(chan []byte, 250),
+	}
+	go m.workOnJSONMessageTextQueue()
+	return m
 }

@@ -103,11 +103,12 @@ export function IncomingView(props: {
                 <button
                     className="bg-gray-900 pl-3 pr-3 ml-auto mr-2 w-32 min-h-8 h-max text-white"
                     onClick={() => {
-                        setFilter({
-                            clientApplication: undefined,
-                            host: undefined,
-                            state: undefined,
+                        Object.keys(filter).forEach((key) => {
+                            filter[key] = undefined; // clear all filters
                         });
+                        const newFilter = {};
+                        Object.assign(newFilter, newFilter);
+                        setFilter(newFilter);
                     }}
                 >
                     Clear Filters
@@ -322,6 +323,7 @@ function FilterSelects(props: {
         // NOTE: name this function something more descriptive
         const h = async () => {
             const result = await props.proxy.getFilterCounts();
+            console.log(result);
             setFilterUniqueValuesCounts(
                 resolveWithLocalFC(props.requests, result),
             );
