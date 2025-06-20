@@ -42,7 +42,7 @@ type MinorTime struct {
 }
 
 type MajorTime struct {
-	start    time.Time
+	Start    time.Time     `json:"start"`
 	Duration time.Duration `json:"duration"`
 
 	MinorTimeKeys   []Subtime    `json:"minorTimeKeys"`
@@ -50,58 +50,133 @@ type MajorTime struct {
 }
 
 type Timing struct {
-	majorTimeKeys   []Time
-	majorTimeValues []*MajorTime
+	MajorTimeKeys   []Time       `json:"majorTimeKeys"`
+	MajorTimeValues []*MajorTime `json:"majorTimeValues"`
 }
 
 func (t *Timing) Start(key Time) {
-	t.majorTimeKeys = append(t.majorTimeKeys, key)
-	t.majorTimeValues = append(t.majorTimeValues, &MajorTime{
-		start: time.Now(),
+	t.MajorTimeKeys = append(t.MajorTimeKeys, key)
+	t.MajorTimeValues = append(t.MajorTimeValues, &MajorTime{
+		Start: time.Now(),
 	})
 }
 
 func (t *Timing) Stop() {
-	lastidx := len(t.majorTimeValues) - 1
-	val := t.majorTimeValues[lastidx]
-	val.Duration = time.Since(val.start)
+	lastidx := len(t.MajorTimeValues) - 1
+	val := t.MajorTimeValues[lastidx]
+	val.Duration = time.Since(val.Start)
 }
 
 func (t *Timing) Substart(sub Subtime) {
-	lastMajorIdx := len(t.majorTimeValues) - 1
-	t.majorTimeValues[lastMajorIdx].MinorTimeKeys = append(t.majorTimeValues[lastMajorIdx].MinorTimeKeys, sub)
-	t.majorTimeValues[lastMajorIdx].MinorTimeValues = append(t.majorTimeValues[lastMajorIdx].MinorTimeValues, &MinorTime{
+	lastMajorIdx := len(t.MajorTimeValues) - 1
+	t.MajorTimeValues[lastMajorIdx].MinorTimeKeys = append(t.MajorTimeValues[lastMajorIdx].MinorTimeKeys, sub)
+	t.MajorTimeValues[lastMajorIdx].MinorTimeValues = append(t.MajorTimeValues[lastMajorIdx].MinorTimeValues, &MinorTime{
 		start: time.Now(),
 	})
 }
 
 func (t *Timing) Substop() {
-	lastMajorIdx := len(t.majorTimeValues) - 1
-	lastMinorIdx := len(t.majorTimeValues[lastMajorIdx].MinorTimeValues) - 1
-	minor := t.majorTimeValues[lastMajorIdx].MinorTimeValues[lastMinorIdx]
+	lastMajorIdx := len(t.MajorTimeValues) - 1
+	lastMinorIdx := len(t.MajorTimeValues[lastMajorIdx].MinorTimeValues) - 1
+	minor := t.MajorTimeValues[lastMajorIdx].MinorTimeValues[lastMinorIdx]
 	minor.Duration = time.Since(minor.start)
 }
 
 func (t *Timing) Export() map[string]any {
 	return map[string]any{
-		"majorTimeKeys":   t.majorTimeKeys,
-		"majorTimeValues": t.majorTimeValues,
+		"majorTimeKeys":   t.MajorTimeKeys,
+		"majorTimeValues": t.MajorTimeValues,
 	}
 }
 
 func (t *Timing) Total() time.Duration {
-	if len(t.majorTimeValues) == 0 {
+	if len(t.MajorTimeValues) == 0 {
 		return 0
 	}
-	first := t.majorTimeValues[0]
-	last := t.majorTimeValues[len(t.majorTimeValues)-1]
-	return last.start.Add(last.Duration).Sub(first.start)
+	first := t.MajorTimeValues[0]
+	last := t.MajorTimeValues[len(t.MajorTimeValues)-1]
+	return last.Start.Add(last.Duration).Sub(first.Start)
 }
+
+// // NOTE: fix ts (use more type-safe stuff)
+// func (t *Timing) MarshalJSON() ([]byte, error) {
+// 	d := []any{}
+// 	for i, key := range t.MajorTimeKeys {
+// 		val := t.MajorTimeValues[i]
+// 		d = append(d, map[string]any{
+// 			"name":     string(key),
+// 			"duration": val.Duration,
+// 			"subevents": func() []any {
+// 				subevents := []any{}
+// 				for j, subkey := range val.MinorTimeKeys {
+// 					subval := val.MinorTimeValues[j]
+// 					subevents = append(subevents, map[string]any{
+// 						"name":     string(subkey),
+// 						"duration": subval.Duration,
+// 					})
+// 				}
+// 				return subevents
+// 			}(),
+// 		})
+// 	}
+// 	// result:
+// 	// [
+// 	// 	{
+// 	// 	"name": "Request Init",
+// 	// 	"duration": 124.56, (ns)
+// 	// 	"subevents": [
+// 	// 		{
+// 	// 			"name": "UUID Generation",
+// 	// 			"duration": 12.34 (ns)
+// 	// 		},
+// 	// 	}
+// 	// ]
+
+// 	return json.Marshal(d)
+// }
+
+// func (t *Timing) UnmarshalJSON(data []byte) error {
+// 	type marshaledTime []struct {
+// 		Name      string        `json:"name"`
+// 		Duration  time.Duration `json:"duration"`
+// 		Subevents []struct {
+// 			Name     string        `json:"name"`
+// 			Duration time.Duration `json:"duration"`
+// 		} `json:"subevents"`
+// 	}
+// 	var mt marshaledTime
+// 	if err := json.Unmarshal(data, &mt); err != nil {
+// 		return err
+// 	}
+// 	t.MajorTimeKeys = make([]Time, len(mt))
+// 	t.MajorTimeValues = make([]*MajorTime, len(mt))
+// 	for i, m := range mt {
+// 		t.MajorTimeKeys[i] = Time(m.Name)
+// 		t.MajorTimeValues[i] = &MajorTime{
+// 			Duration: m.Duration,
+// 			MinorTimeKeys: func() []Subtime {
+// 				keys := make([]Subtime, len(m.Subevents))
+// 				for j, sub := range m.Subevents {
+// 					keys[j] = Subtime(sub.Name)
+// 				}
+// 				return keys
+// 			}(),
+// 			MinorTimeValues: func() []*MinorTime {
+// 				values := make([]*MinorTime, len(m.Subevents))
+// 				for j, sub := range m.Subevents {
+// 					values[j] = &MinorTime{Duration: sub.Duration}
+// 				}
+// 				return values
+// 			}(),
+// 		}
+// 	}
+// 	return nil
+// }
 
 func New(secure, mitm bool) *Timing {
 	t := &Timing{
-		majorTimeKeys:   make([]Time, 0, 4),
-		majorTimeValues: make([]*MajorTime, 0, 4),
+		MajorTimeKeys:   make([]Time, 0, 4),
+		MajorTimeValues: make([]*MajorTime, 0, 4),
 	}
 	return t
 }

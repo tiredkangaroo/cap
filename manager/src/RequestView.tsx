@@ -675,7 +675,7 @@ function formatDate(dateMS: number): string {
     const day = String(date.getDate()).padStart(2, "0");
     const year = date.getFullYear();
 
-    const hours = String(date.getHours()).padStart(2, "0");
+    const hours = String(date.getHours() % 12).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const seconds = String(date.getSeconds()).padStart(2, "0");
     const millis = String(date.getMilliseconds()).padStart(3, "0");

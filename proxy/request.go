@@ -276,7 +276,9 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 			"body":       string(r.respbody()),
 		},
 
-		"state": state,
-		"error": r.errorText,
+		"state":        state,
+		"error":        r.errorText,
+		"timing":       r.timing.Export(),
+		"timing_total": r.timing.Total(),
 	})
 }

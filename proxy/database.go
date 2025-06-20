@@ -9,8 +9,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/bigproxy/proxy/work"
 	_ "modernc.org/sqlite"
 )
@@ -34,6 +36,7 @@ func (d *Database) Exec(query string, args ...any) (sql.Result, error) {
 	d.workerpool.AddWait(func() {
 		result, err = d.b.Exec(query, args...)
 	})
+	d.logError(query, args, err)
 	return result, err
 }
 
@@ -43,7 +46,25 @@ func (d *Database) Query(query string, args ...any) (*sql.Rows, error) {
 	d.workerpool.AddWait(func() {
 		rows, err = d.b.Query(query, args...)
 	})
+	d.logError(query, args, err)
 	return rows, err
+}
+
+func (d *Database) logError(query string, args []any, err error) {
+	if err != nil {
+		args := []any{
+			"error", err.Error(),
+			"query", query,
+			"args", args,
+		}
+		if config.DefaultConfig.Debug { // only log with runtime.Caller in debug mode (this could be expensive im not sure, but defo not smth u want in prod)
+			_, file, line, ok := runtime.Caller(2) // the actual caller -> exec/query -> this function
+			if ok {
+				args = append(args, "file", file, "line", line)
+			}
+		}
+		slog.Error("database exec error", args...)
+	}
 }
 
 func (d *Database) QueryRow(query string, args ...any) *sql.Row {
@@ -68,6 +89,7 @@ func (d *Database) Init() error {
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}
+	// not null is present everywhere for my own sanity
 	createRequestsTable := `CREATE TABLE IF NOT EXISTS requests (
 		id TEXT PRIMARY KEY,
 		kind INTEGER NOT NULL,
@@ -83,6 +105,7 @@ func (d *Database) Init() error {
 		respStatusCode INTEGER NOT NULL,
 		respHeaders BLOB NOT NULL,
 		respBody BLOB NOT NULL,
+		timing BLOB NOT NULL,
 		error TEXT
 	);`
 	_, err = d.Exec(createRequestsTable)
@@ -106,6 +129,7 @@ func (d *Database) scanSingleRequest(row interface {
 	var requestBody []byte
 	var responseHeaders []byte
 	var responseBody []byte
+	var timing []byte
 	var errText sql.NullString
 	var requrl string
 
@@ -124,6 +148,7 @@ func (d *Database) scanSingleRequest(row interface {
 		&req.resp.StatusCode,
 		&responseHeaders,
 		&responseBody,
+		&timing,
 		&errText,
 	)
 	if err != nil {
@@ -139,6 +164,7 @@ func (d *Database) scanSingleRequest(row interface {
 	req.req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 	req.resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	req.req.URL, _ = url.Parse(requrl)
+	json.Unmarshal(timing, &req.timing)
 	req.errorText = errText.String
 	return req, nil
 }
@@ -159,6 +185,7 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		respStatusCode,
 		respHeaders,
 		respBody,
+		timing,
 		error
 	FROM requests WHERE id = ?`
 	row := d.QueryRow(query, id)
@@ -234,6 +261,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 		respStatusCode,
 		respHeaders,
 		respBody,
+		timing,
 		error
 	FROM requests`
 
@@ -366,6 +394,16 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 			[]byte("{}"), // Headers
 			[]byte(""),   // Body
 		)
+	}
+
+	// timing
+	query += `,
+		timing`
+	if req.timing != nil {
+		timingData, _ := json.Marshal(req.timing)
+		args = append(args, timingData)
+	} else {
+		args = append(args, []byte("{}")) // empty timing
 	}
 
 	query += `) VALUES (`
