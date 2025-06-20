@@ -146,7 +146,7 @@ export function IncomingView(props: {
                                         const idx = requests.findIndex(
                                             (v) => v.id === req.id,
                                         );
-                                        requests[idx] = req;
+                                        newRequests[idx] = req;
                                         setRequests(newRequests);
                                     }}
                                     open={
@@ -308,7 +308,6 @@ function FilterSelects(props: {
         // NOTE: name this function something more descriptive
         const h = async () => {
             const result = await props.proxy.getFilterCounts();
-            console.log(result);
             setFilterUniqueValuesCounts(
                 resolveWithLocalFC(props.requests, result),
             );

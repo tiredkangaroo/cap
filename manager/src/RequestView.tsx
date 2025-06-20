@@ -116,7 +116,7 @@ export function RequestView(props: {
                                 {props.request.method}
                             </p>
                         ) : null}
-                        <h2 className="text-2xl underline">
+                        <h2 className="text-2xl">
                             <b>Request</b>{" "}
                             {!props.requestsViewConfig.hideID
                                 ? props.request.id
@@ -134,10 +134,11 @@ export function RequestView(props: {
                         value={props.request.host}
                         hide={props.requestsViewConfig.hideHost}
                         editMode={editMode}
-                        setValue={(v: string) =>
-                            props.setRequest({ ...props.request, host: v })
-                        }
+                        setValue={(v: string) => {
+                            props.setRequest({ ...props.request, host: v });
+                        }}
                     />
+                    <div className="mt-4"></div>
                     <FieldView
                         name="Client Username"
                         value={props.request.clientAuthorizationUser}
@@ -151,15 +152,6 @@ export function RequestView(props: {
                         defaultShow={false}
                         hide={props.requestsViewConfig.hideClientPassword}
                         editMode={editMode}
-                    />
-                    <FieldView
-                        name="Method"
-                        value={props.request.method}
-                        hide={props.requestsViewConfig.hideMethod}
-                        editMode={editMode}
-                        setValue={(v) =>
-                            props.setRequest({ ...props.request, method: v })
-                        }
                     />
                     <FieldView
                         name="Path"
@@ -326,6 +318,114 @@ function getMethodColor(method: string): string {
     }
 }
 
+function TableMapView(props: {
+    editMode: boolean;
+    disableEdits?: boolean;
+    value: Record<string, Array<string>>;
+    setValue: (v: Record<string, Array<string>>) => void;
+}) {
+    const objectKeyRef = useRef<HTMLInputElement | null>(null);
+    const objectValueRef = useRef<HTMLInputElement | null>(null);
+
+    return (
+        <div className="flex flex-col gap-2">
+            <table className="table-auto border-collapse border border-gray-400 text-sm">
+                <thead>
+                    <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-2 py-1 w-64">
+                            Key
+                        </th>
+                        <th className="border border-gray-300 px-2 py-1 w-96">
+                            Values
+                        </th>
+                        {props.editMode && !props.disableEdits && (
+                            <th className="border border-gray-300 px-2 py-1">
+                                Actions
+                            </th>
+                        )}
+                    </tr>
+                </thead>
+                <tbody>
+                    {Object.entries(props.value).map(([key, values]) => {
+                        return values.map((val, i) => (
+                            <tr>
+                                <td className="border border-gray-300 px-2 py-1 w-64 break-all">
+                                    {key}
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1 w-96 break-all">
+                                    <span key={i} className="block">
+                                        {val}
+                                    </span>
+                                </td>
+                                {props.editMode && !props.disableEdits && (
+                                    <td className="border border-gray-300 px-2 py-1">
+                                        <button
+                                            onClick={() => {
+                                                const newValue = {
+                                                    ...props.value,
+                                                };
+                                                if (newValue[key].length == 1) {
+                                                    delete newValue[key];
+                                                } else {
+                                                    newValue[key] = newValue[
+                                                        key
+                                                    ].filter(
+                                                        (_, index) =>
+                                                            index !== i,
+                                                    );
+                                                }
+                                                props.setValue(newValue);
+                                            }}
+                                        >
+                                            <FaRegTrashCan />
+                                        </button>
+                                    </td>
+                                )}
+                            </tr>
+                        ));
+                    })}
+                </tbody>
+            </table>
+
+            {props.editMode && !props.disableEdits && (
+                <div className="flex flex-row gap-3 text-sm items-center mt-2">
+                    <input
+                        type="text"
+                        placeholder="Key"
+                        ref={objectKeyRef}
+                        className="border-2 border-black rounded-2xl px-2 py-1 w-[40%]"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Value"
+                        ref={objectValueRef}
+                        className="border-2 border-black rounded-2xl px-2 py-1 w-[40%]"
+                    />
+                    <button
+                        className="bg-black text-white rounded-full px-3 py-1"
+                        onClick={() => {
+                            const newValue = { ...props.value };
+                            const key = objectKeyRef.current!.value;
+                            const val = objectValueRef.current!.value;
+                            if (!key || !val) return;
+                            if (newValue[key]) {
+                                newValue[key].push(val);
+                            } else {
+                                newValue[key] = [val];
+                            }
+                            props.setValue(newValue);
+                            objectKeyRef.current!.value = "";
+                            objectValueRef.current!.value = "";
+                        }}
+                    >
+                        +
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function MapView(props: {
     editMode: boolean;
     disableEdits?: boolean;
@@ -432,7 +532,7 @@ function ValueView<
     }
     if (typeof props.value === "object") {
         return (
-            <MapView
+            <TableMapView
                 editMode={props.editMode}
                 disableEdits={props.disableEdits}
                 value={props.value as Record<string, Array<string>>}
@@ -517,12 +617,13 @@ function EditButton(props: {
     }
     return (
         <button
-            className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
+            className="bg-gray-600 hover:bg-gray-700 border-1 border-black text-white font-semibold px-2 rounded shadow"
+            // className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
             onClick={() => {
                 if (props.editMode) {
                     // pressed save
-                    console.log("pre", props.request);
                     props.setEditMode(false);
+                    console.log(props.request);
                     props.proxy.updateRequest(props.request);
                 } else {
                     props.setEditMode(true);
@@ -548,9 +649,16 @@ function FieldView<
         return <></>;
     }
     return (
-        <div className="mb-2 gap-2 text-lg flex flex-row w-full">
-            <b className="">{props.name}:</b>
-            <div className="">
+        <div
+            className="mb-2 gap-4 text-md flex flex-row w-full"
+            style={{
+                alignItems: typeof props.value != "object" ? "center" : "",
+            }}
+        >
+            <div className="w-64">
+                <b className="">{props.name}:</b>
+            </div>
+            <div className="min-w-64 w-fit">
                 <ValueView
                     name={props.name}
                     value={props.value}
@@ -580,17 +688,9 @@ function ShowHideFieldView(props: {
     }
 
     return (
-        <div className="mb-2 text-lg flex flex-row w-full">
-            <b className="flex-1">{props.name}</b>
-            <div className="flex-1 text-start">
-                {!isValueEmpty && (
-                    <button
-                        className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
-                        onClick={() => setShow(!show)}
-                    >
-                        {show ? "Hide" : "Show"}
-                    </button>
-                )}
+        <div className="mb-2 text-md gap-4 flex flex-row w-full">
+            <b className="w-64">{props.name}: </b>
+            <div className="min-w-64 w-fit text-start">
                 {isValueEmpty ? (
                     <i>none or unavailable</i>
                 ) : show ? (
@@ -601,6 +701,14 @@ function ShowHideFieldView(props: {
                     />
                 ) : (
                     <i>{props.hiddenValue}</i>
+                )}
+                {!isValueEmpty && (
+                    <button
+                        className="text-sm pl-3 pr-3 bg-gray-600 text-white ml-4"
+                        onClick={() => setShow(!show)}
+                    >
+                        {show ? "Hide" : "Show"}
+                    </button>
                 )}
             </div>
         </div>
