@@ -99,12 +99,12 @@ export function ProxyView() {
                 setRequestsViewConfig={setRequestsViewConfig}
             />
             <div className="flex flex-row mt-4 w-full">
-                <div className="ml-auto mr-auto text-center">
+                {/* <div className="ml-auto mr-auto text-center">
                     <h1 className="text-4xl font-bold mb-1">{proxy.name}</h1>
                     <p className="text-md">URL: {proxy.url}</p>
-                </div>
+                </div> */}
                 <button
-                    className="mr-2 bg-gray-800 min-w-fit h-11 w-11 rounded-xl"
+                    className="ml-auto mr-2 bg-gray-800 w-8 h-8"
                     onClick={() => setSettingsOpen(true)}
                 >
                     <IoSettingsSharp className="ml-auto mr-auto text-white" />

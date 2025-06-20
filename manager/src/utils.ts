@@ -4,6 +4,12 @@ export function camelCaseToCapitalSpace(str: string): string {
         .replace(/^./, (char) => char.toUpperCase()); // capitalize the first letter
 }
 
+export function pascalCaseToCapitalSpace(str: string): string {
+    return str
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
+}
+
 export function nsToReadable(ns: number): string {
     if (ns < 1000) {
         return `${ns.toFixed(2)} ns`;

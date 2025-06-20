@@ -46,6 +46,7 @@ export function Timeline(props: {
                 percents += widthPercent;
                 return (
                     <TimeView
+                        key={i}
                         idx={i}
                         majorKey={majorKey}
                         majorValue={majorValue}

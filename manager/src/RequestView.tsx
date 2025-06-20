@@ -12,7 +12,8 @@ import {
 import { useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
-import { nsToReadable } from "./utils";
+import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
+import { StatusCodes } from "./statuscodes";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -34,37 +35,39 @@ export function RequestView(props: {
     const [editMode, setEditMode] = useState(false);
     return (
         <Collapsible
-            className="border-b-1 border-b-black wrap-anywhere"
+            className="border-b border-gray-300"
             open={props.open}
-            onOpenChange={(o) => {
-                props.setOpen(o);
-            }}
+            onOpenChange={(o) => props.setOpen(o)}
         >
-            <CollapsibleTrigger className="w-full bg-gray-200">
-                <div className="relative flex flex-row w-full pt-4 pb-4">
+            <CollapsibleTrigger className="w-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
                     <ParagraphView
                         hide={props.requestsViewConfig.hideDate}
-                        className="text-sm"
+                        className="text-sm text-gray-600"
                     >
                         {formatDate(props.request.datetime)}
                     </ParagraphView>
+
                     <ParagraphView
                         hide={props.requestsViewConfig.hideHostCollapsed}
                     >
-                        <div className="flex flex-row justify-center items-center gap-2 text-md">
+                        <div className="flex w-full justify-center items-center gap-2 text-md font-medium">
                             {props.request.host}
                             {props.request.secureState !== "HTTP (Insecure)" ? (
-                                <CiLock className="text-green-700" />
+                                <CiLock className="text-green-600" />
                             ) : (
-                                <CiUnlock className="text-red-700" />
+                                <CiUnlock className="text-red-600" />
                             )}
                         </div>
                     </ParagraphView>
+
                     <ParagraphView
                         hide={props.requestsViewConfig.hideClientApplication}
+                        className="text-sm text-gray-700"
                     >
                         {props.request.clientApplication}
                     </ParagraphView>
+
                     <StateView
                         proxy={props.proxy}
                         id={props.request.id}
@@ -74,15 +77,14 @@ export function RequestView(props: {
                     />
                 </div>
             </CollapsibleTrigger>
-            <CollapsibleContent className="bg-gray-300 max-h-[50vh] overflow-y-auto">
-                <div className="flex flex-row">
+
+            <CollapsibleContent className="bg-gray-50 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace]">
+                <div className="flex gap-3">
                     <button
-                        className="bg-gray-600 text-white border-black border-1 ml-2 mt-2 pl-2 pr-2"
-                        onClick={() => {
-                            downloadRequest(props.request);
-                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded shadow"
+                        onClick={() => downloadRequest(props.request)}
                     >
-                        Download
+                        Download Request
                     </button>
                     <EditButton
                         proxy={props.proxy}
@@ -91,215 +93,200 @@ export function RequestView(props: {
                         setEditMode={setEditMode}
                     />
                 </div>
-                <div className="ml-2 pt-2 pb-1">
-                    {props.request.error &&
-                    !props.requestsViewConfig.hideError ? (
-                        <p>
-                            <span className="text-red-700">Error</span>:{" "}
-                            {props.request.error}
-                        </p>
-                    ) : (
-                        <></>
-                    )}
+
+                {props.request.error && !props.requestsViewConfig.hideError && (
+                    <p className="text-red-600">
+                        <b>Error:</b> {props.request.error}
+                    </p>
+                )}
+
+                {/* Request Info */}
+                <div className="bg-white rounded-lg shadow p-4 space-y-3">
+                    <h2 className="text-lg font-semibold">Request</h2>
+
                     <FieldView
                         name="ID"
                         value={props.request.id}
                         hide={props.requestsViewConfig.hideID}
                         editMode={editMode}
-                        disableEdits={true}
+                        disableEdits
                     />
-                    <p>
-                        <b>Request: </b>
-                    </p>
-                    <div className="hashi w-full pt-2 pl-5 pr-5">
-                        <FieldView
-                            name="Host"
-                            value={props.request.host}
-                            hide={props.requestsViewConfig.hideHost}
-                            editMode={editMode}
-                            setValue={(v: string) => {
-                                props.setRequest({
-                                    ...props.request,
-                                    host: v,
-                                });
-                            }}
-                        />
-                        <FieldView
-                            name="Client IP"
-                            value={props.request.clientIP}
-                            hide={props.requestsViewConfig.hideClientIP}
-                            editMode={editMode}
-                            disableEdits={true}
-                        />
-                        <FieldView
-                            name="Client Username"
-                            value={props.request.clientAuthorizationUser}
-                            hide={props.requestsViewConfig.hideClientUser}
-                            editMode={editMode}
-                        />
-                        <ShowHideFieldView
-                            name="Client Password"
-                            value={props.request.clientAuthorizationPassword}
-                            hiddenValue="********"
-                            defaultShow={false}
-                            hide={props.requestsViewConfig.hideClientPassword}
-                            editMode={editMode}
-                        />
-                        <FieldView
-                            name="Method"
-                            value={props.request.method}
-                            hide={props.requestsViewConfig.hideMethod}
-                            editMode={editMode}
-                            setValue={(v) => {
-                                props.setRequest({
-                                    ...props.request,
-                                    method: v,
-                                });
-                            }}
-                        />
-                        <FieldView
-                            name="Path"
-                            value={props.request.path}
-                            hide={props.requestsViewConfig.hidePath}
-                            editMode={editMode}
-                            setValue={(v) => {
-                                props.setRequest({
-                                    ...props.request,
-                                    path: v,
-                                });
-                            }}
-                        />
-                        <FieldView
-                            name="Query"
-                            value={props.request.query}
-                            hide={props.requestsViewConfig.hideQuery}
-                            editMode={editMode}
-                            setValue={(v) =>
-                                props.setRequest({
-                                    ...props.request,
-                                    query: v,
-                                })
-                            }
-                        />
-                        <FieldView
-                            name="Headers"
-                            value={props.request.headers}
-                            hide={props.requestsViewConfig.hideRequestHeaders}
-                            editMode={editMode}
-                            setValue={(v) => {
-                                props.setRequest({
-                                    ...props.request,
-                                    headers: v,
-                                });
-                            }}
-                        />
-                        {props.requestsViewConfig.hideRequestBody ? (
-                            <></>
-                        ) : (
-                            <button
-                                className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
-                                onClick={() =>
-                                    downloadBody(
-                                        props.request.id,
-                                        props.request.body,
-                                        props.request.headers![
-                                            "Content-Type"
-                                        ][0],
-                                    )
-                                }
-                            >
-                                Download Body
-                            </button>
-                        )}
-                        <BodyView
-                            value={props.request.body}
-                            hide={props.requestsViewConfig.hideRequestBody}
-                            editMode={editMode}
-                            setValue={(v: string) => {
-                                props.setRequest({
-                                    ...props.request,
-                                    body: v,
-                                });
-                            }}
-                        />
-                    </div>
-                    <p>
-                        <b>Response: </b>
-                    </p>
-                    <div className="mt-2 ml-5">
-                        <FieldView
-                            name="Status"
-                            value={props.request.response?.statusCode}
-                            hide={props.requestsViewConfig.hideResponseStatus}
-                            editMode={editMode}
-                            disableEdits={true}
-                        />
-                        <FieldView
-                            name="Headers"
-                            value={props.request.response?.headers}
-                            hide={props.requestsViewConfig.hideResponseHeaders}
-                            editMode={editMode}
-                        />
-                        {props.requestsViewConfig.hideResponseBody ? (
-                            <></>
-                        ) : (
-                            <button
-                                className="bg-gray-600 text-white border-black border-1 mt-2 pl-2 pr-2"
-                                onClick={() =>
-                                    downloadBody(
-                                        props.request.id,
-                                        props.request.response!.body,
-                                        props.request.response!.headers![
-                                            "Content-Type"
-                                        ][0],
-                                    )
-                                }
-                            >
-                                Download Body
-                            </button>
-                        )}
-                        <BodyView
-                            value={props.request.response?.body}
-                            hide={props.requestsViewConfig.hideResponseBody}
-                            editMode={editMode}
-                            setValue={(v: string) => {
-                                //NOTE: not implemented
-                                props.setRequest({
-                                    ...props.request,
-                                    response: {
-                                        ...props.request.response!,
-                                        body: v,
-                                    },
-                                });
-                            }}
-                        />
-                    </div>
+
                     <FieldView
-                        name="Bytes Transferred"
-                        hide={props.requestsViewConfig.hideBytesTransferred}
-                        value={props.request.bytesTransferred}
+                        name="Host"
+                        value={props.request.host}
+                        hide={props.requestsViewConfig.hideHost}
                         editMode={editMode}
-                        disableEdits={true}
-                    ></FieldView>
-                    {props.request.timing && props.request.timing_total ? (
+                        setValue={(v: string) =>
+                            props.setRequest({ ...props.request, host: v })
+                        }
+                    />
+                    <FieldView
+                        name="Client IP"
+                        value={props.request.clientIP}
+                        hide={props.requestsViewConfig.hideClientIP}
+                        editMode={editMode}
+                        disableEdits
+                    />
+                    <FieldView
+                        name="Client Username"
+                        value={props.request.clientAuthorizationUser}
+                        hide={props.requestsViewConfig.hideClientUser}
+                        editMode={editMode}
+                    />
+                    <ShowHideFieldView
+                        name="Client Password"
+                        value={props.request.clientAuthorizationPassword}
+                        hiddenValue="********"
+                        defaultShow={false}
+                        hide={props.requestsViewConfig.hideClientPassword}
+                        editMode={editMode}
+                    />
+                    <FieldView
+                        name="Method"
+                        value={props.request.method}
+                        hide={props.requestsViewConfig.hideMethod}
+                        editMode={editMode}
+                        setValue={(v) =>
+                            props.setRequest({ ...props.request, method: v })
+                        }
+                    />
+                    <FieldView
+                        name="Path"
+                        value={props.request.path}
+                        hide={props.requestsViewConfig.hidePath}
+                        editMode={editMode}
+                        setValue={(v) =>
+                            props.setRequest({ ...props.request, path: v })
+                        }
+                    />
+                    <FieldView
+                        name="Query"
+                        value={props.request.query}
+                        hide={props.requestsViewConfig.hideQuery}
+                        editMode={editMode}
+                        setValue={(v) =>
+                            props.setRequest({ ...props.request, query: v })
+                        }
+                    />
+                    <FieldView
+                        name="Headers"
+                        value={props.request.headers}
+                        hide={props.requestsViewConfig.hideRequestHeaders}
+                        editMode={editMode}
+                        setValue={(v) =>
+                            props.setRequest({ ...props.request, headers: v })
+                        }
+                    />
+
+                    {!props.requestsViewConfig.hideRequestBody && (
                         <>
-                            <h1 className="text-lg mt-4">
-                                <b>Timeline</b> (
-                                {nsToReadable(props.request.timing_total)})
-                            </h1>
-                            <Timeline
-                                timing={props.request.timing}
-                                totalTime={props.request.timing_total}
-                                className="mt-2"
+                            <BodyView
+                                request={props.request}
+                                body={props.request.body}
+                                hide={false}
+                                editMode={editMode}
+                                setValue={(v: string) =>
+                                    props.setRequest({
+                                        ...props.request,
+                                        body: v,
+                                    })
+                                }
                             />
                         </>
-                    ) : (
-                        <></>
                     )}
                 </div>
+
+                {/* Response Info */}
+                <div className="bg-white rounded-lg shadow p-4 space-y-3">
+                    <h2 className="text-lg font-semibold">Response</h2>
+                    <div className="flex flex-row text-lg gap-2">
+                        <p
+                            className="mt-auto mb-auto w-3 h-3 rounded-4xl"
+                            style={{
+                                backgroundColor: getStatusCodeBGColor(
+                                    props.request.response!.statusCode!,
+                                ),
+                            }}
+                        ></p>
+                        {props.request.response?.statusCode}{" "}
+                        {statusCodeToName(props.request.response?.statusCode)}
+                    </div>
+                    {/* <FieldView
+                        name="Status"
+                        value={props.request.response?.statusCode}
+                        hide={props.requestsViewConfig.hideResponseStatus}
+                        editMode={editMode}
+                        disableEdits
+                    /> */}
+                    <FieldView
+                        name="Headers"
+                        value={props.request.response?.headers}
+                        hide={props.requestsViewConfig.hideResponseHeaders}
+                        editMode={editMode}
+                    />
+                    {!props.requestsViewConfig.hideResponseBody && (
+                        <>
+                            <BodyView
+                                request={props.request}
+                                body={props.request.response?.body}
+                                hide={false}
+                                editMode={editMode}
+                                setValue={(v: string) =>
+                                    props.setRequest({
+                                        ...props.request,
+                                        response: {
+                                            ...props.request.response!,
+                                            body: v,
+                                        },
+                                    })
+                                }
+                            />
+                        </>
+                    )}
+                </div>
+
+                <FieldView
+                    name="Bytes Transferred"
+                    hide={props.requestsViewConfig.hideBytesTransferred}
+                    value={props.request.bytesTransferred}
+                    editMode={editMode}
+                    disableEdits
+                />
+
+                {props.request.timing && props.request.timing_total && (
+                    <div>
+                        <h2 className="text-lg font-semibold mt-4">
+                            Timeline ({nsToReadable(props.request.timing_total)}
+                            )
+                        </h2>
+                        <Timeline
+                            timing={props.request.timing}
+                            totalTime={props.request.timing_total}
+                            className="mt-2"
+                        />
+                    </div>
+                )}
             </CollapsibleContent>
         </Collapsible>
     );
+}
+
+function getStatusCodeBGColor(statusCode: number) {
+    if (statusCode >= 200 && statusCode < 300) {
+        return "#4CAF50"; // Vibrant Green
+    } else if (statusCode >= 300 && statusCode < 400) {
+        return "#FFEB3B"; // Amber
+    } else if (statusCode >= 400 && statusCode < 500) {
+        return "#FF5722"; // Deep Orange/Red
+    } else if (statusCode >= 500) {
+        return "#D32F2F"; // Darker Red
+    }
+    return "#424242"; // Dark Grey
+}
+
+function statusCodeToName(statusCode: number | undefined): string {
+    return pascalCaseToCapitalSpace(StatusCodes[statusCode!] || "");
 }
 
 function MapView(props: {
@@ -312,12 +299,12 @@ function MapView(props: {
     const objectValueRef = useRef<HTMLInputElement | null>(null);
 
     return (
-        <>
+        <div className="flex flex-col gap-2">
             {Object.keys(props.value!).length !== 0 ? (
                 Object.entries(props.value!).map((v) => (
-                    <div key={v[0]} className="flex flex-row gap-3 text-sm">
+                    <div key={v[0]} className="flex flex-row gap-4 text-sm">
                         {v[1].map((x, i) => (
-                            <p key={i}>
+                            <p key={i} className="wrap-anywhere">
                                 <b>{v[0]}</b>: {x}
                             </p>
                         ))}
@@ -390,7 +377,7 @@ function MapView(props: {
             ) : (
                 <></>
             )}
-        </>
+        </div>
     );
 }
 
@@ -422,7 +409,7 @@ function ValueView<
         return (
             <input
                 type={typeof props.value === "number" ? "number" : "text"}
-                className="bg-gray-200 text-black w-full pl-2"
+                className="bg-gray-200 text-black w-full pl-2 wrap-anywhere"
                 defaultValue={props.value}
                 onBlur={(e) => {
                     const v = e.target.value as T;
@@ -583,16 +570,17 @@ function ShowHideFieldView(props: {
     );
 }
 
+// NOTE: make body not in Request by default (must be loaded by call to server)
 function BodyView(props: {
-    value: string | null | undefined;
+    request: Request;
+    body: string | null | undefined;
+    headers?: Record<string, Array<string>>;
     hide: boolean;
     editMode: boolean;
     setValue?: (v: string) => void;
 }) {
     const bodyBytes =
-        props.value != null && props.value != undefined
-            ? props.value.length
-            : 0;
+        props.body != null && props.body != undefined ? props.body.length : 0;
     const [showBody, setShowBody] = useState<boolean>(
         bodyBytes == 0 ? true : false,
     );
@@ -602,8 +590,21 @@ function BodyView(props: {
     }
     return (
         <div className="mb-2 text-lg w-full">
+            <button
+                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mt-2 disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
+                disabled={!props.body}
+                onClick={() =>
+                    downloadBody(
+                        props.request.id,
+                        props.body,
+                        props.headers?.["Content-Type"]?.[0],
+                    )
+                }
+            >
+                Download Body
+            </button>
             <div className="flex flex-row items-center">
-                <b className="ml-2 flex-1">Body ({bodyBytes} bytes)</b>
+                <b className="flex-1">Body ({bodyBytes} bytes)</b>
                 <div className="flex-1 flex flex-row">
                     {bodyBytes != 0 ? (
                         <>
@@ -623,7 +624,7 @@ function BodyView(props: {
             <div className="ml-2 font-[monospace]">
                 {props.editMode && showBody ? (
                     <textarea
-                        defaultValue={props.value ?? ""}
+                        defaultValue={props.body ?? ""}
                         className="w-full border-2 border-black p-1"
                         onBlur={(e) => {
                             props.setValue!(e.target.value);
@@ -631,7 +632,7 @@ function BodyView(props: {
                     ></textarea>
                 ) : showBody ? (
                     <pre className="ml-2 mt-2 whitespace-pre-wrap">
-                        {props.value}
+                        {props.body}
                     </pre>
                 ) : null}{" "}
             </div>
