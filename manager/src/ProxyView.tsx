@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { Proxy } from "./api/api";
 import { IncomingView } from "./IncomingView";
 
-import { IoSettingsSharp } from "react-icons/io5";
 import { Config, RequestsViewConfig } from "./types";
 import { SettingsDialog } from "./settings/SettingsDialog";
+import cap from "./assets/cap.png";
 
 export function ProxyView() {
     const [proxy, setProxy] = useState<Proxy | null>(
@@ -90,7 +90,7 @@ export function ProxyView() {
     }
 
     return (
-        <div className="flex flex-col w-full h-full">
+        <div className="flex flex-col w-full h-full bg-gray-100">
             <SettingsDialog
                 proxy={proxy}
                 open={settingsOpen}
@@ -98,20 +98,12 @@ export function ProxyView() {
                 requestsViewConfig={requestsViewConfig}
                 setRequestsViewConfig={setRequestsViewConfig}
             />
-            <div className="flex flex-row mt-4 w-full">
-                {/* <div className="ml-auto mr-auto text-center">
-                    <h1 className="text-4xl font-bold mb-1">{proxy.name}</h1>
-                    <p className="text-md">URL: {proxy.url}</p>
-                </div> */}
-                <button
-                    className="ml-auto mr-2 bg-gray-800 w-8 h-8"
-                    onClick={() => setSettingsOpen(true)}
-                >
-                    <IoSettingsSharp className="ml-auto mr-auto text-white" />
-                </button>
+            <div className="flex flex-row w-full min-h-12 text-black items-center px-4 justify-center">
+                <img src={cap} className="w-16" />
             </div>
             <IncomingView
                 proxy={proxy}
+                setSettingsDialogOpen={setSettingsOpen}
                 requestsViewConfig={requestsViewConfig}
             />
         </div>

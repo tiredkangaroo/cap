@@ -15,10 +15,12 @@ import {
     SelectValue,
 } from "./components/ui/select";
 import { camelCaseToCapitalSpace } from "./utils";
+import { IoSettingsSharp } from "react-icons/io5";
 
 export function IncomingView(props: {
     proxy: Proxy;
     requestsViewConfig: RequestsViewConfig;
+    setSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
     const [requests, setRequests] = useState<Array<Request>>([]);
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
@@ -84,68 +86,56 @@ export function IncomingView(props: {
             setPageNumber(0);
         }
     }, [pageNumber, totalPages]);
+
     return (
         <div className="w-full h-full flex flex-col">
-            {/* Header */}
-            <div className="h-10 flex flex-row w-full">
-                <h1 className="ml-2 text-2xl font-bold mb-2">Requests</h1>
-            </div>
+            <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 p-4">
+                {/* Filter Section */}
+                <div className="bg-gray-200 rounded-xl text-black border-1 border-black p-3 flex items-center justify-between">
+                    <FilterSelects
+                        proxy={props.proxy}
+                        requests={requests}
+                        currentlyShownRequests={currentlyShownRequests}
+                        filter={filter}
+                        setFilter={setFilter}
+                    />
+                    <button
+                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                        onClick={() => {
+                            Object.keys(filter).forEach((key) => {
+                                filter[key] = undefined;
+                            });
+                            setFilter({});
+                        }}
+                    >
+                        Clear Filters
+                    </button>
+                </div>
 
-            {/* Filters */}
-            <div className="h-8 flex flex-row gap-6 ml-2">
-                <FilterSelects
-                    proxy={props.proxy}
-                    requests={requests}
-                    currentlyShownRequests={currentlyShownRequests}
-                    filter={filter}
-                    setFilter={setFilter}
-                />
-                <button
-                    className="bg-gray-900 pl-3 pr-3 ml-auto mr-2 w-32 min-h-8 h-max text-white"
-                    onClick={() => {
-                        Object.keys(filter).forEach((key) => {
-                            filter[key] = undefined; // clear all filters
-                        });
-                        const newFilter = {};
-                        Object.assign(newFilter, newFilter);
-                        setFilter(newFilter);
-                    }}
-                >
-                    Clear Filters
-                </button>
-            </div>
-            <div className="ml-2 min-h-fit py-1 text-gray-500">
-                {totalResults.current} results
-            </div>
+                <div className="text-gray-600 text-sm ml-1">
+                    {totalResults.current} results
+                </div>
 
-            {/* Table Headers */}
-            <div className="h-8 flex flex-row w-full text-center bg-gray-700 pt-1 text-white">
-                {!props.requestsViewConfig.hideDate && (
-                    <p className="flex-1">Date</p>
-                )}
-                {!props.requestsViewConfig.hideHostCollapsed && (
-                    <p className="flex-1">Host</p>
-                )}
-                {!props.requestsViewConfig.hideClientApplication && (
-                    <p className="flex-1">Client App</p>
-                )}
-                {!props.requestsViewConfig.hideState && (
-                    <p className="flex-1">State</p>
-                )}
-            </div>
+                <div className="bg-gray-700 text-white text-sm font-medium rounded-md py-2 px-4 grid grid-cols-4 text-center sticky top-0 z-10">
+                    {!props.requestsViewConfig.hideDate && <span>Date</span>}
+                    {!props.requestsViewConfig.hideHostCollapsed && (
+                        <span>Host</span>
+                    )}
+                    {!props.requestsViewConfig.hideClientApplication && (
+                        <span>Client App</span>
+                    )}
+                    {!props.requestsViewConfig.hideState && <span>State</span>}
+                </div>
 
-            <div className="h-[calc(100vh-13%-123px)] flex flex-col">
-                {/* Scrollable Request List */}
-                <div className="overflow-y-auto h-max">
+                <div className="flex-1 overflow-y-auto pr-2 max-h-[calc(100vh-300px)]">
                     {currentlyShownRequests
                         .slice(
                             pageNumber * resultsPerPage,
                             (pageNumber + 1) * resultsPerPage,
                         )
-                        .map((request, idx) => {
-                            return (
+                        .map((request, idx) => (
+                            <div key={idx} className="bg-white rounded-lg">
                                 <RequestView
-                                    key={idx}
                                     proxy={props.proxy}
                                     request={request}
                                     requestsViewConfig={
@@ -164,58 +154,53 @@ export function IncomingView(props: {
                                         currentRequestCollapsibleOpen
                                     }
                                     setOpen={(o: boolean) => {
-                                        if (o) {
-                                            setCurrentRequestCollapsibleOpen(
-                                                request.id,
-                                            );
-                                        } else {
-                                            setCurrentRequestCollapsibleOpen(
-                                                undefined,
-                                            );
-                                        }
+                                        setCurrentRequestCollapsibleOpen(
+                                            o ? request.id : undefined,
+                                        );
                                     }}
                                 />
-                            );
-                        })}
+                            </div>
+                        ))}
                 </div>
+            </div>
 
-                <div className="mt-8"></div>
-                {/* Bottom Section - Always visible */}
-                <div className="fixed mt-auto bottom-0 w-full h-[calc(5%)] bg-gray-900 flex flex-row items-center justify-between shrink-0">
-                    <Pagination
-                        requests={requests}
-                        currentlyShownRequests={currentlyShownRequests}
-                        pageNumber={pageNumber}
-                        setPageNumber={setPageNumber}
-                        resultsPerPage={resultsPerPage}
-                        totalPages={totalPages.current}
-                    />
-                    <div className="flex flex-row text-white text-sm items-center mr-2">
+            <div className="bg-gray-700 sticky bottom-0 shadow-inner border-t mt-4 px-4 py-2 flex items-center justify-between">
+                <Pagination
+                    requests={requests}
+                    currentlyShownRequests={currentlyShownRequests}
+                    pageNumber={pageNumber}
+                    setPageNumber={setPageNumber}
+                    resultsPerPage={resultsPerPage}
+                    totalPages={totalPages.current}
+                />
+
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-700">
                         Results per page:
-                        <Select
-                            value={resultsPerPage.toString() ?? "15"}
-                            onValueChange={(v) => {
-                                setResultsPerPage(parseInt(v) ?? 15);
-                            }}
-                        >
-                            <SelectTrigger className="ml-4 border-white text-white min-w-[150px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="text-black">
-                                {["10", "15", "25", "50", "75", "100"].map(
-                                    (v) => (
-                                        <SelectItem
-                                            key={v}
-                                            className="text-black"
-                                            value={v}
-                                        >
-                                            {v}
-                                        </SelectItem>
-                                    ),
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    </span>
+                    <Select
+                        value={resultsPerPage.toString() ?? "15"}
+                        onValueChange={(v) => {
+                            setResultsPerPage(parseInt(v) ?? 15);
+                        }}
+                    >
+                        <SelectTrigger className="min-w-[120px] text-white border-gray-300 shadow-sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="text-black">
+                            {["10", "15", "25", "50", "75", "100"].map((v) => (
+                                <SelectItem key={v} value={v}>
+                                    {v}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <button
+                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
+                        onClick={() => props.setSettingsDialogOpen(true)}
+                    >
+                        <IoSettingsSharp size={18} />
+                    </button>
                 </div>
             </div>
         </div>
@@ -343,7 +328,8 @@ function FilterSelects(props: {
     }, [props.proxy, props.requests, props.currentlyShownRequests]);
 
     return (
-        <div className="flex flex-row gap-10">
+        <div className="flex flex-row gap-10 items-center">
+            <p>Query</p>
             {Object.entries(props.filter).map(([key, _]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
                 const uniqueValuesAndCounts = filterUniqueValuesCounts[key]; // get the unique values and counts for the current filter key
@@ -367,12 +353,15 @@ function FilterSelects(props: {
                             <SelectTrigger className="border-black min-w-[150px]">
                                 <SelectValue placeholder={verboseKey} />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-none">
                                 <SelectGroup>
                                     <SelectLabel>{verboseKey}</SelectLabel>
                                     {uniqueValues.map((key, index) => (
                                         <SelectItem key={index} value={key}>
-                                            {key} ({uniqueValuesAndCounts[key]})
+                                            <div className="justify-between flex flex-row w-full">
+                                                {key} (
+                                                {uniqueValuesAndCounts[key]})
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectGroup>

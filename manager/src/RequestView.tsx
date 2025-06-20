@@ -39,7 +39,7 @@ export function RequestView(props: {
             open={props.open}
             onOpenChange={(o) => props.setOpen(o)}
         >
-            <CollapsibleTrigger className="w-full bg-gray-100 hover:bg-gray-200 transition-colors">
+            <CollapsibleTrigger className="w-full bg-white hover:bg-gray-200 transition-colors">
                 <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
                     <ParagraphView
                         hide={props.requestsViewConfig.hideDate}
@@ -51,7 +51,7 @@ export function RequestView(props: {
                     <ParagraphView
                         hide={props.requestsViewConfig.hideHostCollapsed}
                     >
-                        <div className="flex w-full justify-center items-center gap-2 text-md font-medium">
+                        <div className="flex w-full justify-center items-center gap-2 text-md">
                             {props.request.host}
                             {props.request.secureState !== "HTTP (Insecure)" ? (
                                 <CiLock className="text-green-600" />
@@ -78,7 +78,7 @@ export function RequestView(props: {
                 </div>
             </CollapsibleTrigger>
 
-            <CollapsibleContent className="bg-gray-50 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace]">
+            <CollapsibleContent className="bg-gray-300 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace]">
                 <div className="flex gap-3">
                     <button
                         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded shadow"
@@ -101,16 +101,33 @@ export function RequestView(props: {
                 )}
 
                 {/* Request Info */}
-                <div className="bg-white rounded-lg shadow p-4 space-y-3">
-                    <h2 className="text-lg font-semibold">Request</h2>
-
-                    <FieldView
-                        name="ID"
-                        value={props.request.id}
-                        hide={props.requestsViewConfig.hideID}
-                        editMode={editMode}
-                        disableEdits
-                    />
+                <div className="bg-white rounded-lg shadow p-4 space-y-3 font-[Manrope]">
+                    <div className="flex flex-row items-center gap-2">
+                        {!props.requestsViewConfig.hideMethod &&
+                        props.request.method !== undefined ? (
+                            <p
+                                className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-white"
+                                style={{
+                                    backgroundColor: getMethodColor(
+                                        props.request.method!,
+                                    ),
+                                }}
+                            >
+                                {props.request.method}
+                            </p>
+                        ) : null}
+                        <h2 className="text-2xl underline">
+                            <b>Request</b>{" "}
+                            {!props.requestsViewConfig.hideID
+                                ? props.request.id
+                                : null}{" "}
+                            {!props.requestsViewConfig.hideClientIP ? (
+                                <span>
+                                    by <b>{props.request.clientIP}</b>
+                                </span>
+                            ) : null}
+                        </h2>
+                    </div>
 
                     <FieldView
                         name="Host"
@@ -120,13 +137,6 @@ export function RequestView(props: {
                         setValue={(v: string) =>
                             props.setRequest({ ...props.request, host: v })
                         }
-                    />
-                    <FieldView
-                        name="Client IP"
-                        value={props.request.clientIP}
-                        hide={props.requestsViewConfig.hideClientIP}
-                        editMode={editMode}
-                        disableEdits
                     />
                     <FieldView
                         name="Client Username"
@@ -201,16 +211,22 @@ export function RequestView(props: {
                 <div className="bg-white rounded-lg shadow p-4 space-y-3">
                     <h2 className="text-lg font-semibold">Response</h2>
                     <div className="flex flex-row text-lg gap-2">
-                        <p
-                            className="mt-auto mb-auto w-3 h-3 rounded-4xl"
-                            style={{
-                                backgroundColor: getStatusCodeBGColor(
-                                    props.request.response!.statusCode!,
-                                ),
-                            }}
-                        ></p>
-                        {props.request.response?.statusCode}{" "}
-                        {statusCodeToName(props.request.response?.statusCode)}
+                        {props.request.response?.statusCode != undefined ? (
+                            <>
+                                <p
+                                    className="mt-auto mb-auto w-3 h-3 rounded-4xl"
+                                    style={{
+                                        backgroundColor: getStatusCodeBGColor(
+                                            props.request.response!.statusCode!,
+                                        ),
+                                    }}
+                                ></p>
+                                {props.request.response?.statusCode}{" "}
+                                {statusCodeToName(
+                                    props.request.response?.statusCode,
+                                )}
+                            </>
+                        ) : null}
                     </div>
                     {/* <FieldView
                         name="Status"
@@ -287,6 +303,27 @@ function getStatusCodeBGColor(statusCode: number) {
 
 function statusCodeToName(statusCode: number | undefined): string {
     return pascalCaseToCapitalSpace(StatusCodes[statusCode!] || "");
+}
+
+function getMethodColor(method: string): string {
+    // colors are taken from Postman
+    switch (method) {
+        case "GET":
+            return "#007F31";
+        case "POST":
+            return "#AD7A03";
+        case "PUT":
+            return "#0053B8";
+        case "PATCH":
+            return "#623497";
+        case "DELETE":
+            return "#8E1A10";
+        case "OPTIONS":
+            return "#A61468";
+        case "HEAD":
+        default:
+            return "#9E9E9E"; // Grey for unknown methods
+    }
 }
 
 function MapView(props: {
@@ -511,9 +548,9 @@ function FieldView<
         return <></>;
     }
     return (
-        <div className="mb-2 text-lg flex flex-row w-full">
-            <b className="flex-1">{props.name} </b>
-            <div className="flex-1">
+        <div className="mb-2 gap-2 text-lg flex flex-row w-full">
+            <b className="">{props.name}:</b>
+            <div className="">
                 <ValueView
                     name={props.name}
                     value={props.value}

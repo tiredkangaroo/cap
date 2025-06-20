@@ -13,6 +13,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-collapsible": "^1.1.10",
         "@radix-ui/react-dialog": "^1.1.13",
         "@radix-ui/react-hover-card": "^1.1.13",
@@ -30,12 +31,12 @@
         "tailwindcss": "^4.1.6"
     },
     "devDependencies": {
-        "electron": "^36.2.0",
-        "electron-builder": "^26.0.12",
         "@eslint/js": "^9.25.0",
         "@types/react": "^19.1.2",
         "@types/react-dom": "^19.1.2",
         "@vitejs/plugin-react-swc": "^3.9.0",
+        "electron": "^36.2.0",
+        "electron-builder": "^26.0.12",
         "eslint": "^9.25.0",
         "eslint-plugin-react-hooks": "^5.2.0",
         "eslint-plugin-react-refresh": "^0.4.19",
