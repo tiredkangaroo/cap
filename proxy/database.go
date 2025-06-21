@@ -92,7 +92,7 @@ func (d *Database) Init() error {
 	// not null is present everywhere for my own sanity
 	createRequestsTable := `CREATE TABLE IF NOT EXISTS requests (
 		id TEXT PRIMARY KEY,
-		kind INTEGER NOT NULL,
+		secure BOOLEAN NOT NULL,
 		datetime timestamp NOT NULL,
 		host TEXT NOT NULL,
 		clientIP TEXT NOT NULL,
@@ -135,7 +135,7 @@ func (d *Database) scanSingleRequest(row interface {
 
 	err := row.Scan(
 		&req.ID,
-		&req.Kind,
+		&req.Secure,
 		&req.Datetime,
 		&req.Host,
 		&req.ClientIP,
@@ -172,7 +172,7 @@ func (d *Database) scanSingleRequest(row interface {
 func (d *Database) GetRequestByID(id string) (*Request, error) {
 	query := `SELECT
 		id,
-		kind,
+		secure,
 		datetime,
 		host,
 		clientIP,
@@ -248,7 +248,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	// paginated query
 	queryBase := `SELECT
 		id,
-		kind,
+		secure,
 		datetime,
 		host,
 		clientIP,
@@ -327,7 +327,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 func (d *Database) SaveRequest(req *Request, err error) error {
 	query := `INSERT INTO requests (
 		id,
-		kind,
+		secure,
 		datetime,
 		host,
 
@@ -338,7 +338,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		error`
 	args := []any{
 		req.ID,
-		req.Kind,
+		req.Secure,
 		req.Datetime,
 		req.Host,
 		req.ClientIP,

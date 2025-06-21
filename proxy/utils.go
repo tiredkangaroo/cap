@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/url"
 	"os/exec"
 	"runtime"
@@ -17,10 +16,9 @@ import (
 //
 // This function is used to ensure that the URL is in a valid format before
 // performing any net/http Do operations.
-func toURL(s string, https bool) (*url.URL, error) {
+func toURL(s string, secure bool) (*url.URL, error) {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
-		_, port, _ := net.SplitHostPort(s)
-		if https || port == "443" {
+		if secure {
 			s = "https://" + s
 		} else {
 			s = "http://" + s

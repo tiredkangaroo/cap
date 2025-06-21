@@ -25,13 +25,13 @@ export function SettingsDialog(props: {
         <dialog
             open={props.open}
             hidden={!props.open}
-            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full"
+            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-gray-400"
         >
-            <div className="w-[90%] h-[90%] bg-gray-100 rounded shadow-lg flex flex-col overflow-hidden">
+            <div className="w-[90%] h-[90%] bg-gray-100 rounded-4xl shadow-lg flex flex-col overflow-hidden p-2">
                 {/* Entire inner content in vertical flex layout */}
                 <div className="flex flex-col flex-grow min-h-0 px-2 py-2">
                     <button
-                        className="ml-auto bg-black w-6 aspect-square"
+                        className="ml-auto bg-black px-1 py-1 aspect-square rounded-4xl"
                         onClick={() => props.setOpen(false)}
                     >
                         <IoClose className="text-white mx-auto" />
@@ -39,7 +39,7 @@ export function SettingsDialog(props: {
 
                     <h1 className="text-3xl text-center">Settings</h1>
                     <p className="text-center mb-4">
-                        configuration stuff goes here :/
+                        configure some cool stuff here :)
                     </p>
 
                     {/* Flex-grow Tabs with min-h-0 is critical */}
@@ -48,13 +48,12 @@ export function SettingsDialog(props: {
                         className="flex flex-col flex-grow min-h-0"
                     >
                         <TabsList>
+                            <TabsTrigger value="proxy">Proxy</TabsTrigger>
                             <TabsTrigger value="requests-view">
                                 Request View
                             </TabsTrigger>
-                            <TabsTrigger value="proxy">Proxy</TabsTrigger>
                         </TabsList>
 
-                        {/* This is now scrollable if needed */}
                         <TabsContent
                             value="proxy"
                             className="flex-grow min-h-0 overflow-y-auto pr-1"

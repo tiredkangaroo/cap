@@ -43,20 +43,11 @@ func (c *Manager) AcceptWS(w http.ResponseWriter, r *http.Request) (*websocket.C
 }
 
 func (c *Manager) SendNew(req *Request) {
-	var secureState string
-	switch req.Kind {
-	case RequestKindHTTP:
-		secureState = "HTTP (Insecure)"
-	case RequestKindHTTPS:
-		secureState = "HTTPS (Secure)"
-	case RequestKindHTTPSMITM:
-		secureState = "HTTPS (with MITM)"
-	}
 	c.writeJSON("NEW", map[string]any{
 		"id":                  req.ID,
 		"datetime":            req.Datetime.UnixMilli(),
 		"host":                req.Host,
-		"secureState":         secureState,
+		"secure":              req.Secure,
 		"clientIP":            req.ClientIP,
 		"clientAuthorization": req.ClientAuthorization,
 		"clientProcessID":     req.ClientProcessID,
@@ -201,6 +192,7 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 			Method  string      `json:"method"`
 			Path    string      `json:"path"`
 			Query   url.Values  `json:"query"`
+			Secure  bool        `json:"secure"`
 		} `json:"request"`
 	}
 	updatedMessage, err := expectJSON[updatedMessageType](data)
@@ -224,10 +216,11 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 	req.req.Header = updatedMessage.Request.Headers
 	req.req.Host = updatedMessage.Request.Host
 	req.req.Method = updatedMessage.Request.Method
+	req.Secure = updatedMessage.Request.Secure
+	req.req.URL, _ = toURL(updatedMessage.Request.Host, updatedMessage.Request.Secure)
 	req.req.URL.Host = updatedMessage.Request.Host
 	req.req.URL.Path = updatedMessage.Request.Path
 	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
-
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

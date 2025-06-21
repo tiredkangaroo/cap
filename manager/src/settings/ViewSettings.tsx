@@ -64,7 +64,7 @@ export function ViewSettings(props: {
                     Hide the state field.
                 </CheckField>
             </div>
-            <h1 className="text-md">
+            <h1 className="text-md mt-4">
                 <b>Content</b>
             </h1>
             <div className="space-y-4 ml-4">
