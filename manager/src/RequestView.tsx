@@ -90,7 +90,7 @@ export function RequestView(props: {
                 </div>
 
                 {props.request.error && !props.requestsViewConfig.hideError && (
-                    <p className="text-red-600">
+                    <p className="text-blue-800">
                         <b>Error:</b> {props.request.error}
                     </p>
                 )}
