@@ -107,6 +107,29 @@ export function RequestView(props: {
                                         props.request.method!,
                                     ),
                                 }}
+                                onClick={() => {
+                                    if (editMode) {
+                                        const methods = [
+                                            "GET",
+                                            "POST",
+                                            "PUT",
+                                            "PATCH",
+                                            "DELETE",
+                                            "OPTIONS",
+                                            "HEAD",
+                                        ];
+                                        const currentIndex = methods.indexOf(
+                                            props.request.method!,
+                                        );
+                                        const nextIndex =
+                                            (currentIndex + 1) % methods.length;
+                                        const nextMethod = methods[nextIndex];
+                                        props.setRequest({
+                                            ...props.request,
+                                            method: nextMethod,
+                                        });
+                                    }
+                                }}
                             >
                                 {props.request.method}
                             </p>
