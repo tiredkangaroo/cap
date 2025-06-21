@@ -134,7 +134,7 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	// this code will need to be combined because it's the same in Perform and here in tunneling
 	if config.DefaultConfig.RequireApproval {
 		r.timing.Start(timing.TimeWaitApproval)
-		if !m.RecieveApproval(r) {
+		if !m.RecieveApproval(r) { // req.Secure changes should not affect this (so we're good i think)
 			return ErrPerformStop
 		}
 		r.timing.Stop()

@@ -53,11 +53,6 @@ export function RequestView(props: {
                     >
                         <div className="flex w-full justify-center items-center gap-2 text-md">
                             {props.request.host}
-                            {props.request.secureState !== "HTTP (Insecure)" ? (
-                                <CiLock className="text-green-600" />
-                            ) : (
-                                <CiUnlock className="text-red-600" />
-                            )}
                         </div>
                     </ParagraphView>
 
@@ -116,7 +111,28 @@ export function RequestView(props: {
                                 {props.request.method}
                             </p>
                         ) : null}
-                        <h2 className="text-2xl">
+                        <div className="flex flex-row items-center gap-2 text-2xl">
+                            {props.request.secure ? (
+                                <CiLock
+                                    className="text-green-800"
+                                    onClick={() => {
+                                        props.setRequest({
+                                            ...props.request,
+                                            secure: false,
+                                        });
+                                    }}
+                                />
+                            ) : (
+                                <CiUnlock
+                                    className="text-red-600"
+                                    onClick={() => {
+                                        props.setRequest({
+                                            ...props.request,
+                                            secure: true,
+                                        });
+                                    }}
+                                />
+                            )}
                             <b>Request</b>{" "}
                             {!props.requestsViewConfig.hideID
                                 ? props.request.id
@@ -126,7 +142,7 @@ export function RequestView(props: {
                                     by <b>{props.request.clientIP}</b>
                                 </span>
                             ) : null}
-                        </h2>
+                        </div>
                     </div>
 
                     <FieldView

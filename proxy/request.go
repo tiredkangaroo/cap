@@ -45,6 +45,19 @@ func (k Kind) String() string {
 	}
 }
 
+func KindFromString(s string) Kind {
+	switch s {
+	case "HTTP (Insecure)":
+		return RequestKindHTTP
+	case "HTTPS (Secure)":
+		return RequestKindHTTPS
+	case "HTTPS (with MITM)":
+		return RequestKindHTTPSMITM
+	default:
+		return -1 // Unknown kind
+	}
+}
+
 type Request struct {
 	// NOTE: most if not all of these fields should NOT be private fields
 	Kind Kind // 0 = HTTP, 1 = HTTPS, 2 = HTTPS (with MITM)
@@ -257,7 +270,7 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"id":                  r.ID,
 		"datetime":            r.Datetime.UnixMilli(), // unix milli for js
-		"secureState":         r.Kind.String(),
+		"secure":              r.Secure,
 		"clientIP":            r.ClientIP,
 		"clientApplication":   r.ClientApplication,
 		"clientAuthorization": r.ClientAuthorization,
