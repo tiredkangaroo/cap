@@ -48,7 +48,7 @@ async function createWindow() {
         await waitForPort(PORT, CHECK_INTERVAL);
         // this is the url for the vite server
         win.loadURL("http://localhost:5173");
-    } else {
+    } else if (process.env.BUILT != "false") {
         // add better error handling; kill all procs on err
         execFile(
             "bash",
@@ -60,6 +60,8 @@ async function createWindow() {
             },
         );
         win.loadFile("../dist/index.html");
+    } else {
+        win.loadFile("dist/index.html");
     }
 }
 

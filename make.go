@@ -215,7 +215,7 @@ func run() {
 	pg.Add(proxyApp)
 	defer pg.Cleanup()
 
-	electron, err := startProcess("DEBUG=false electron ./manager")
+	electron, err := startProcess("DEBUG=false BUILT=false electron ./manager")
 	if err != nil {
 		fmt.Println("error starting proxy app:", err)
 		return
@@ -266,7 +266,7 @@ func runDebug() {
 	}
 
 	// Start Electron
-	electron, err := startProcess("DEBUG=true electron ./manager")
+	electron, err := startProcess("DEBUG=true BUILT=false electron ./manager")
 	if err != nil {
 		fmt.Println("Error starting Electron:", err)
 		return
