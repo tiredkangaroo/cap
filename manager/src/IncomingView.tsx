@@ -55,6 +55,7 @@ export function IncomingView(props: {
 
     useEffect(() => {
         const h = async () => {
+            // currentRequests, totalPages, totalResults
             const [cR, tP, tC] = await getCurrentlyShownRequests(
                 pageNumber,
                 resultsPerPage,
@@ -428,7 +429,9 @@ function resolveWithLocalFC(
 
         // Add local requests counts
         requests.forEach((request) => {
-            const value = request[filterKey];
+            const value = request[filterKey as keyof Request] as
+                | string
+                | number;
             if (value !== undefined) {
                 if (localUniqueValuesAndCounts[value] === undefined) {
                     localUniqueValuesAndCounts[value] = 0;

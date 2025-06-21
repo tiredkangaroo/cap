@@ -9,3 +9,4 @@ config.json
 cap.app
 cap.db
 manager/vitedist
+.DS_Store
