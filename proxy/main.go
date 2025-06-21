@@ -29,6 +29,7 @@ func main() {
 		slog.Error("failed to initialize database", "err", err.Error())
 		return
 	}
+	defer db.b.Close()
 
 	m := NewManager(db)
 

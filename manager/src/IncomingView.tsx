@@ -432,7 +432,7 @@ function resolveWithLocalFC(
             const value = request[filterKey as keyof Request] as
                 | string
                 | number;
-            if (value !== undefined) {
+            if (value !== undefined && value !== null && value !== "") {
                 if (localUniqueValuesAndCounts[value] === undefined) {
                     localUniqueValuesAndCounts[value] = 0;
                 }
