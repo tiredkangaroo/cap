@@ -24,6 +24,7 @@ const (
 	CommandRun
 	CommandCompile
 	CommandApp
+	CommandGenCA
 )
 
 var command Command
@@ -35,10 +36,18 @@ const (
 	CheckViteRetries  = 5
 )
 
+var args []string
+
 func init() {
 	flag.Parse()
 
 	cmd := flag.Arg(0)
+	args = flag.Args()
+	if len(args) > 1 {
+		args = args[1:] // Remove the command from args
+	} else {
+		args = []string{} // No additional args
+	}
 
 	switch cmd {
 	case "debug":
@@ -49,6 +58,8 @@ func init() {
 		command = CommandCompile
 	case "app":
 		command = CommandApp
+	case "gen-ca":
+		command = CommandGenCA
 	default:
 		slog.Error("Invalid command. Use debug, run, compile, or app.")
 	}
@@ -64,6 +75,8 @@ func main() {
 		compile()
 	case CommandApp:
 		app()
+	case CommandGenCA:
+		genCA()
 	default:
 		fmt.Println("Invalid command. Use -debug, -run, or -compile.")
 	}
@@ -178,6 +191,20 @@ func startProcess(command string) (*ProcessHandle, error) {
 func compile() {
 	cmd("04", "npm run build --prefix ./manager")
 	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
+}
+
+func genCA() {
+	var CERTS_DIR = "./certs"
+	if len(args) > 0 {
+		CERTS_DIR = args[0]
+	}
+	if err := os.MkdirAll(CERTS_DIR, 0744); err != nil {
+		slog.Error("error creating certs directory", "error", err)
+		return
+	}
+	cmd("01", fmt.Sprintf("openssl req -x509 -newkey rsa:4096 -keyout %s/ca.key -out %s/ca.crt -days 3650 -nodes -subj \"/CN=CAP\"", CERTS_DIR, CERTS_DIR))
+	fmt.Println("CA certificate and key generated in", CERTS_DIR)
+	fmt.Println("NOTE: this certificate expires in 3650 day (~10 years). You can regenerate it at any time by running this command again.")
 }
 
 func handleSignals(cleanup func()) {

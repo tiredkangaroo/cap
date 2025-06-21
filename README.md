@@ -3,7 +3,7 @@ cap is a proxy server that allows you to capture, modify, and inspect HTTP and H
 
 # Screenshots
 ![1](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/1.png)
-A request being displated in the UI with two filters selected.
+A request being displayed in the UI with two filters selected.
 
 ![2](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/2.png)
 A request being modified in the UI (edit mode) while also asking for approval (Wait for Approval).
