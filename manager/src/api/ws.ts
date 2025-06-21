@@ -7,6 +7,8 @@ interface IDMessage {
 
 export class ClientWS {
     ws: WebSocket | null = null;
+    paused: boolean = false;
+    messageQueue: Array<MessageEvent> = [];
 
     constructor() {
         this.ws = null;
@@ -21,7 +23,30 @@ export class ClientWS {
         return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
     }
 
+    pauseLiveActions(): void {
+        this.paused = true;
+    }
+    resumeLiveActions(requests: Array<Request>): Array<Request> {
+        for (const event of this.messageQueue) {
+            requests = this.handleMessage(event, requests);
+        }
+        this.paused = false;
+        this.messageQueue = [];
+        return requests;
+    }
+
     onmessage = (
+        event: MessageEvent,
+        requests: Array<Request>,
+    ): [Array<Request>, boolean] => {
+        if (this.paused) {
+            this.messageQueue.push(event);
+            return [requests, false];
+        }
+        return [this.handleMessage(event, requests), true];
+    };
+
+    handleMessage = (
         event: MessageEvent,
         requests: Array<Request>,
     ): Array<Request> => {

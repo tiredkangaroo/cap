@@ -16,6 +16,7 @@ import {
 } from "./components/ui/select";
 import { camelCaseToCapitalSpace } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
+import { FaSnowflake } from "react-icons/fa6";
 
 export function IncomingView(props: {
     proxy: Proxy;
@@ -26,6 +27,8 @@ export function IncomingView(props: {
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>
     >([]);
+
+    const [freeze, setFreeze] = useState<boolean>(false);
 
     // filter is used to filter the requests shown in the view.
     const [filter, setFilter] = useState<Record<string, string | undefined>>(
@@ -63,6 +66,7 @@ export function IncomingView(props: {
             totalPages.current = tP;
             totalResults.current = tC;
         };
+        if (freeze) return; // don't update if freeze is true
         h();
     }, [
         pageNumber,
@@ -71,6 +75,7 @@ export function IncomingView(props: {
         props.proxy.loaded,
         requests,
         filter,
+        freeze,
     ]);
 
     useEffect(() => {
@@ -195,6 +200,10 @@ export function IncomingView(props: {
                             ))}
                         </SelectContent>
                     </Select>
+                    <IncomingFreezeButton
+                        freeze={freeze}
+                        setFreeze={setFreeze}
+                    />
                     <button
                         className="p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
                         onClick={() => props.setSettingsDialogOpen(true)}
@@ -204,6 +213,28 @@ export function IncomingView(props: {
                 </div>
             </div>
         </div>
+    );
+}
+
+function IncomingFreezeButton(props: {
+    freeze: boolean;
+    setFreeze: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+    return (
+        <button
+            className="p-2 rounded-md border-1 border-blue-300 hover:border-blue-400"
+            style={{
+                backgroundColor: props.freeze
+                    ? "var(--color-blue-300)"
+                    : "transparent",
+                color: props.freeze ? "black" : "white",
+            }}
+            onClick={() => {
+                props.setFreeze(!props.freeze);
+            }}
+        >
+            <FaSnowflake />
+        </button>
     );
 }
 
@@ -352,7 +383,7 @@ function FilterSelects(props: {
                             <SelectTrigger className="border-black min-w-[150px]">
                                 <SelectValue placeholder={verboseKey} />
                             </SelectTrigger>
-                            <SelectContent className="rounded-none">
+                            <SelectContent className="">
                                 <SelectGroup>
                                     <SelectLabel>{verboseKey}</SelectLabel>
                                     {uniqueValues.map((key, index) => (

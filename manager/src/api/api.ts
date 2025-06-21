@@ -108,8 +108,11 @@ export class Proxy {
         }
         this.clientWS.ws.onopen = () => {};
         this.clientWS.ws.onmessage = (event: MessageEvent) => {
-            this.requests = this.clientWS.onmessage(event, this.requests);
-            this.updateCB!();
+            const [reqs, ok] = this.clientWS.onmessage(event, this.requests);
+            if (ok) {
+                this.requests = reqs;
+                this.updateCB!();
+            }
         };
         this.clientWS.ws.onclose = (event: CloseEvent) => {
             console.log("webSocket connection closed:", event);
