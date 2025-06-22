@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -85,7 +87,15 @@ func (d *Database) Init() error {
 	d.workerpool.Start()
 
 	var err error
-	d.b, err = sql.Open("sqlite", "file:cap.db?cache=shared&_journal_mode=WAL")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("init: get executable path: %w", err)
+	}
+	dir := filepath.Dir(execPath)
+	fmt.Println("ex", execPath, "dir", dir)
+
+	d.b, err = sql.Open("sqlite", fmt.Sprintf("file:%s/cap.db?cache=shared&_journal_mode=WAL", dir))
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}

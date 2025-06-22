@@ -189,7 +189,7 @@ func startProcess(command string) (*ProcessHandle, error) {
 }
 
 func compile() {
-	cmd("04", "npm run build --prefix ./manager")
+	cmd("04", "npm run build --prefix ./manager --outDir vitedist")
 	cmd("05", "go build -o ./proxy/proxy-app ./proxy")
 }
 
@@ -219,7 +219,7 @@ func handleSignals(cleanup func()) {
 }
 
 func app() {
-	cmd("01", "npm run build --prefix ./manager --outDir vitedist")
+	cmd("01", "npm run build --prefix ./manager -- --outDir vitedist")
 	cmd("02", "go build -o ./proxy/proxy-app ./proxy")
 	cmd("03", "cd manager && npx electron-builder build")
 	cmd("04", "cp ./proxy/proxy-app ./manager/dist/mac-arm64/cap.app/Contents/Resources")
