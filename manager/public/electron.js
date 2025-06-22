@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
-import { exec, execFile } from "child_process";
+import { exec, execFile, spawn } from "child_process";
 import path from "path";
+import { stdin } from "process";
 
 const PORT = 5173;
 const CHECK_INTERVAL = 500; // ms
@@ -50,15 +51,22 @@ async function createWindow() {
         win.loadURL("http://localhost:5173");
     } else if (process.env.BUILT != "false") {
         // add better error handling; kill all procs on err
-        execFile(
-            "bash",
-            ["-c", new URL("../../proxy-app", import.meta.url).pathname],
-            (err, stdout, stderr) => {
-                console.log("err", err);
-                console.log("stdout", stdout);
-                console.error("stderr", stderr);
-            },
-        );
+        const script = new URL("../../proxy-app", import.meta.url).pathname;
+        const child = spawn("bash", ["-c", script], {
+            stdio: ["inherit", "pipe", "pipe"],
+        });
+        child.stdout.pipe(process.stdout);
+        child.stderr.pipe(process.stderr);
+
+        // execFile(
+        //     "bash",
+        //     ["-c", scri],
+        //     (err, stdout, stderr) => {
+        //         console.log("err", err);
+        //         console.log("stdout", stdout);
+        //         console.error("stderr", stderr);
+        //     },
+        // );
         win.loadFile("../dist/index.html");
     } else {
         win.loadFile("dist/index.html");

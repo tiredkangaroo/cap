@@ -2,10 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 )
 
@@ -63,10 +65,22 @@ type Config struct {
 func init() {
 	DefaultConfig.Debug = os.Getenv("DEBUG") == "true"
 
+	var dirname string
+	if os.Getenv("DEBUG") != "true" {
+		execPath, err := os.Executable()
+		if err != nil {
+			slog.Error("failed to get executable path (nonfatal)", "err", err.Error())
+		} else {
+			dirname = filepath.Dir(execPath)
+		}
+	} else {
+		dirname = "."
+	}
+
 	filename := os.Getenv(proxy_config_file)
 	if filename == "" {
 		slog.Warn("no proxy config file specified, using config.json as default")
-		filename = "config.json"
+		filename = fmt.Sprintf("%s/config.json", dirname)
 	}
 
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)

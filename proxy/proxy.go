@@ -60,9 +60,9 @@ func (c *ProxyHandler) serveAfterInit(req *Request) {
 	}
 }
 
-func (c *ProxyHandler) Init() error {
+func (c *ProxyHandler) Init(dirname string) error {
 	c.certifcates = new(certificate.Certificates)
-	if err := c.certifcates.Init(); err != nil {
+	if err := c.certifcates.Init(dirname); err != nil {
 		slog.Warn("initializing certificates (mitm cannot be used)", "err", err.Error())
 		c.certifcates = nil
 		config.DefaultConfig.MITM = false
@@ -70,8 +70,8 @@ func (c *ProxyHandler) Init() error {
 	return nil
 }
 
-func (c *ProxyHandler) ListenAndServe(m *Manager) error {
-	if err := c.Init(); err != nil {
+func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
+	if err := c.Init(dirname); err != nil {
 		return err
 	}
 	c.m = m

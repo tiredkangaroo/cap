@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -149,11 +148,11 @@ func cmd(id, command string) {
 
 	if err := c.Start(); err != nil {
 		fmt.Printf("cmd (%s) command failed: %s\n", id, err.Error())
-		runtime.Goexit()
+		os.Exit(1)
 	}
 	if err := c.Wait(); err != nil {
 		fmt.Printf("cmd (%s) wait failed: %s\n", id, err.Error())
-		runtime.Goexit()
+		os.Exit(1)
 	}
 }
 
@@ -224,7 +223,27 @@ func app() {
 	cmd("03", "cd manager && npx electron-builder build")
 	cmd("04", "cp ./proxy/proxy-app ./manager/dist/mac-arm64/cap.app/Contents/Resources")
 	cmd("05", "cp -R ./manager/vitedist ./manager/dist/mac-arm64/cap.app/Contents/Resources/dist")
-	cmd("06", "cp -R ./manager/dist/mac-arm64/cap.app .")
+	var certsDir = os.Getenv("CERTS_DIR")
+	if certsDir == "" {
+		fmt.Println("CERTS_DIR environment variable not set, using default: certs")
+		certsDir = "certs"
+	}
+	_, err := os.Stat(certsDir)
+	if err != nil {
+		fmt.Printf("certs directory not found, generate CA? (Y/n): ")
+		var response string
+		fmt.Scanln(&response)
+		if response == "" || response == "Y" || response == "y" {
+			args = []string{certsDir} // set args to the certs directory for genCA
+			genCA()
+		} else {
+			fmt.Println("Skipping CA generation.")
+		}
+	} else {
+		fmt.Println("Using existing certs directory.")
+		cmd("06", fmt.Sprintf("cp -R ./%s ./manager/dist/mac-arm64/cap.app/Contents/Resources/certs", certsDir))
+	}
+	cmd("07", "cp -R ./manager/dist/mac-arm64/cap.app .")
 }
 
 func run() {

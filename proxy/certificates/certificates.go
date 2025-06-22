@@ -40,18 +40,18 @@ type Certificates struct {
 // environment variable PROXY_CACERT and the CA private key from the environment
 // variable PROXY_CAKEY. It parses the certificate and key and stores them in
 // the caCert and caKey fields respectively.
-func (c *Certificates) Init() error {
+func (c *Certificates) Init(dirname string) error {
 	proxyCACert := os.Getenv("PROXY_CACERT")
 	proxyCAKey := os.Getenv("PROXY_CAKEY")
 
 	// default values for the CA certificate and key will be used when the user can manually drop in proxy cacert and cakey
 	// files
 	if proxyCACert == "" {
-		proxyCACert = "./certs/ca.crt"
+		proxyCACert = fmt.Sprintf("%s/certs/ca.crt", dirname)
 		slog.Warn("PROXY_CACERT environment variable is not set, using default: certs/ca.crt")
 	}
 	if proxyCAKey == "" {
-		proxyCAKey = "./certs/ca.key"
+		proxyCAKey = fmt.Sprintf("%s/certs/ca.key", dirname)
 		slog.Warn("PROXY_CAKEY environment variable is not set, using default: certs/ca.key")
 	}
 	rawproxyCACert, err := os.ReadFile(proxyCACert)

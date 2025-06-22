@@ -9,8 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -83,22 +81,17 @@ type DatabaseAction struct {
 	args []any
 }
 
-func (d *Database) Init() error {
+func (d *Database) Init(dirname string) error {
 	d.workerpool.Start()
 
 	var err error
 
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("init: get executable path: %w", err)
-	}
-	dir := filepath.Dir(execPath)
-	fmt.Println("ex", execPath, "dir", dir)
-
-	d.b, err = sql.Open("sqlite", fmt.Sprintf("file:%s/cap.db?cache=shared&_journal_mode=WAL", dir))
+	d.b, err = sql.Open("sqlite", fmt.Sprintf("file:%s/cap.db?cache=shared&_journal_mode=WAL", dirname))
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}
+	slog.Info("database open at", "dirname", dirname)
+
 	// not null is present everywhere for my own sanity
 	createRequestsTable := `CREATE TABLE IF NOT EXISTS requests (
 		id TEXT PRIMARY KEY,

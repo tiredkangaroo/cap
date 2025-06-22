@@ -177,8 +177,6 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	<-ctx.Done()
 	r.timing.Stop()
 
-	m.SendDone(r)
-
 	return nil
 }
 
