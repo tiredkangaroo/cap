@@ -90,7 +90,7 @@ export function ProxyView() {
     }
 
     return (
-        <div className="flex flex-col w-full h-full bg-gray-100">
+        <div className="flex flex-col w-full h-full bg-gray-100 dark:bg-gray-950">
             <SettingsDialog
                 proxy={proxy}
                 open={settingsOpen}

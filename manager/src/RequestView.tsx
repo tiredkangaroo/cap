@@ -9,10 +9,10 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
-import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
+import { darkmode, nsToReadable, pascalCaseToCapitalSpace } from "./utils";
 import { StatusCodes } from "./statuscodes";
 
 const stateColors: Record<string, string> = {
@@ -23,6 +23,16 @@ const stateColors: Record<string, string> = {
     "Approval Timeout": "#806262",
     "Waiting Approval": "#806262",
 };
+
+const darkStateColors: Record<string, string> = {
+    Processing: "#e0e0e0", // Light gray for contrast
+    Canceled: "#f2a6a6", // Light desaturated red
+    Done: "#a6f2c3", // Soft mint green
+    Error: "oklch(85% 0.2 27.5)", // Lighter and more saturated version
+    "Approval Timeout": "#f2a6a6", // Same as Canceled
+    "Waiting Approval": "#f2a6a6", // Same as Canceled
+};
+
 export function RequestView(props: {
     proxy: Proxy;
     request: Request;
@@ -39,11 +49,11 @@ export function RequestView(props: {
             open={props.open}
             onOpenChange={(o) => props.setOpen(o)}
         >
-            <CollapsibleTrigger className="w-full bg-white hover:bg-gray-200 transition-colors">
+            <CollapsibleTrigger className="w-full bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors">
                 <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
                     <ParagraphView
                         hide={props.requestsViewConfig.hideDate}
-                        className="text-sm text-gray-600"
+                        className="text-sm text-gray-600 dark:text-gray-500"
                     >
                         {formatDate(props.request.datetime)}
                     </ParagraphView>
@@ -73,10 +83,10 @@ export function RequestView(props: {
                 </div>
             </CollapsibleTrigger>
 
-            <CollapsibleContent className="bg-gray-300 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace]">
+            <CollapsibleContent className="bg-gray-300 dark:bg-gray-900 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace] text-black dark:text-white">
                 <div className="flex gap-3">
                     <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded shadow"
+                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover-blue-400 text-white font-semibold px-3 py-1 rounded shadow"
                         onClick={() => downloadRequest(props.request)}
                     >
                         Download Request
@@ -90,18 +100,18 @@ export function RequestView(props: {
                 </div>
 
                 {props.request.error && !props.requestsViewConfig.hideError && (
-                    <p className="text-blue-800">
+                    <p className="text-blue-800 dark:text-blue-400">
                         <b>Error:</b> {props.request.error}
                     </p>
                 )}
 
                 {/* Request Info */}
-                <div className="bg-white rounded-lg shadow p-4 space-y-3 font-[Manrope]">
+                <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3 font-[Manrope]">
                     <div className="flex flex-row items-center gap-2">
                         {!props.requestsViewConfig.hideMethod &&
                         props.request.method !== undefined ? (
                             <p
-                                className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-white"
+                                className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-black dark:text-white"
                                 style={{
                                     backgroundColor: getMethodColor(
                                         props.request.method!,
@@ -137,7 +147,7 @@ export function RequestView(props: {
                         <div className="flex flex-row items-center gap-2 text-2xl">
                             {props.request.secure ? (
                                 <CiLock
-                                    className="text-green-800"
+                                    className="text-green-800 dark:text-green-400"
                                     onClick={() => {
                                         props.setRequest({
                                             ...props.request,
@@ -147,7 +157,7 @@ export function RequestView(props: {
                                 />
                             ) : (
                                 <CiUnlock
-                                    className="text-red-600"
+                                    className="text-red-600 dark:text-red-400"
                                     onClick={() => {
                                         props.setRequest({
                                             ...props.request,
@@ -239,7 +249,7 @@ export function RequestView(props: {
                 </div>
 
                 {/* Response Info */}
-                <div className="bg-white rounded-lg shadow p-4 space-y-3">
+                <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
                     <h2 className="text-lg font-semibold">Response</h2>
                     <div className="flex flex-row text-lg gap-2">
                         {props.request.response?.statusCode != undefined ? (
@@ -370,15 +380,15 @@ function TableMapView(props: {
         <div className="flex flex-col gap-2">
             <table className="table-auto border-collapse border border-gray-400 text-sm">
                 <thead>
-                    <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-2 py-1 w-64">
+                    <tr className="bg-gray-100 dark:bg-gray-800">
+                        <th className="border border-gray-300 dark:border-gray-500 px-2 py-1 w-64">
                             Key
                         </th>
-                        <th className="border border-gray-300 px-2 py-1 w-96">
+                        <th className="border border-gray-300 dark:border-gray-500 px-2 py-1 w-96">
                             Values
                         </th>
                         {props.editMode && !props.disableEdits && (
-                            <th className="border border-gray-300 px-2 py-1">
+                            <th className="border border-gray-300 dark:border-gray-500 px-2 py-1">
                                 Actions
                             </th>
                         )}
@@ -388,16 +398,16 @@ function TableMapView(props: {
                     {Object.entries(props.value).map(([key, values]) => {
                         return values.map((val, i) => (
                             <tr>
-                                <td className="border border-gray-300 px-2 py-1 w-64 break-all">
+                                <td className="border border-gray-300 dark:border-gray-500 px-2 py-1 w-64 break-all">
                                     {key}
                                 </td>
-                                <td className="border border-gray-300 px-2 py-1 w-96 break-all">
+                                <td className="border border-gray-300  dark:border-gray-500 px-2 py-1 w-96 break-all">
                                     <span key={i} className="block">
                                         {val}
                                     </span>
                                 </td>
                                 {props.editMode && !props.disableEdits && (
-                                    <td className="border border-gray-300 px-2 py-1">
+                                    <td className="border border-gray-300 dark:border-gray-500 px-2 py-1">
                                         <button
                                             onClick={() => {
                                                 const newValue = {
@@ -520,7 +530,7 @@ function StateView(props: {
         return (
             <div className="flex-1 flex flex-row content-center items-center justify-center">
                 <button
-                    className="bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
+                    className="bg-gray-700 dark:bg-gray-300 text-white dark:text-black px-3 pt-1 pb-1 rounded-xl"
                     onClick={(e) => {
                         e.stopPropagation();
                         props.setEditMode(false);
@@ -530,7 +540,7 @@ function StateView(props: {
                     Approve
                 </button>
                 <button
-                    className="ml-2 bg-gray-700 text-white pl-2 pr-2 pt-1 pb-1"
+                    className="ml-2 bg-gray-700 dark:bg-gray-300 dark:text-black text-white px-3 pt-1 pb-1 rounded-xl"
                     onClick={(e) => {
                         e.stopPropagation();
                         props.proxy.cancelRequest(props.id);
@@ -545,7 +555,9 @@ function StateView(props: {
         <p
             className="flex-1"
             style={{
-                color: stateColors[props.state],
+                color: darkmode()
+                    ? darkStateColors[props.state]
+                    : stateColors[props.state],
             }}
         >
             {props.state}
@@ -651,7 +663,7 @@ function ShowHideFieldView(props: {
                 )}
                 {!isValueEmpty && (
                     <button
-                        className="text-sm pl-3 pr-3 bg-gray-600 text-white ml-4"
+                        className="text-sm pl-3 pr-3 bg-gray-600 dark:bg-gray-300 text-white ml-4"
                         onClick={() => setShow(!show)}
                     >
                         {show ? "Hide" : "Show"}
@@ -695,18 +707,17 @@ function BodyView(props: {
             >
                 Download Body
             </button>
-            <div className="flex flex-row items-center">
-                <b className="flex-1">Body ({bodyBytes} bytes)</b>
-                <div className="flex-1 flex flex-row">
+            <div className="flex flex-row items-center mt-1">
+                <b className="">Body ({bodyBytes} bytes)</b>
+                <div className="ml-4 flex flex-row">
                     {bodyBytes != 0 ? (
                         <>
                             <button
-                                className="text-sm pl-3 pr-3 bg-gray-600 text-white mr-4"
+                                className="text-md pl-3 pr-3 bg-gray-600 dark:bg-gray-300 text-white dark:text-black mr-4"
                                 onClick={() => setShowBody(!showBody)}
                             >
                                 {showBody ? "Hide" : "Show"}
                             </button>
-                            {!showBody && <i className="mr-4">hidden</i>}
                         </>
                     ) : (
                         <></>
@@ -723,7 +734,7 @@ function BodyView(props: {
                         }}
                     ></textarea>
                 ) : showBody ? (
-                    <pre className="ml-2 mt-2 whitespace-pre-wrap">
+                    <pre className="ml-2 mt-2 whitespace-pre-wrap wrap-anywhere">
                         {props.body}
                     </pre>
                 ) : null}{" "}
@@ -741,7 +752,12 @@ function ParagraphView(props: {
         return <></>;
     }
     return (
-        <div className={"flex-1 text-center" + props.className}>
+        <div
+            className={
+                "flex-1 text-center text-black dark:text-white " +
+                props.className
+            }
+        >
             {props.children != "" ? props.children : <i>unavailable</i>}
         </div>
     );

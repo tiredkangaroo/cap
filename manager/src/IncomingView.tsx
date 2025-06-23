@@ -55,28 +55,27 @@ export function IncomingView(props: {
 
     useEffect(() => {
         const h = async () => {
-            // currentRequests, totalPages, totalResults
-            const [cR, tP, tC] = await getCurrentlyShownRequests(
+            await reloadCurrentlyShownRequests(
+                setCurrentlyShownRequests,
+                freeze,
                 pageNumber,
                 resultsPerPage,
                 requests,
                 props.proxy,
                 filter,
+                totalPages,
+                totalResults,
             );
-            setCurrentlyShownRequests(cR);
-            totalPages.current = tP;
-            totalResults.current = tC;
         };
-        if (freeze) return; // don't update if freeze is true
         h();
     }, [
         pageNumber,
+        freeze,
         resultsPerPage,
         props.proxy,
         props.proxy.loaded,
         requests,
         filter,
-        freeze,
     ]);
 
     useEffect(() => {
@@ -95,9 +94,9 @@ export function IncomingView(props: {
 
     return (
         <div className="w-full h-full flex flex-col">
-            <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 p-4">
+            <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 dark:bg-gray-950 text-white p-4">
                 {/* Filter Section */}
-                <div className="bg-gray-200 rounded-xl text-black border-1 border-black p-3 flex items-center justify-between">
+                <div className="bg-gray-200 dark:bg-gray-700 rounded-xl text-black border-1 border-black p-3 flex items-center justify-between">
                     <FilterSelects
                         proxy={props.proxy}
                         requests={requests}
@@ -106,7 +105,7 @@ export function IncomingView(props: {
                         setFilter={setFilter}
                     />
                     <button
-                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                        className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 font-medium"
                         onClick={() => {
                             Object.keys(filter).forEach((key) => {
                                 filter[key] = undefined;
@@ -118,7 +117,7 @@ export function IncomingView(props: {
                     </button>
                 </div>
 
-                <div className="text-gray-600 text-sm ml-1">
+                <div className="text-gray-600 dark:text-gray-200 text-sm ml-1">
                     {totalResults.current} results
                 </div>
 
@@ -170,7 +169,7 @@ export function IncomingView(props: {
                 </div>
             </div>
 
-            <div className="bg-gray-700 sticky bottom-0 shadow-inner border-t mt-4 px-4 py-2 flex items-center justify-between">
+            <div className="bg-gray-700 dark:bg-gray-900 sticky bottom-0 shadow-inner border-t mt-4 px-4 py-2 flex items-center justify-between">
                 <Pagination
                     requests={requests}
                     currentlyShownRequests={currentlyShownRequests}
@@ -215,6 +214,35 @@ export function IncomingView(props: {
             </div>
         </div>
     );
+}
+
+async function reloadCurrentlyShownRequests(
+    setCurrentlyShownRequests: React.Dispatch<
+        React.SetStateAction<Array<Request>>
+    >,
+    freeze: boolean,
+    pageNumber: number,
+    resultsPerPage: number,
+    requests: Array<Request>,
+    proxy: Proxy,
+    filter: Record<string, string | undefined>,
+    totalPages: React.RefObject<number>,
+    totalResults: React.RefObject<number>,
+) {
+    if (freeze) {
+        // donut reload if frozen 🍩
+        return;
+    }
+    const [cR, tP, tC] = await getCurrentlyShownRequests(
+        pageNumber,
+        resultsPerPage,
+        requests,
+        proxy,
+        filter,
+    );
+    setCurrentlyShownRequests(cR);
+    totalPages.current = tP;
+    totalResults.current = tC;
 }
 
 function IncomingFreezeButton(props: {
@@ -359,7 +387,7 @@ function FilterSelects(props: {
     }, [props.proxy, props.requests, props.currentlyShownRequests]);
 
     return (
-        <div className="flex flex-row gap-10 items-center">
+        <div className="flex flex-row gap-10 items-center text-black dark:text-white">
             <p>Query</p>
             {Object.entries(props.filter).map(([key, _]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
@@ -381,14 +409,18 @@ function FilterSelects(props: {
                                 }));
                             }}
                         >
-                            <SelectTrigger className="border-black min-w-[150px]">
+                            <SelectTrigger className="border-1 border-black dark:border-gray-200 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white">
                                 <SelectValue placeholder={verboseKey} />
                             </SelectTrigger>
-                            <SelectContent className="">
+                            <SelectContent className="border-1 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
                                 <SelectGroup>
                                     <SelectLabel>{verboseKey}</SelectLabel>
                                     {uniqueValues.map((key, index) => (
-                                        <SelectItem key={index} value={key}>
+                                        <SelectItem
+                                            className="hover:bg-gray-300 hover:dark:bg-gray-600"
+                                            key={index}
+                                            value={key}
+                                        >
                                             <div className="justify-between flex flex-row w-full">
                                                 {key} (
                                                 {uniqueValuesAndCounts[key]})
