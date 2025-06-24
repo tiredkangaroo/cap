@@ -17,7 +17,7 @@ import {
 import { camelCaseToCapitalSpace } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
-import { DarkModeContext } from "./context/contextDarkMode";
+import { DarkModeContext } from "./context/context";
 
 export function IncomingView(props: {
     proxy: Proxy;

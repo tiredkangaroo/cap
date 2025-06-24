@@ -100,3 +100,7 @@ export interface RequestsViewConfig {
     hideResponseBody: boolean;
     hideBytesTransferred: boolean;
 }
+
+export interface AppearanceConfig {
+    darkModeSystem: boolean;
+}

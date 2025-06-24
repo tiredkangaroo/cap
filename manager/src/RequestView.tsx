@@ -14,7 +14,7 @@ import { FaRegTrashCan } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
 import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
 import { StatusCodes } from "./statuscodes";
-import { DarkModeContext } from "./context/contextDarkMode";
+import { DarkModeContext } from "./context/context";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -398,7 +398,7 @@ function TableMapView(props: {
                 <tbody>
                     {Object.entries(props.value).map(([key, values]) => {
                         return values.map((val, i) => (
-                            <tr>
+                            <tr key={`${key}-${values}-${val}-i`}>
                                 <td className="border border-gray-300 dark:border-gray-500 px-2 py-1 w-64 break-all">
                                     {key}
                                 </td>

@@ -26,7 +26,7 @@ export function SettingsDialog(props: {
         <dialog
             open={props.open}
             hidden={!props.open}
-            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-gray-400"
+            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/40 backdrop-blur-sm"
         >
             <div className="w-[90%] h-[90%] bg-gray-100 rounded-4xl shadow-lg flex flex-col overflow-hidden p-2">
                 {/* Entire inner content in vertical flex layout */}
@@ -48,7 +48,7 @@ export function SettingsDialog(props: {
                         defaultValue="appearance"
                         className="flex flex-col flex-grow min-h-0"
                     >
-                        <TabsList>
+                        <TabsList className="bg-gray-200 dark:bg-gray-800 text-black dark:text-white rounded-xl p-1 mb-4">
                             <TabsTrigger value="appearance">
                                 Appearance
                             </TabsTrigger>
