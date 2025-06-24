@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { IoMdClose } from "react-icons/io";
 
 import { Request, RequestsViewConfig } from "./types";
@@ -17,12 +17,14 @@ import {
 import { camelCaseToCapitalSpace } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
+import { DarkModeContext } from "./context/contextDarkMode";
 
 export function IncomingView(props: {
     proxy: Proxy;
     requestsViewConfig: RequestsViewConfig;
     setSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+    const [darkMode, _] = useContext(DarkModeContext);
     const [requests, setRequests] = useState<Array<Request>>([]);
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>

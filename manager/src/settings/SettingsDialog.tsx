@@ -9,6 +9,7 @@ import {
 } from "../components/ui/tabs";
 import { RequestsViewConfig } from "../types";
 import { ViewSettings } from "./ViewSettings";
+import { Appearance } from "./Appearance";
 
 export function SettingsDialog(props: {
     proxy: Proxy | null;
@@ -44,16 +45,25 @@ export function SettingsDialog(props: {
 
                     {/* Flex-grow Tabs with min-h-0 is critical */}
                     <Tabs
-                        defaultValue="proxy"
+                        defaultValue="appearance"
                         className="flex flex-col flex-grow min-h-0"
                     >
                         <TabsList>
+                            <TabsTrigger value="appearance">
+                                Appearance
+                            </TabsTrigger>
                             <TabsTrigger value="proxy">Proxy</TabsTrigger>
                             <TabsTrigger value="requests-view">
                                 Request View
                             </TabsTrigger>
                         </TabsList>
 
+                        <TabsContent
+                            value="appearance"
+                            className="flex-grow min-h-0 overflow-y-auto pr-1"
+                        >
+                            <Appearance />
+                        </TabsContent>
                         <TabsContent
                             value="proxy"
                             className="flex-grow min-h-0 overflow-y-auto pr-1"

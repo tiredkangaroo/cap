@@ -40,7 +40,3 @@ export function objectToQueryString(
         )
         .join("&");
 }
-
-export function darkmode(): boolean {
-    return document.documentElement.classList.contains("dark");
-}

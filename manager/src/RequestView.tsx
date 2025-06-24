@@ -9,11 +9,12 @@ import {
     CollapsibleContent,
 } from "./components/ui/collapsible";
 
-import { useMemo, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
-import { darkmode, nsToReadable, pascalCaseToCapitalSpace } from "./utils";
+import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
 import { StatusCodes } from "./statuscodes";
+import { DarkModeContext } from "./context/contextDarkMode";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -523,6 +524,7 @@ function StateView(props: {
     setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
     hide: boolean;
 }) {
+    const [darkMode, _] = useContext(DarkModeContext);
     if (props.hide) {
         return <></>;
     }
@@ -555,7 +557,7 @@ function StateView(props: {
         <p
             className="flex-1"
             style={{
-                color: darkmode()
+                color: darkMode
                     ? darkStateColors[props.state]
                     : stateColors[props.state],
             }}
