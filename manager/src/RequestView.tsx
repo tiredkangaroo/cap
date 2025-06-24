@@ -2,6 +2,7 @@ import { downloadBody, downloadRequest } from "./downloadRequest";
 import { Request, RequestsViewConfig } from "./types";
 import { Proxy } from "./api/api";
 import { CiLock, CiUnlock } from "react-icons/ci";
+import { JsonEditor } from "json-edit-react";
 
 import {
     Collapsible,
@@ -754,8 +755,14 @@ function BodyContentView(props: {
         return <></>;
     }
     switch (props.contentType) {
-        // case "application/json":
-        //     return <JSONEditor body={props.body} />;
+        case "application/json":
+            return (
+                <JSONContent
+                    body={props.body}
+                    editMode={props.editMode}
+                    setBody={props.setValue}
+                />
+            );
         case "application/x-www-form-urlencoded":
             return (
                 <URLFormEncodedContent
@@ -770,6 +777,25 @@ function BodyContentView(props: {
             editMode={props.editMode}
             body={props.body!}
             setValue={props.setValue}
+        />
+    );
+}
+
+function JSONContent(props: {
+    body: string;
+    setBody: (v: string) => void;
+    editMode: boolean;
+}) {
+    return (
+        <JsonEditor
+            data={JSON.parse(props.body)}
+            setData={(v) => props.setBody(JSON.stringify(v))}
+            restrictEdit={!props.editMode}
+            restrictAdd={!props.editMode}
+            restrictDelete={!props.editMode}
+            rootName=""
+            showCollectionCount={false}
+            showArrayIndices={false}
         />
     );
 }
