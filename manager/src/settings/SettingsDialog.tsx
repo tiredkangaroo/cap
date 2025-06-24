@@ -22,6 +22,19 @@ export function SettingsDialog(props: {
 }) {
     if (props.proxy === null) return <></>;
 
+    document.addEventListener("keydown", (e) => {
+        if (e.metaKey && e.key == ",") {
+            e.preventDefault();
+            props.setOpen(true);
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            props.setOpen(false);
+        }
+    });
+
     return (
         <dialog
             open={props.open}

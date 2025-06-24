@@ -212,15 +212,16 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		req.req.Body.Close() // close the old body if it exists
 	}
 
-	req.req.Body = io.NopCloser(strings.NewReader(updatedMessage.Request.Body))
-	req.req.Header = updatedMessage.Request.Headers
-	req.req.Host = updatedMessage.Request.Host
-	req.req.Method = updatedMessage.Request.Method
 	req.Secure = updatedMessage.Request.Secure
+	req.req.Method = updatedMessage.Request.Method
+	req.req.Host = updatedMessage.Request.Host //
 	req.req.URL, _ = toURL(updatedMessage.Request.Host, updatedMessage.Request.Secure)
 	req.req.URL.Host = updatedMessage.Request.Host
 	req.req.URL.Path = updatedMessage.Request.Path
 	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
+	req.req.Header = updatedMessage.Request.Headers                             // possible nil pointer dereference if headers are not set
+	req.req.Body = io.NopCloser(strings.NewReader(updatedMessage.Request.Body)) // update the request body with the new body
+	req.req.ContentLength = int64(len(updatedMessage.Request.Body))             // change content length to reflect the length of the new body
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

@@ -1,5 +1,4 @@
 import { AppearanceConfigContext, DarkModeContext } from "@/context/context";
-import { CheckField } from "./SettingsFields";
 import { useContext } from "react";
 
 export function Appearance() {

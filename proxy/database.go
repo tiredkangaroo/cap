@@ -389,7 +389,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		args = append(args,
 			req.resp.StatusCode,
 			marshal(req.resp.Header),
-			marshal(req.respbody()),
+			req.respbody(),
 		)
 	} else {
 		args = append(args,

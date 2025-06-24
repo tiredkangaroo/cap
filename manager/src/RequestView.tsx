@@ -15,6 +15,7 @@ import { Timeline } from "./Timeline";
 import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
 import { StatusCodes } from "./statuscodes";
 import { DarkModeContext } from "./context/context";
+import { encodeURLEncoded, parseURLEncoded } from "./encoding/urlencoded";
 
 const stateColors: Record<string, string> = {
     Processing: "#000",
@@ -235,6 +236,7 @@ export function RequestView(props: {
                         <>
                             <BodyView
                                 request={props.request}
+                                headers={props.request.headers}
                                 body={props.request.body}
                                 hide={false}
                                 editMode={editMode}
@@ -287,6 +289,7 @@ export function RequestView(props: {
                         <>
                             <BodyView
                                 request={props.request}
+                                headers={props.request.response?.headers}
                                 body={props.request.response?.body}
                                 hide={false}
                                 editMode={editMode}
@@ -694,6 +697,7 @@ function BodyView(props: {
     if (props.hide) {
         return <></>;
     }
+
     return (
         <div className="mb-2 text-lg w-full">
             <button
@@ -709,7 +713,7 @@ function BodyView(props: {
             >
                 Download Body
             </button>
-            <div className="flex flex-row items-center mt-1">
+            <div className="flex flex-row items-center mt-1 mb-2">
                 <b className="">Body ({bodyBytes} bytes)</b>
                 <div className="ml-4 flex flex-row">
                     {bodyBytes != 0 ? (
@@ -726,21 +730,91 @@ function BodyView(props: {
                     )}
                 </div>
             </div>
-            <div className="ml-2 font-[monospace]">
-                {props.editMode && showBody ? (
-                    <textarea
-                        defaultValue={props.body ?? ""}
-                        className="w-full border-2 border-black p-1"
-                        onBlur={(e) => {
-                            props.setValue!(e.target.value);
-                        }}
-                    ></textarea>
-                ) : showBody ? (
-                    <pre className="ml-2 mt-2 whitespace-pre-wrap wrap-anywhere">
-                        {props.body}
-                    </pre>
-                ) : null}{" "}
-            </div>
+            <BodyContentView
+                contentType={props.headers?.["Content-Type"]?.[0]}
+                body={props.body}
+                editMode={props.editMode}
+                showBody={showBody}
+                setValue={props.setValue!}
+            />
+        </div>
+    );
+}
+
+function BodyContentView(props: {
+    contentType?: string;
+    body?: string | null;
+
+    editMode: boolean;
+    showBody?: boolean;
+    setValue: (v: string) => void;
+}) {
+    console.log(props.body);
+    if (!props.body || !props.showBody) {
+        return <></>;
+    }
+    switch (props.contentType) {
+        // case "application/json":
+        //     return <JSONEditor body={props.body} />;
+        case "application/x-www-form-urlencoded":
+            return (
+                <URLFormEncodedContent
+                    editMode={props.editMode}
+                    body={props.body!}
+                    setValue={props.setValue}
+                />
+            );
+    }
+    return (
+        <GenericContent
+            editMode={props.editMode}
+            body={props.body!}
+            setValue={props.setValue}
+        />
+    );
+}
+
+function GenericContent(props: {
+    editMode: boolean;
+    body: string;
+    setValue: (v: string) => void;
+}) {
+    if (props.editMode) {
+        return (
+            <textarea
+                defaultValue={props.body ?? ""}
+                className="w-full border-2 border-black p-1"
+                onBlur={(e) => {
+                    props.setValue!(e.target.value);
+                }}
+            ></textarea>
+        );
+    }
+    return (
+        <div className="ml-2 font-[monospace]">
+            <pre className="ml-2 mt-2 whitespace-pre-wrap wrap-anywhere">
+                {props.body}
+            </pre>
+        </div>
+    );
+}
+
+function URLFormEncodedContent(props: {
+    body: string;
+    setValue: (v: string) => void;
+
+    editMode: boolean;
+}) {
+    return (
+        <div className="w-full">
+            <TableMapView
+                editMode={props.editMode}
+                disableEdits={false}
+                value={parseURLEncoded(props.body)}
+                setValue={(v: Record<string, Array<string>>) =>
+                    props.setValue(encodeURLEncoded(v))
+                }
+            />
         </div>
     );
 }
