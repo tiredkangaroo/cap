@@ -63,6 +63,9 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 	}
 
 	for i, line := range lines {
+		if len(line) < 2 {
+			continue
+		}
 		if line[0] != 'c' {
 			continue
 		}
