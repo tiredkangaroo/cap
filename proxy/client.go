@@ -1,18 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -62,15 +62,12 @@ func (c *Manager) SendTunnel(req *Request) {
 }
 
 func (c *Manager) SendRequest(req *Request) {
-	// NOTE: HTTP requests will have a 0 bytesTransferred value because the request is read before the connection is hijacked and
-	// made custom.
 	c.writeJSON("REQUEST", map[string]any{
 		"id":               req.ID,
 		"method":           req.req.Method,
-		"path":             req.req.URL.Path,
-		"query":            req.req.URL.Query(),
+		"path":             req.req.Path,
+		"query":            req.req.Query,
 		"headers":          req.req.Header,
-		"body":             string(req.body()),
 		"bytesTransferred": req.BytesTransferred(),
 	})
 }
@@ -208,20 +205,18 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		// handle error: request not found
 		return
 	}
-	if req.req.Body != nil {
-		req.req.Body.Close() // close the old body if it exists
-	}
+	// if req.req.Body != nil {
+	// 	req.req.Body.Close() // close the old body if it exists
+	// }
 
 	req.Secure = updatedMessage.Request.Secure
-	req.req.Method = updatedMessage.Request.Method
+	req.req.Method = http.MethodFromString(updatedMessage.Request.Method)
 	req.req.Host = updatedMessage.Request.Host //
-	req.req.URL, _ = toURL(updatedMessage.Request.Host, updatedMessage.Request.Secure)
-	req.req.URL.Host = updatedMessage.Request.Host
-	req.req.URL.Path = updatedMessage.Request.Path
-	req.req.URL.RawQuery = updatedMessage.Request.Query.Encode()
-	req.req.Header = updatedMessage.Request.Headers                             // possible nil pointer dereference if headers are not set
-	req.req.Body = io.NopCloser(strings.NewReader(updatedMessage.Request.Body)) // update the request body with the new body
-	req.req.ContentLength = int64(len(updatedMessage.Request.Body))             // change content length to reflect the length of the new body
+	req.req.Path = updatedMessage.Request.Path
+	req.req.Query = updatedMessage.Request.Query
+	req.req.Header = updatedMessage.Request.Headers                 // possible nil pointer dereference if headers are not set
+	req.req.ContentLength = int64(len(updatedMessage.Request.Body)) // change content length to reflect the length of the new body
+	req.req.Body = http.NewBody(bufio.NewReader(strings.NewReader(updatedMessage.Request.Body)), int64(len(updatedMessage.Request.Body)))
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

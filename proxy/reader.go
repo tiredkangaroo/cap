@@ -61,3 +61,11 @@ func (cr *CustomConn) Writen() int64 {
 func (cr *CustomConn) BytesTransferred() int64 {
 	return cr.readn + cr.writen
 }
+
+func NewCustomConn(u net.Conn) *CustomConn {
+	return &CustomConn{
+		u:      u,
+		readn:  0,
+		writen: 0,
+	}
+}

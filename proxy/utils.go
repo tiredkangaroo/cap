@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"os/exec"
 	"runtime"
@@ -76,6 +77,14 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 	}
 	// fmt.Println("no matching process found")
 	return 0, ""
+}
+
+func getHostname(hp string) string {
+	h, _, err := net.SplitHostPort(hp)
+	if err != nil {
+		return hp
+	}
+	return h
 }
 
 func marshal(data any) []byte {

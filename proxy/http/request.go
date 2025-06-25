@@ -1,7 +1,9 @@
 package http
 
 import (
+	"io"
 	"net"
+	"net/url"
 )
 
 type Method uint8
@@ -18,6 +20,31 @@ const (
 	MethodConnect
 	MethodTrace
 )
+
+func MethodFromString(s string) Method {
+	switch s {
+	case "GET":
+		return MethodGet
+	case "POST":
+		return MethodPost
+	case "PUT":
+		return MethodPut
+	case "PATCH":
+		return MethodPatch
+	case "DELETE":
+		return MethodDelete
+	case "OPTIONS":
+		return MethodOptions
+	case "HEAD":
+		return MethodHead
+	case "CONNECT":
+		return MethodConnect
+	case "TRACE":
+		return MethodTrace
+	default:
+		return MethodUnknown
+	}
+}
 
 // type Connection uint8
 
@@ -56,15 +83,65 @@ func (m Method) String() string {
 type Request struct {
 	conn net.Conn
 
-	Method  Method
-	Path    string
-	Headers map[string][]string
+	Method Method
+	Path   string
+	Query  url.Values
+	Header Header
 
 	Host          string
-	ContentLength int
+	ContentLength int64
 	Connection    string
 
+	Proto []byte // HTTP version, e.g., "HTTP/1.1"
+
 	Body *Body
+}
+
+// Write writes the HTTP request to the provided writer. It writes the request line, headers, and body if present.
+func (r *Request) Write(w io.Writer) error {
+	if r.conn == nil {
+		return io.ErrClosedPipe
+	}
+
+	// request line
+	var requestLine = make([]byte, 0, 64)
+	requestLine = append(requestLine, s2b(r.Method.String())...)
+	requestLine = append(requestLine, ' ')
+	requestLine = append(requestLine, s2b(r.Path)...)
+	requestLine = append(requestLine, ' ')
+	requestLine = append(requestLine, r.Proto...)
+	requestLine = append(requestLine, '\r', '\n')
+	_, err := w.Write(requestLine)
+	if err != nil {
+		return err
+	}
+
+	// headers
+	for key, values := range r.Header {
+		for _, value := range values {
+			headerLine := make([]byte, 0, len(key)+len(value)+4)
+			headerLine = append(headerLine, s2b(key)...)   // len key
+			headerLine = append(headerLine, ": "...)       // 2
+			headerLine = append(headerLine, s2b(value)...) // len value
+			headerLine = append(headerLine, '\r', '\n')    // 2
+			_, err = w.Write(headerLine)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// end of headers
+	_, err = w.Write([]byte{'\r', '\n'})
+	if err != nil {
+		return err
+	}
+
+	// body
+	if r.Body != nil {
+		_, err = r.Body.WriteTo(w)
+		return err
+	}
+	return nil
 }
 
 func (r *Request) Close() error {
@@ -78,7 +155,7 @@ func NewRequest() *Request {
 	return &Request{
 		Method:        MethodUnknown,
 		Path:          "",
-		Headers:       make(map[string][]string),
+		Header:        make(map[string][]string),
 		Host:          "",
 		ContentLength: -1, // -1 indicates unknown content length
 		Connection:    "",

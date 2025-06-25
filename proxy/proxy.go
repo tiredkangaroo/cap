@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"log/slog"
-	"net/http"
+	"net"
+
+	"github.com/tiredkangaroo/bigproxy/proxy/http"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -13,26 +15,14 @@ import (
 // rejected by net/http's default handler on ListenAndServe.
 type ProxyHandler struct {
 	certifcates *certificate.Certificates
-
-	// liveRequestMessages messages:
-	//
-	// NEW {id: string, secure: bool, clientIP: string, clientAuthorization: string, host: string}
-	// - followed up by: "HTTP {id: string, method: string, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-MITM-REQUEST {id: string, method: string, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-TUNNEL-REQUEST "
-	// - followed up by: "HTTP-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-MITM-RESPONSE {id: string, statusCode: int, headers: map[string][]string, body: []byte}"
-	// - followed up by: "HTTPS-TUNNEL-RESPONSE "
-	m *Manager
+	m           *Manager
 }
 
-func (c *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// c.working.Add(1)
-	// defer c.working.Add(-1)
+func (c *ProxyHandler) ServeHTTP(conn net.Conn, r *http.Request) {
+	defer conn.Close()
 
 	req := new(Request)
-	req.Init(w, r)
-	defer req.conn.Close()
+	req.Init(conn, r)
 
 	c.serveAfterInit(req)
 }
@@ -71,15 +61,38 @@ func (c *ProxyHandler) Init(dirname string) error {
 }
 
 func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
+	// HTTP pathway:
+	// read request -> init request -> dial host -> write request -> read response -> write response
+	// HTTPS NO MITM pathway:
+	// read request -> init request -> send 200 response -> tunnel
+	// HTTPS MITM pathway:
+	// read request -> init request -> send 200 response -> cert gen + handshake -> dial host -> write request -> read response -> write response
+
 	if err := c.Init(dirname); err != nil {
 		return err
 	}
 	c.m = m
 
-	if err := http.ListenAndServe(":8000", c); err != nil {
-		slog.Error("fatal proxy server", "err", err.Error())
+	listener, err := net.Listen("tcp", ":8000")
+	if err != nil {
+		slog.Error("failed to start proxy listener", "err", err.Error())
 		return err
-	} else {
-		return nil
+	}
+	for {
+		rawconn, err := listener.Accept()
+		if err != nil {
+			slog.Error("failed to accept connection", "err", err.Error())
+			continue
+		}
+		conn := NewCustomConn(rawconn)
+
+		req, err := http.ReadRequest(conn)
+		if err != nil {
+			slog.Error("failed to read request", "err", err.Error())
+			conn.Close()
+			continue
+		}
+
+		go c.ServeHTTP(conn, req)
 	}
 }

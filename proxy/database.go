@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"runtime"
 	"strings"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/bigproxy/proxy/work"
 	_ "modernc.org/sqlite"
 )
@@ -123,7 +123,6 @@ func (d *Database) scanSingleRequest(row interface {
 }) (*Request, error) {
 	req := new(Request)
 	req.req = new(http.Request)
-	req.req.URL = new(url.URL)
 	req.resp = new(http.Response)
 
 	// var datetime string

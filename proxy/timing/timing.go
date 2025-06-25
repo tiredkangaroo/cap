@@ -13,12 +13,12 @@ const (
 	TimeNone        Time = ""
 	TimeRequestInit Time = "Request Init"
 
-	TimePrepRequest    = "Prep Request"
-	TimeWaitApproval   = "Wait Approval"
-	TimeDelayPeform    = "Perform Delay"
-	TimeRequestPerform = "Perform Request"
-	TimeDumpResponse   = "Dump Response"
-	TimeWriteResponse  = "Write Response"
+	TimePrepRequest   = "Prep Request"
+	TimeWaitApproval  = "Wait Approval"
+	TimeDelayPeform   = "Perform Delay"
+	TimeWriteRequest  = "Write Request"
+	TimeReadRequest   = "Read Response"
+	TimeWriteResponse = "Write Response"
 
 	TimeProxyResponse   = "Proxy Response"
 	TimeDialHost        = "Dial Host"
@@ -173,7 +173,7 @@ func (t *Timing) Total() time.Duration {
 // 	return nil
 // }
 
-func New(secure, mitm bool) *Timing {
+func New() *Timing {
 	t := &Timing{
 		MajorTimeKeys:   make([]Time, 0, 4),
 		MajorTimeValues: make([]*MajorTime, 0, 4),

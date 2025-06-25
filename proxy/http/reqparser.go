@@ -7,7 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/url"
 	"strconv"
+	"strings"
 	"unsafe"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -61,9 +63,12 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 		return nil, ErrProtocolError
 	}
 	req.Path = b2s(firstLineData[1])
-	// NOTE: not handling HTTP version (ex: HTTP/1.1)
+	// the query is everything after the first "?" in the path
+	req.Path, req.Query = parseQuery(req.Path)
 
-	req.Headers = make(map[string][]string)
+	req.Proto = bytes.TrimSpace(firstLineData[2])
+
+	req.Header = make(map[string][]string)
 	// len(data) > 2 is to ensure the thing we just read isn't \r\n (indicates the end of headers)
 	for data, err = buf.ReadBytes('\n'); err == nil && len(data) > 2; data, err = buf.ReadBytes('\n') {
 		// split by ": " to get key and value
@@ -82,10 +87,10 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 			}
 			return nil, ErrProtocolError
 		}
-		if req.Headers[key] == nil {
-			req.Headers[key] = []string{value}
+		if req.Header[key] == nil {
+			req.Header[key] = []string{value}
 		} else {
-			req.Headers[key] = append(req.Headers[key], value)
+			req.Header[key] = append(req.Header[key], value)
 		}
 		if err := handleSpecialHeaders(req, key, value); err != nil {
 			if config.DefaultConfig.Debug {
@@ -117,18 +122,18 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 }
 
 func handleSpecialHeaders(req *Request, key, value string) error {
-	var err error
 	switch key {
 	case "Host":
 		req.Host = value
 	case "Content-Length":
-		req.ContentLength, err = strconv.Atoi(value)
+		cl, err := strconv.Atoi(value)
 		if err != nil {
 			if config.DefaultConfig.Debug {
 				slog.Error("http parser: invalid Content-Length header", "value", value, "err", err.Error())
 			}
 			return ErrContentLengthInvalid
 		}
+		req.ContentLength = int64(cl)
 	case "Connection":
 		req.Connection = value
 	}
@@ -148,6 +153,23 @@ func ensureSpecialHeaders(req *Request) error {
 	return nil
 }
 
+// returns new path, query values
+func parseQuery(path string) (string, url.Values) {
+	queryI := strings.IndexByte(path, '?')
+	if queryI == -1 {
+		return path, url.Values{} // no query
+	}
+	queryStr := path[queryI+1:]
+	q, err := url.ParseQuery(queryStr)
+	if err != nil {
+		return path, url.Values{}
+	}
+	return path[:queryI], q
+}
+
 func b2s(b []byte) string {
 	return unsafe.String(&b[0], len(b))
+}
+func s2b(s string) []byte {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

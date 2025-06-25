@@ -36,12 +36,17 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// WriteTo does not enforce content length.
 func (buf *Body) WriteTo(w io.Writer) (n int64, err error) {
+	if buf.buf == nil {
+		return 0, nil // nothing to write
+	}
 	return buf.buf.WriteTo(w)
 }
 
-func NewBody(buf *bufio.Reader, cl int) *Body {
+func NewBody(buf *bufio.Reader, cl int64) *Body {
 	return &Body{
-		buf: buf,
+		buf:           buf,
+		contentLength: cl,
 	}
 }

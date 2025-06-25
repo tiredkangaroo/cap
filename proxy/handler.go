@@ -1,18 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
-	"net/http"
 	"time"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 )
 
@@ -39,9 +38,10 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func (r *Request) handleHTTP(m *Manager) error {
+func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	m.SendRequest(r)
 
+	r.req = req
 	// perform the request
 	resp, raw, err := r.Perform(m)
 	if err != nil {
@@ -90,7 +90,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
 	r.timing.Start(timing.TimeCertGenTLSHandshake)
-	tlsconn, err := c.TLSConn(r.conn, r.req.URL.Hostname())
+	tlsconn, err := c.TLSConn(r.conn, getHostname(r.req.Host))
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
@@ -99,14 +99,12 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 	r.timing.Stop()
 
-	r.timing.Start(timing.TimeReadParseRequest)
-	buf := bufio.NewReader(tlsconn)
-	finalReq, err := http.ReadRequest(buf)
+	req, err := http.ReadRequest(tlsconn)
 	r.timing.Stop()
 	if err != nil {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
-	r.req = finalReq
+	r.req = req
 
 	m.SendRequest(r)
 
