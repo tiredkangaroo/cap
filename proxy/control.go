@@ -63,7 +63,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 			slog.Error("failed to accept websocket", "err", err.Error())
 			return
 		}
-		//NOTE: if there's a write error, and its deleted, what happens? grtine leak?
+		// NOTE: if there's a write error, and its deleted, what happens? grtine leak?
 		go func() {
 			for {
 				msg, err := conn.Read()

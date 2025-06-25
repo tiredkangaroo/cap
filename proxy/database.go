@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/url"
 	"runtime"
 	"strings"
 
@@ -101,13 +98,17 @@ func (d *Database) Init(dirname string) error {
 		clientIP TEXT NOT NULL,
 		clientAuthorization TEXT,
 		clientApplication TEXT NOT NULL,
-		reqURL TEXT NOT NULL,
-		reqMethod TEXT NOT NULL,
+
+		reqMethod INTEGER NOT NULL,
+		reqPath TEXT NOT NULL,
+		reqQuery BLOB NOT NULL,
 		reqHeaders BLOB NOT NULL,
-		reqBody BLOB NOT NULL,
+		reqBodyID TEXT NOT NULL,
+
 		respStatusCode INTEGER NOT NULL,
 		respHeaders BLOB NOT NULL,
-		respBody BLOB NOT NULL,
+		respBodyID TEXT NOT NULL,
+
 		timing BLOB NOT NULL,
 		error TEXT
 	);`
@@ -115,26 +116,25 @@ func (d *Database) Init(dirname string) error {
 	if err != nil {
 		return fmt.Errorf("init: failed to create requests table: %w", err)
 	}
+	bodyTable := `CREATE TABLE IF NOT EXISTS bodies (
+		id TEXT PRIMARY KEY,
+		body BLOB NOT NULL
+	);`
+	_, err = d.Exec(bodyTable)
+	if err != nil {
+		return fmt.Errorf("init: failed to create bodies table: %w", err)
+	}
+
 	return nil
 }
 
 func (d *Database) scanSingleRequest(row interface {
 	Scan(dest ...any) error
 }) (*Request, error) {
-	req := new(Request)
-	req.req = new(http.Request)
-	req.resp = new(http.Response)
-
-	// var datetime string
-	var requestQuery []byte
-	var requestHeaders []byte
-	var requestBody []byte
-	var responseHeaders []byte
-	var responseBody []byte
-	var timing []byte
-	var errText sql.NullString
-	var requrl string
-
+	req := &Request{
+		req: http.NewRequest(),
+	}
+	var reqQueryRaw, reqHeadersRaw, respHeadersRaw, timingDataRaw []byte
 	err := row.Scan(
 		&req.ID,
 		&req.Secure,
@@ -144,30 +144,32 @@ func (d *Database) scanSingleRequest(row interface {
 		&req.ClientAuthorization,
 		&req.ClientApplication,
 		&req.req.Method,
-		&requrl,
-		&requestHeaders,
-		&requestBody,
+		&req.req.Path,
+		&reqQueryRaw,
+		&reqHeadersRaw,
+		&req.reqBodyID,
 		&req.resp.StatusCode,
-		&responseHeaders,
-		&responseBody,
-		&timing,
-		&errText,
+		&respHeadersRaw,
+		&req.respBodyID,
+		&timingDataRaw,
+		&req.errorText,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GetRequestByID: %w", err)
+		return nil, fmt.Errorf("scan single request: %w", err)
 	}
-	var urlQuery url.Values
-	err = json.Unmarshal(requestQuery, &urlQuery)
-	if err == nil {
-		req.req.URL.RawQuery = urlQuery.Encode()
+	// NOTE: streamline this, or use a helper func
+	if err := json.Unmarshal(reqQueryRaw, &req.req.Query); err != nil {
+		return nil, fmt.Errorf("scan single request: unmarshal query")
 	}
-	json.Unmarshal(requestHeaders, &req.req.Header)
-	json.Unmarshal(responseHeaders, &req.resp.Header)
-	req.req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-	req.resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
-	req.req.URL, _ = url.Parse(requrl)
-	json.Unmarshal(timing, &req.timing)
-	req.errorText = errText.String
+	if err := json.Unmarshal(reqHeadersRaw, &req.req.Header); err != nil {
+		return nil, fmt.Errorf("scan single request: unmarshal headers")
+	}
+	if err := json.Unmarshal(respHeadersRaw, &req.resp.Header); err != nil {
+		return nil, fmt.Errorf("scan single request: unmarshal response headers")
+	}
+	if err := json.Unmarshal(timingDataRaw, &req.timing); err != nil {
+		return nil, fmt.Errorf("scan single request: unmarshal timing data: %w", err)
+	}
 	return req, nil
 }
 

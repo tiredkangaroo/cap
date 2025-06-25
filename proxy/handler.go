@@ -43,7 +43,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 
 	r.req = req
 	// perform the request
-	resp, raw, err := r.Perform(m)
+	resp, err := r.Perform(m)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -52,7 +52,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	m.SendResponse(r)
 
 	r.timing.Start(timing.TimeWriteResponse)
-	_, err = r.conn.Write(raw)
+	resp.Write(r.conn) // write the response to the connection
 	r.timing.Stop()
 	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
@@ -99,6 +99,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 	r.timing.Stop()
 
+	r.timing.Start(timing.TimeReadRequest)
 	req, err := http.ReadRequest(tlsconn)
 	r.timing.Stop()
 	if err != nil {
@@ -108,7 +109,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	m.SendRequest(r)
 
-	resp, raw, err := r.Perform(m)
+	resp, err := r.Perform(m)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -117,7 +118,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	m.SendResponse(r)
 
 	r.timing.Start(timing.TimeWriteResponse)
-	_, err = tlsconn.Write(raw)
+	r.resp.Write(tlsconn) // write the response to the TLS connection
 	r.timing.Stop()
 	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
@@ -178,12 +179,12 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	return nil
 }
 
-// hijack hijacks the ResponseWriter connection to the client.
-func hijack(w http.ResponseWriter) (net.Conn, error) {
-	h, ok := w.(http.Hijacker)
-	if !ok {
-		return nil, ErrResponseWriterNoHijack
-	}
-	c, _, err := h.Hijack()
-	return c, err
-}
+// // hijack hijacks the ResponseWriter connection to the client.
+// func hijack(w http.ResponseWriter) (net.Conn, error) {
+// 	h, ok := w.(http.Hijacker)
+// 	if !ok {
+// 		return nil, ErrResponseWriterNoHijack
+// 	}
+// 	c, _, err := h.Hijack()
+// 	return c, err
+// }

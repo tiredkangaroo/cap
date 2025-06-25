@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"io"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/url"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
@@ -25,7 +24,6 @@ var (
 // we can do pooling of http.Request later
 
 func ReadRequest(conn net.Conn) (*Request, error) {
-	var rnSuffix = []byte("\r\n")
 	// example request:
 	// POST /cgi-bin/process.cgi HTTP/1.1
 	// User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)
@@ -68,45 +66,12 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 
 	req.Proto = bytes.TrimSpace(firstLineData[2])
 
-	req.Header = make(map[string][]string)
-	// len(data) > 2 is to ensure the thing we just read isn't \r\n (indicates the end of headers)
-	for data, err = buf.ReadBytes('\n'); err == nil && len(data) > 2; data, err = buf.ReadBytes('\n') {
-		// split by ": " to get key and value
-		keyVSplit := bytes.SplitN(data, []byte{':', ' '}, 2)
-		if len(keyVSplit) != 2 {
-			if config.DefaultConfig.Debug {
-				slog.Error("http parser: invalid header line", "line", b2s(data))
-			}
-			return nil, ErrProtocolError
-		}
-		key := b2s(keyVSplit[0])
-		value := b2s(bytes.TrimSuffix(keyVSplit[1], rnSuffix))
-		if len(key) == 0 {
-			if config.DefaultConfig.Debug {
-				slog.Error("http parser: empty header key", "line", b2s(data))
-			}
-			return nil, ErrProtocolError
-		}
-		if req.Header[key] == nil {
-			req.Header[key] = []string{value}
-		} else {
-			req.Header[key] = append(req.Header[key], value)
-		}
-		if err := handleSpecialHeaders(req, key, value); err != nil {
-			if config.DefaultConfig.Debug {
-				slog.Error("http parser: error handling special header", "key", key, "value", value, "err", err.Error())
-			}
-			return nil, err
-		}
-	}
-	if err != nil && err != io.EOF {
+	req.Header, err = readHeader(buf)
+	if err != nil {
 		return nil, err
 	}
-	if err := ensureSpecialHeaders(req); err != nil {
-		if config.DefaultConfig.Debug {
-			slog.Error("http parser: missing special headers", "err", err.Error())
-		}
-		return nil, err
+	if err := manageSpecialRequestHeaders(req); err != nil {
+		return nil, fmt.Errorf("special headers issue: %w", err)
 	}
 
 	buf.Reset(nil)
@@ -121,35 +86,26 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 	return req, nil
 }
 
-func handleSpecialHeaders(req *Request, key, value string) error {
-	switch key {
-	case "Host":
-		req.Host = value
-	case "Content-Length":
-		cl, err := strconv.Atoi(value)
-		if err != nil {
-			if config.DefaultConfig.Debug {
-				slog.Error("http parser: invalid Content-Length header", "value", value, "err", err.Error())
-			}
-			return ErrContentLengthInvalid
-		}
-		req.ContentLength = int64(cl)
-	case "Connection":
-		req.Connection = value
-	}
-	return nil
-}
-
-func ensureSpecialHeaders(req *Request) error {
+func manageSpecialRequestHeaders(req *Request) error {
+	req.Host = req.Header.Get("Host")
 	if req.Host == "" {
 		return ErrMissingHostHeader
 	}
-	if req.ContentLength < 0 {
-		if config.DefaultConfig.Debug {
-			slog.Error("http parser: missing Content-Length header")
-		}
+
+	contentLength := req.Header.Get("Content-Length")
+	if (req.Method == MethodPost || req.Method == MethodPut || req.Method == MethodPatch) && contentLength == "" {
 		return ErrMissingContentLengthHeader
 	}
+	if contentLength != "" {
+		cl, err := strconv.Atoi(contentLength)
+		if err != nil {
+			return ErrContentLengthInvalid
+		}
+		req.ContentLength = int64(cl)
+	}
+
+	req.Connection = req.Header.Get("Connection")
+
 	return nil
 }
 
@@ -165,11 +121,4 @@ func parseQuery(path string) (string, url.Values) {
 		return path, url.Values{}
 	}
 	return path[:queryI], q
-}
-
-func b2s(b []byte) string {
-	return unsafe.String(&b[0], len(b))
-}
-func s2b(s string) []byte {
-	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

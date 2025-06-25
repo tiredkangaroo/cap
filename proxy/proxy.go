@@ -24,18 +24,18 @@ func (c *ProxyHandler) ServeHTTP(conn net.Conn, r *http.Request) {
 	req := new(Request)
 	req.Init(conn, r)
 
-	c.serveAfterInit(req)
+	c.serveAfterInit(req, r)
 }
 
-func (c *ProxyHandler) serveAfterInit(req *Request) {
+func (c *ProxyHandler) serveAfterInit(req *Request, r *http.Request) {
 	c.m.SendNew(req)
 
 	var err error
 	if req.Secure { // we're handling an HTTPS connection here
 		err = req.handleHTTPS(c.m, c.certifcates)
 	} else {
-		// we're handling an HTTP connection here
-		err = req.handleHTTP(c.m)
+		// we're handling an HTTP connection here, HTTP connections send the full request to the proxy, so we actually do need this request here
+		err = req.handleHTTP(c.m, r)
 	}
 
 	if errors.Is(err, ErrPerformStop) { // ignore PerformStop errors and don't send a control message

@@ -75,10 +75,12 @@ type Request struct {
 
 	timing *timing.Timing
 
-	req  *http.Request
-	resp *http.Response
+	req        *http.Request
+	reqBodyID  string // ID of the request body in the database
+	resp       *http.Response
+	respBodyID string // ID of the response body in the database
 
-	errorText string // NOTE: only populated at db, prolly should change that
+	errorText string // NOTE: only populated at db, prolly should change that, maybe not, who knows, not me, maybe me, who knows
 
 	approveResponseFunc func(approved bool)
 }
@@ -138,7 +140,7 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager) (*http.Response, error) {
-	// might be too resource heavy to do it this way
+	// NOTE: these should be sub times where Perform is the major time
 	r.timing.Start(timing.TimePrepRequest)
 
 	r.req.Header.Del("Proxy-Authorization")
@@ -178,7 +180,7 @@ func (r *Request) Perform(m *Manager) (*http.Response, error) {
 	}
 	r.timing.Stop()
 
-	http.ReadResponse(hostc, r.req)
+	return http.ReadResponse(hostc)
 }
 
 func (r *Request) BytesTransferred() int64 {

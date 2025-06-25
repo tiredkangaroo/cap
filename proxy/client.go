@@ -77,7 +77,6 @@ func (c *Manager) SendResponse(req *Request) {
 		"id":         req.ID,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
-		"body":       string(req.respbody()),
 	})
 }
 

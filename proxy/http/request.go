@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -117,23 +118,8 @@ func (r *Request) Write(w io.Writer) error {
 	}
 
 	// headers
-	for key, values := range r.Header {
-		for _, value := range values {
-			headerLine := make([]byte, 0, len(key)+len(value)+4)
-			headerLine = append(headerLine, s2b(key)...)   // len key
-			headerLine = append(headerLine, ": "...)       // 2
-			headerLine = append(headerLine, s2b(value)...) // len value
-			headerLine = append(headerLine, '\r', '\n')    // 2
-			_, err = w.Write(headerLine)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	// end of headers
-	_, err = w.Write([]byte{'\r', '\n'})
-	if err != nil {
-		return err
+	if err := r.Header.write(w); err != nil {
+		return fmt.Errorf("header write: %w", err)
 	}
 
 	// body
@@ -153,8 +139,11 @@ func (r *Request) Close() error {
 
 func NewRequest() *Request {
 	return &Request{
+		conn:          nil,
+		Proto:         []byte{},
 		Method:        MethodUnknown,
 		Path:          "",
+		Query:         make(url.Values),
 		Header:        make(map[string][]string),
 		Host:          "",
 		ContentLength: -1, // -1 indicates unknown content length
@@ -221,16 +210,3 @@ func methodFromBytes(b []byte) Method {
 		return MethodUnknown
 	}
 }
-
-// func connectionFromString(c string) Connection {
-// 	switch strings.ToLower(c) {
-// 	case "keep-alive":
-// 		return ConnectionKeepAlive
-// 	case "close":
-// 		return ConnectionClose
-// 	case "upgrade":
-// 		return ConnectionUpgrade
-// 	default:
-// 		return ConnectionUnknown
-// 	}
-// }
