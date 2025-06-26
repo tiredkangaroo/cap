@@ -67,7 +67,7 @@ func (c *Manager) SendTunnel(req *Request) {
 func (c *Manager) SendRequest(req *Request) {
 	c.writeJSON("REQUEST", map[string]any{
 		"id":               req.ID,
-		"method":           req.req.Method,
+		"method":           req.req.Method.String(),
 		"path":             req.req.Path,
 		"query":            req.req.Query,
 		"headers":          req.req.Header,

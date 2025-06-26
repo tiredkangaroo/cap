@@ -67,15 +67,13 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 	req.Proto = bytes.TrimSpace(firstLineData[2])
 
 	req.Header, err = readHeader(buf)
+	fmt.Println(req.Header)
 	if err != nil {
 		return nil, err
 	}
 	if err := manageSpecialRequestHeaders(req); err != nil {
 		return nil, fmt.Errorf("special headers issue: %w", err)
 	}
-
-	buf.Reset(nil)
-	buf.Reset(conn)
 
 	req.Body = NewBody(buf, req.ContentLength)
 	if req.ContentLength == 0 {

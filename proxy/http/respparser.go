@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"strconv"
@@ -72,11 +73,27 @@ func ReadResponse(conn net.Conn) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := manageSpecialResponseHeaders(resp); err != nil {
+		return nil, fmt.Errorf("special headers issue: %w", err)
+	}
 
+	fmt.Println("79", resp.Header, resp.ContentLength)
 	resp.Body = NewBody(buf, resp.ContentLength)
 	if resp.ContentLength == 0 {
 		resp.Body.buf = nil // release at once
 	}
 
 	return resp, nil
+}
+
+func manageSpecialResponseHeaders(resp *Response) error {
+	contentLength := resp.Header.Get("Content-Length")
+	if contentLength != "" {
+		cl, err := strconv.Atoi(contentLength)
+		if err != nil {
+			return fmt.Errorf("invalid Content-Length header: %w", err)
+		}
+		resp.ContentLength = int64(cl)
+	}
+	return nil
 }

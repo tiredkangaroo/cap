@@ -110,6 +110,8 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 		r.ID = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
 	}
 	r.ID = id.String()
+	r.reqBodyID = r.ID + "-req-body"
+	r.respBodyID = r.ID + "-resp-body"
 	r.timing.Substop()
 
 	r.conn = &CustomConn{
@@ -168,18 +170,23 @@ func (r *Request) Perform(m *Manager) (*http.Response, error) {
 	}
 
 	r.timing.Start(timing.TimeDialHost)
+	fmt.Println("dialing host", r.req.Host)
 	hostc, err := net.Dial("tcp", r.req.Host)
 	if err != nil {
 		return nil, fmt.Errorf("dial host: %w", err)
 	}
 	r.timing.Stop()
+	fmt.Println("dialed host", r.req.Host)
 
+	fmt.Println("writing request to host", r.req.Host)
 	r.timing.Start(timing.TimeWriteRequest)
 	if err := r.req.Write(hostc); err != nil {
 		return nil, fmt.Errorf("write request: %w", err)
 	}
 	r.timing.Stop()
+	fmt.Println("wrote request to host", r.req.Host)
 
+	fmt.Println("reading response")
 	return http.ReadResponse(hostc)
 }
 
@@ -204,7 +211,7 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 		"clientAuthorization": r.ClientAuthorization,
 		"host":                r.Host,
 
-		"method":  r.req.Method,
+		"method":  r.req.Method.String(),
 		"path":    r.req.Path,
 		"query":   r.req.Query,
 		"headers": r.req.Header,

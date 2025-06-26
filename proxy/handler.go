@@ -39,9 +39,14 @@ var (
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
 func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
+	r.req = req
+	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
+		slog.Error("save request body: %w", "err", err)
+	} else {
+		slog.Debug("saved request body", "id", r.reqBodyID)
+	}
 	m.SendRequest(r)
 
-	r.req = req
 	// perform the request
 	resp, err := r.Perform(m)
 	if err != nil {
@@ -90,7 +95,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
 	r.timing.Start(timing.TimeCertGenTLSHandshake)
-	tlsconn, err := c.TLSConn(r.conn, getHostname(r.req.Host))
+	tlsconn, err := c.TLSConn(r.conn, getHostname(r.Host))
 	if err != nil {
 		return fmt.Errorf("tls conn: %w", err)
 	}
@@ -99,27 +104,35 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 	r.timing.Stop()
 
+	fmt.Println("reading request")
 	r.timing.Start(timing.TimeReadRequest)
 	req, err := http.ReadRequest(tlsconn)
 	r.timing.Stop()
+	fmt.Println("read request")
 	if err != nil {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
+	fmt.Println("set request")
 	r.req = req
 
 	m.SendRequest(r)
+	fmt.Println("performing request")
 
 	resp, err := r.Perform(m)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
 	r.resp = resp
+	fmt.Println("performed request")
 
+	fmt.Println("sending response")
 	m.SendResponse(r)
 
+	fmt.Println("writing response")
 	r.timing.Start(timing.TimeWriteResponse)
 	err = r.resp.Write(tlsconn) // write the response to the TLS connection
 	r.timing.Stop()
+	fmt.Println("sent response")
 	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)
 	}

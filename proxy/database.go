@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/bigproxy/proxy/work"
-	_ "modernc.org/sqlite"
 )
 
 // NOTE: bytes transferred
@@ -133,9 +131,11 @@ func (d *Database) scanSingleRequest(row interface {
 	Scan(dest ...any) error
 }) (*Request, error) {
 	req := &Request{
-		req: http.NewRequest(),
+		req:  http.NewRequest(),
+		resp: http.NewResponse(),
 	}
 	var reqQueryRaw, reqHeadersRaw, respHeadersRaw, timingDataRaw []byte
+	var errorText sql.NullString
 	err := row.Scan(
 		&req.ID,
 		&req.Secure,
@@ -153,7 +153,7 @@ func (d *Database) scanSingleRequest(row interface {
 		&respHeadersRaw,
 		&req.respBodyID,
 		&timingDataRaw,
-		&req.errorText,
+		&errorText,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan single request: %w", err)
@@ -170,6 +170,11 @@ func (d *Database) scanSingleRequest(row interface {
 	}
 	if err := json.Unmarshal(timingDataRaw, &req.timing); err != nil {
 		return nil, fmt.Errorf("scan single request: unmarshal timing data: %w", err)
+	}
+	if errorText.Valid {
+		req.errorText = errorText.String
+	} else {
+		req.errorText = ""
 	}
 	return req, nil
 }
@@ -363,12 +368,14 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		reqMethod,
 		reqPath,
 		reqHeaders,
+		reqQuery,
 		reqBodyID`
 	if req.req != nil {
 		args = append(args,
 			req.req.Method,
 			req.req.Path,
 			marshal(req.req.Header),
+			marshal(req.req.Query),
 			req.reqBodyID,
 		)
 	} else {
@@ -426,14 +433,27 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	return nil
 }
 
-func (d *Database) SaveBody(id string, body io.Reader) error {
-	query := `INSERT INTO bodies (id, body) VALUES (?, ?);`
-	_, err := d.Exec(query, id, body)
-	if err != nil {
-		return fmt.Errorf("save body: %w", err)
-	}
-	return nil
-}
+// func (d *Database) SaveBody(id string, body *http.Body) error {
+// 	cl := body.ContentLength()
+// 	if cl == 0 {
+// 		_, err := d.Exec(`INSERT INTO bodies (id, body) VALUES (?, ?)`, id, []byte{})
+// 		return err
+// 	}
+// 	query := `INSERT INTO bodies (id, body) VALUES (?, zeroblob(?));`
+// 	_, err := d.Exec(query, id, body.ContentLength())
+// 	if err != nil {
+// 		return fmt.Errorf("save body: %w", err)
+// 	}
+// 	conn, err := d.b.Conn(context.Background())
+// 	if err != nil {
+// 		return fmt.Errorf("save body: get connection: %w", err)
+// 	}
+// 	defer conn.Close()
+
+// 	var blobWriter *sqlite3.SQLiteBlob
+
+// 	return nil
+// }
 
 func NewDatabase() *Database {
 	return &Database{workerpool: work.NewWorkerPool(1)}

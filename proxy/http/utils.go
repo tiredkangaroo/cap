@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"log/slog"
+	"net/textproto"
 	"unsafe"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -22,7 +23,7 @@ func readHeader(buf *bufio.Reader) (Header, error) {
 			}
 			return nil, ErrProtocolError
 		}
-		key := b2s(keyVSplit[0])
+		key := textproto.CanonicalMIMEHeaderKey(b2s(keyVSplit[0]))
 		value := b2s(bytes.TrimSuffix(keyVSplit[1], rnSuffix))
 		if len(key) == 0 {
 			if config.DefaultConfig.Debug {

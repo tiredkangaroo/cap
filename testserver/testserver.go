@@ -10,7 +10,6 @@ import (
 type HackHandler struct{}
 
 func (h HackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// imho bradbury should've developed captain beatty's intentional will to be burned
 	w.WriteHeader(http.StatusUnavailableForLegalReasons)
 	w.Write([]byte("you've been hacked?! mwhaha"))
 }

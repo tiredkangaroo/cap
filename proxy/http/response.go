@@ -236,7 +236,7 @@ func NewResponse() *Response {
 	return &Response{
 		StatusCode:    200, // Default to 200 OK
 		Header:        make(Header),
-		ContentLength: -1,
+		ContentLength: 0,
 		Body:          NewBody(nil, 0), // Body will be set later
 	}
 }

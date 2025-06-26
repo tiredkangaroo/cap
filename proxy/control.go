@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	nethttp "net/http"
+	_ "net/http/pprof"
 	"strconv"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -15,8 +16,21 @@ import (
 // we will continue to use net/http for the control server
 
 func startControlServer(m *Manager, ph *ProxyHandler) {
+	mux := nethttp.NewServeMux()
+
+	if config.DefaultConfig.Debug {
+		slog.Info("debug mode enabled")
+		mux.Handle("GET /debug/pprof/", nethttp.DefaultServeMux)
+		mux.Handle("GET /debug/pprof/cmdline", nethttp.DefaultServeMux)
+		mux.Handle("GET /debug/pprof/profile", nethttp.DefaultServeMux)
+		mux.Handle("GET /debug/pprof/symbol", nethttp.DefaultServeMux)
+		mux.Handle("GET /debug/pprof/trace", nethttp.DefaultServeMux)
+	} else {
+		slog.Info("debug mode disabled, use DEBUG=true to enable it")
+	}
+
 	// Start the control server
-	nethttp.HandleFunc("GET /config", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /config", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 
 		data, err := json.Marshal(config.DefaultConfig)
@@ -31,7 +45,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.Write(data)
 	})
 
-	nethttp.HandleFunc("POST /config", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("POST /config", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 
 		b, err := io.ReadAll(r.Body)
@@ -56,7 +70,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.Write([]byte("config updated"))
 	})
 
-	nethttp.HandleFunc("GET /requestsWS", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /requestsWS", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		var conn *websocket.Conn
 		var err error
 		if conn, err = m.AcceptWS(w, r); err != nil {
@@ -82,7 +96,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 	// nethttp.HandleFunc("GET /response", func (w nethttp.ResponseWriter, r *nethttp.Request) {
 
 	// })
-	nethttp.HandleFunc("GET /request/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /request/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 		id := r.PathValue("id")
 		if id == "" {
@@ -109,12 +123,12 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.Write(data)
 	})
 
-	nethttp.HandleFunc("OPTIONS /", func(w nethttp.ResponseWriter, _ *nethttp.Request) {
+	mux.HandleFunc("OPTIONS /", func(w nethttp.ResponseWriter, _ *nethttp.Request) {
 		setCORSHeaders(w)
 		w.WriteHeader(nethttp.StatusNoContent)
 	})
 
-	nethttp.HandleFunc("GET /filterCounts", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /filterCounts", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 
 		counts, err := m.db.GetFilterCounts()
@@ -130,7 +144,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.Write(marshal(counts))
 	})
 
-	nethttp.HandleFunc("GET /requestsMatchingFilter", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /requestsMatchingFilter", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 
 		query := r.URL.Query()
@@ -177,7 +191,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		}))
 	})
 
-	err := nethttp.ListenAndServe(":8001", nil)
+	err := nethttp.ListenAndServe(":8001", mux)
 	if err != nil {
 		panic(err)
 	}

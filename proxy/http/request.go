@@ -112,6 +112,7 @@ func (r *Request) Write(w io.Writer) error {
 	requestLine = append(requestLine, ' ')
 	requestLine = append(requestLine, r.Proto...)
 	requestLine = append(requestLine, '\r', '\n')
+	fmt.Println("writing request line", string(requestLine))
 	_, err := w.Write(requestLine)
 	if err != nil {
 		return err
@@ -121,12 +122,15 @@ func (r *Request) Write(w io.Writer) error {
 	if err := r.Header.write(w); err != nil {
 		return fmt.Errorf("header write: %w", err)
 	}
+	fmt.Println("wrote headers", r.Header)
 
+	fmt.Println("writing body")
 	// body
 	if r.Body != nil {
 		_, err = r.Body.WriteTo(w)
 		return err
 	}
+	fmt.Println("no body to write")
 	return nil
 }
 
@@ -146,7 +150,7 @@ func NewRequest() *Request {
 		Query:         make(url.Values),
 		Header:        make(map[string][]string),
 		Host:          "",
-		ContentLength: -1, // -1 indicates unknown content length
+		ContentLength: 0, // -1 indicates unknown content length
 		Connection:    "",
 	}
 }

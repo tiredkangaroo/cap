@@ -2,8 +2,6 @@ package main
 
 import (
 	_ "embed"
-	"net/http"
-	"net/http/pprof"
 	"path/filepath"
 
 	"log/slog"
@@ -11,7 +9,6 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 var myLocalIP string
@@ -53,19 +50,6 @@ func main() {
 	defer db.b.Close()
 
 	m := NewManager(db)
-
-	// NOTE: ensure
-	if config.DefaultConfig.Debug {
-		mux := http.DefaultServeMux
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-		slog.Info("debug mode enabled")
-	} else {
-		slog.Info("debug mode disabled, use DEBUG=true to enable it")
-	}
 
 	ph := new(ProxyHandler)
 	go startControlServer(m, ph)
