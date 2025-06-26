@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -183,12 +184,13 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		clientAuthorization,
 		clientApplication,
 		reqMethod,
-		reqURL,
+		reqPath,
+		reqQuery,
 		reqHeaders,
-		reqBody,
+		reqBodyID,
 		respStatusCode,
 		respHeaders,
-		respBody,
+		respBodyID,
 		timing,
 		error
 	FROM requests WHERE id = ?`
@@ -259,12 +261,13 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 		clientAuthorization,
 		clientApplication,
 		reqMethod,
-		reqURL,
+		reqPath,
+		reqQuery,
 		reqHeaders,
-		reqBody,
+		reqBodyID,
 		respStatusCode,
 		respHeaders,
-		respBody,
+		respBodyID,
 		timing,
 		error
 	FROM requests`
@@ -358,26 +361,22 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	// request
 	query += `,
 		reqMethod,
-		reqURL,
+		reqPath,
 		reqHeaders,
-		reqBody`
+		reqBodyID`
 	if req.req != nil {
-		reqbody := req.body()
-		if reqbody == nil {
-			reqbody = []byte("")
-		}
 		args = append(args,
 			req.req.Method,
-			req.req.URL.String(),
+			req.req.Path,
 			marshal(req.req.Header),
-			reqbody,
+			req.reqBodyID,
 		)
 	} else {
 		args = append(args,
 			"",           // Method
-			"",           // URL
+			"",           // Path
 			[]byte("{}"), // Headers
-			[]byte(""),   // Body
+			"",           // Body ID
 		)
 	}
 
@@ -385,18 +384,18 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	query += `,
 		respStatusCode,
 		respHeaders,
-		respBody`
+		respBodyID`
 	if req.resp != nil {
 		args = append(args,
 			req.resp.StatusCode,
 			marshal(req.resp.Header),
-			req.respbody(),
+			req.respBodyID,
 		)
 	} else {
 		args = append(args,
 			0,            // StatusCode
 			[]byte("{}"), // Headers
-			[]byte(""),   // Body
+			"",           // Body ID
 		)
 	}
 
@@ -424,6 +423,15 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		return fmt.Errorf("save request: %w", err)
 	}
 
+	return nil
+}
+
+func (d *Database) SaveBody(id string, body io.Reader) error {
+	query := `INSERT INTO bodies (id, body) VALUES (?, ?);`
+	_, err := d.Exec(query, id, body)
+	if err != nil {
+		return fmt.Errorf("save body: %w", err)
+	}
 	return nil
 }
 

@@ -52,7 +52,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	m.SendResponse(r)
 
 	r.timing.Start(timing.TimeWriteResponse)
-	resp.Write(r.conn) // write the response to the connection
+	err = resp.Write(r.conn) // write the response to the connection
 	r.timing.Stop()
 	if err != nil {
 		return fmt.Errorf("connection write: %w", err)
@@ -118,7 +118,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	m.SendResponse(r)
 
 	r.timing.Start(timing.TimeWriteResponse)
-	r.resp.Write(tlsconn) // write the response to the TLS connection
+	err = r.resp.Write(tlsconn) // write the response to the TLS connection
 	r.timing.Stop()
 	if err != nil {
 		return fmt.Errorf("tls connection write: %w", err)

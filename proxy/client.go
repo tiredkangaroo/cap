@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	nethttp "net/http"
+
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/websocket"
 )
@@ -33,7 +35,8 @@ type IDMessage struct {
 	ID string `json:"id"`
 }
 
-func (c *Manager) AcceptWS(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
+// since the control server uses nethttp, we use nethttp accept ws
+func (c *Manager) AcceptWS(w nethttp.ResponseWriter, r *nethttp.Request) (*websocket.Conn, error) {
 	conn, err := websocket.AcceptHTTP(w, r)
 	if err != nil {
 		return nil, err
