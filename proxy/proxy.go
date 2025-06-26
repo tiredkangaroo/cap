@@ -94,7 +94,7 @@ func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
 		}
 
 		go func() {
-			defer req.Body.Close()
+			defer req.Body.CloseBody()
 			c.ServeHTTP(conn, req)
 		}()
 	}

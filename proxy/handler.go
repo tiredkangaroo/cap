@@ -45,6 +45,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	} else {
 		slog.Debug("saved request body", "id", r.reqBodyID)
 	}
+	fmt.Println("48", string(marshal(req)))
 	m.SendRequest(r)
 
 	// perform the request

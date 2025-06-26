@@ -11,6 +11,11 @@ import (
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/bigproxy/proxy/work"
+
+	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/ext/blobio"
 )
 
 // NOTE: bytes transferred
@@ -82,7 +87,7 @@ func (d *Database) Init(dirname string) error {
 
 	var err error
 
-	d.b, err = sql.Open("sqlite", fmt.Sprintf("file:%s/cap.db?cache=shared&_journal_mode=WAL", dirname))
+	d.b, err = driver.Open(fmt.Sprintf("file:%s/cap.db?cache=shared&_journal_mode=WAL", dirname), blobio.Register)
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}
@@ -139,7 +144,7 @@ func (d *Database) scanSingleRequest(row interface {
 	err := row.Scan(
 		&req.ID,
 		&req.Secure,
-		&req.Datetime,
+		sqlite3.TimeFormat4.Scanner(&req.Datetime),
 		&req.Host,
 		&req.ClientIP,
 		&req.ClientAuthorization,
@@ -351,7 +356,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	args := []any{
 		req.ID,
 		req.Secure,
-		req.Datetime,
+		sqlite3.TimeFormat4.Encode(req.Datetime),
 		req.Host,
 		req.ClientIP,
 		req.ClientAuthorization,
@@ -433,27 +438,28 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	return nil
 }
 
-// func (d *Database) SaveBody(id string, body *http.Body) error {
-// 	cl := body.ContentLength()
-// 	if cl == 0 {
-// 		_, err := d.Exec(`INSERT INTO bodies (id, body) VALUES (?, ?)`, id, []byte{})
-// 		return err
-// 	}
-// 	query := `INSERT INTO bodies (id, body) VALUES (?, zeroblob(?));`
-// 	_, err := d.Exec(query, id, body.ContentLength())
-// 	if err != nil {
-// 		return fmt.Errorf("save body: %w", err)
-// 	}
-// 	conn, err := d.b.Conn(context.Background())
-// 	if err != nil {
-// 		return fmt.Errorf("save body: get connection: %w", err)
-// 	}
-// 	defer conn.Close()
+func (d *Database) SaveBody(id string, body *http.Body) error {
+	cl := body.ContentLength()
+	if cl == 0 {
+		_, err := d.Exec(`INSERT INTO bodies (id, body) VALUES (?, ?)`, id, []byte{})
+		return err
+	}
+	query := `INSERT INTO bodies (id, body) VALUES (:id, :cl);`
+	res, err := d.Exec(query, sql.Named("id", id), sql.Named("cl", sqlite3.ZeroBlob(cl)))
+	if err != nil {
+		return fmt.Errorf("save body: %w", err)
+	}
+	rowid, _ := res.LastInsertId()
 
-// 	var blobWriter *sqlite3.SQLiteBlob
-
-// 	return nil
-// }
+	_, err = d.Exec(
+		`SELECT writeblob('main', 'bodies', 'body', :rowid, :offset, :message)`,
+		sql.Named("rowid", rowid), sql.Named("offset", 0), sql.Named("message", sqlite3.Pointer(body)),
+	)
+	if err != nil {
+		return fmt.Errorf("save body: writeblob: %w", err)
+	}
+	return nil
+}
 
 func NewDatabase() *Database {
 	return &Database{workerpool: work.NewWorkerPool(1)}

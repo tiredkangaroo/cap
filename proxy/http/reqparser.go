@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrProtocolError              = errors.New("protocol error: invalid HTTP request")
+	ErrProtocolError              = errors.New("protocol error: invalid HTTP request/response")
 	ErrMissingHostHeader          = errors.New("missing Host header in HTTP request")
 	ErrContentLengthInvalid       = errors.New("invalid Content-Length header in HTTP request")
 	ErrMissingContentLengthHeader = errors.New("missing Content-Length header in HTTP request")

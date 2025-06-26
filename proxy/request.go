@@ -142,6 +142,7 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager) (*http.Response, error) {
+	fmt.Println(r)
 	// NOTE: these should be sub times where Perform is the major time
 	r.timing.Start(timing.TimePrepRequest)
 

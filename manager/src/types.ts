@@ -53,12 +53,12 @@ export interface Request {
     path?: string;
     query?: Record<string, Array<string>>;
     headers?: Record<string, Array<string>>;
-    body: string | null;
+    bodyID?: string;
 
     response?: {
         statusCode?: number;
         headers?: Record<string, Array<string>>;
-        body: string | null;
+        bodyID?: string;
     };
 
     bytesTransferred?: number;
