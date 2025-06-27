@@ -69,12 +69,12 @@ export function IncomingView(props: {
         };
         h();
     }, [
+        requests,
         pageNumber,
         freeze,
         resultsPerPage,
         props.proxy,
         props.proxy.loaded,
-        requests,
         filter,
     ]);
 
@@ -151,7 +151,11 @@ export function IncomingView(props: {
                                         const idx = requests.findIndex(
                                             (v) => v.id === req.id,
                                         );
-                                        newRequests[idx] = req;
+                                        if (idx === -1) {
+                                            newRequests.push(req);
+                                        } else {
+                                            newRequests[idx] = req;
+                                        }
                                         setRequests(newRequests);
                                     }}
                                     open={
@@ -499,6 +503,17 @@ async function getCurrentlyShownRequests(
     filter: Record<string, string | undefined>,
     // currentlyShownRequests, totalPages, totalResults
 ): Promise<[Array<Request>, number, number]> {
+    const loadedRequestBodies: Record<string, string> = {};
+    const loadedResponseBodies: Record<string, string> = {};
+    requests.forEach((r) => {
+        if (r.tempBody) {
+            loadedRequestBodies[r.id] = r.tempBody;
+        }
+        if (r.response!.tempBody) {
+            loadedResponseBodies[r.id] = r.response!.tempBody;
+        }
+    });
+
     let dbCurrentlyShownRequests: Array<Request> = [];
     let dbTotalPages = 0;
     let dbTotalCount = 0;
@@ -529,11 +544,24 @@ async function getCurrentlyShownRequests(
     const currentlyShownRequests = [
         // using map elimnates id dups
         ...new Map(
-            [...dbCurrentlyShownRequests, ...localCurrentlyShownRequests].map(
+            [...localCurrentlyShownRequests, ...dbCurrentlyShownRequests].map(
                 (obj) => [obj.id, obj],
             ),
         ).values(),
     ];
+
+    Object.keys(loadedRequestBodies).forEach((id) => {
+        const request = currentlyShownRequests.find((r) => r.id === id);
+        if (request) {
+            request.tempBody = loadedRequestBodies[id];
+        }
+    });
+    Object.keys(loadedResponseBodies).forEach((id) => {
+        const request = currentlyShownRequests.find((r) => r.id === id);
+        if (request) {
+            request.response!.tempBody = loadedResponseBodies[id];
+        }
+    });
 
     currentlyShownRequests.sort((a, b) => {
         const dateA = new Date(a.datetime).getTime();

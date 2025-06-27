@@ -45,6 +45,28 @@ export class Proxy {
         return respJSON;
     }
 
+    async getRequestBody(id: string): Promise<string> {
+        const response = await fetch(`${this.url}/reqbody/${id}`);
+        if (!response.ok) {
+            throw new Error(
+                `failed to fetch request body: ${response.statusText}`,
+            );
+        }
+        const body = await response.text();
+        return body;
+    }
+
+    async getResponseBody(id: string): Promise<string> {
+        const response = await fetch(`${this.url}/respbody/${id}`);
+        if (!response.ok) {
+            throw new Error(
+                `failed to fetch response body: ${response.statusText}`,
+            );
+        }
+        const body = await response.text();
+        return body;
+    }
+
     async getRequestsWithFilter(
         filter: Record<string, string | undefined>,
         offset: number,
@@ -139,10 +161,12 @@ export class Proxy {
         req.headers = newrequest.headers;
         req.path = newrequest.path;
         req.query = newrequest.query;
-        req.body = newrequest.body;
         req.response = newrequest.response;
+        req.tempBody = newrequest.tempBody;
 
         this.clientWS.updateRequest(newrequest);
+        console.log("here?!");
+        req.tempBody = undefined;
         this.requests[reqIndex] = req;
         this.updateCB!();
     }

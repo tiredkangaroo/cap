@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 
 	"github.com/google/uuid"
@@ -119,6 +122,13 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 	}
 
 	r.Host = req.Host
+	if _, _, err := net.SplitHostPort(req.Host); err != nil {
+		if r.Secure {
+			r.Host = req.Host + ":443" // default HTTPS port
+		} else {
+			r.Host = req.Host + ":80" // default HTTP port
+		}
+	}
 
 	r.ClientIP = r.conn.RemoteAddr().String()
 	if ip, port, err := net.SplitHostPort(r.ClientIP); err == nil {
@@ -141,18 +151,13 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 }
 
 // Perform performs the request and returns the raw response as a byte slice.
-func (r *Request) Perform(m *Manager) (*http.Response, error) {
+func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Response, error) {
 	fmt.Println(r)
 	// NOTE: these should be sub times where Perform is the major time
 	r.timing.Start(timing.TimePrepRequest)
 
 	r.req.Header.Del("Proxy-Authorization")
 	r.req.Header.Del("Proxy-Connection")
-
-	// NOTE: this is temporarily unsupported while we make some changes
-	// if config.DefaultConfig.RealIPHeader {
-	// 	// r.req.Header.Set("X-Forwarded-For", r.req.RemoteAddr)
-	// }
 
 	r.timing.Stop()
 	if config.DefaultConfig.RequireApproval {
@@ -172,23 +177,38 @@ func (r *Request) Perform(m *Manager) (*http.Response, error) {
 
 	r.timing.Start(timing.TimeDialHost)
 	fmt.Println("dialing host", r.req.Host)
-	hostc, err := net.Dial("tcp", r.req.Host)
+
+	var hostconn net.Conn
+	var err error
+	if r.Secure {
+		var sysCertPool *x509.CertPool
+		sysCertPool, err = c.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("get system cert pool: %w", err)
+		}
+		hostconn, err = tls.Dial("tcp", r.Host, &tls.Config{
+			RootCAs: sysCertPool,
+		})
+	} else {
+		hostconn, err = net.Dial("tcp", r.Host)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("dial host: %w", err)
 	}
+
 	r.timing.Stop()
 	fmt.Println("dialed host", r.req.Host)
 
 	fmt.Println("writing request to host", r.req.Host)
 	r.timing.Start(timing.TimeWriteRequest)
-	if err := r.req.Write(hostc); err != nil {
+	if err := r.req.Write(hostconn); err != nil {
 		return nil, fmt.Errorf("write request: %w", err)
 	}
 	r.timing.Stop()
 	fmt.Println("wrote request to host", r.req.Host)
 
 	fmt.Println("reading response")
-	return http.ReadResponse(hostc)
+	return http.ReadResponse(hostconn)
 }
 
 func (r *Request) BytesTransferred() int64 {
@@ -212,14 +232,18 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 		"clientAuthorization": r.ClientAuthorization,
 		"host":                r.Host,
 
-		"method":  r.req.Method.String(),
-		"path":    r.req.Path,
-		"query":   r.req.Query,
-		"headers": r.req.Header,
+		"method":     r.req.Method.String(),
+		"path":       r.req.Path,
+		"query":      r.req.Query,
+		"headers":    r.req.Header,
+		"bodyID":     r.reqBodyID,
+		"bodyLength": r.req.ContentLength,
 
 		"response": map[string]any{
 			"statusCode": r.resp.StatusCode,
 			"headers":    r.resp.Header,
+			"bodyID":     r.respBodyID,
+			"bodyLength": r.resp.ContentLength,
 		},
 
 		"state":        state,
@@ -228,3 +252,5 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 		"timing_total": r.timing.Total(),
 	})
 }
+
+// func dial(host string) (net.Conn, error) {}

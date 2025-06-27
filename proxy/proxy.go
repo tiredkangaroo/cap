@@ -35,7 +35,7 @@ func (c *ProxyHandler) serveAfterInit(req *Request, r *http.Request) {
 		err = req.handleHTTPS(c.m, c.certifcates)
 	} else {
 		// we're handling an HTTP connection here, HTTP connections send the full request to the proxy, so we actually do need this request here
-		err = req.handleHTTP(c.m, r)
+		err = req.handleHTTP(c.m, r, c.certifcates)
 	}
 
 	if errors.Is(err, ErrPerformStop) { // ignore PerformStop errors and don't send a control message

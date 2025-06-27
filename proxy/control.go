@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net"
 
 	nethttp "net/http"
 	_ "net/http/pprof"
@@ -94,8 +95,6 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 	})
 
 	mux.HandleFunc("GET /reqbody/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
-		setCORSHeaders(w)
-
 		id := r.PathValue("id")
 		if id == "" {
 			w.WriteHeader(nethttp.StatusBadRequest)
@@ -114,6 +113,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		defer conn.Close()
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
 		conn.Write([]byte("Content-Type: text/plain\r\n"))
+		writeRawCORSHeaders(conn)
 		err = m.db.WriteRequestBody(id, NewNoOpCloser(conn))
 		if err != nil {
 			w.WriteHeader(nethttp.StatusInternalServerError)
@@ -124,8 +124,6 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 	})
 
 	mux.HandleFunc("GET /respbody/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
-		setCORSHeaders(w)
-
 		id := r.PathValue("id")
 		if id == "" {
 			w.WriteHeader(nethttp.StatusBadRequest)
@@ -144,6 +142,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		defer conn.Close()
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
 		conn.Write([]byte("Content-Type: text/plain\r\n"))
+		writeRawCORSHeaders(conn)
 		err = m.db.WriteResponseBody(id, NewNoOpCloser(conn))
 		if err != nil {
 			w.WriteHeader(nethttp.StatusInternalServerError)
@@ -262,4 +261,14 @@ func setCORSHeaders(w nethttp.ResponseWriter) {
 	w.Header().Set("Access-Control-Request-Method", "POST, GET, OPTIONS")
 	w.Header().Set("Access-Control-Max-Age", "300")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func writeRawCORSHeaders(c net.Conn) {
+	if !config.DefaultConfig.Debug {
+		return
+	}
+	c.Write([]byte("Access-Control-Allow-Origin: *\r\n"))
+	c.Write([]byte("Access-Control-Request-Method: POST, GET, OPTIONS\r\n"))
+	c.Write([]byte("Access-Control-Max-Age: 300\r\n"))
+	c.Write([]byte("Access-Control-Allow-Headers: Content-Type\r\n"))
 }

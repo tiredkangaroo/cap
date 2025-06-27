@@ -109,10 +109,12 @@ func (d *Database) Init(dirname string) error {
 		reqQuery BLOB NOT NULL,
 		reqHeaders BLOB NOT NULL,
 		reqBodyID TEXT NOT NULL,
+		reqBodySize INTEGER NOT NULL,
 
 		respStatusCode INTEGER NOT NULL,
 		respHeaders BLOB NOT NULL,
 		respBodyID TEXT NOT NULL,
+		respBodySize INTEGER NOT NULL,
 
 		timing BLOB NOT NULL,
 		error TEXT
@@ -155,9 +157,11 @@ func (d *Database) scanSingleRequest(row interface {
 		&reqQueryRaw,
 		&reqHeadersRaw,
 		&req.reqBodyID,
+		&req.req.ContentLength,
 		&req.resp.StatusCode,
 		&respHeadersRaw,
 		&req.respBodyID,
+		&req.resp.ContentLength,
 		&timingDataRaw,
 		&errorText,
 	)
@@ -182,6 +186,9 @@ func (d *Database) scanSingleRequest(row interface {
 	} else {
 		req.errorText = ""
 	}
+	req.reqBodyID = req.ID + "-req-body"
+	req.respBodyID = req.ID + "-resp-body"
+
 	return req, nil
 }
 
@@ -199,9 +206,11 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 		reqQuery,
 		reqHeaders,
 		reqBodyID,
+		reqBodySize,
 		respStatusCode,
 		respHeaders,
 		respBodyID,
+		respBodySize,
 		timing,
 		error
 	FROM requests WHERE id = ?`
@@ -276,9 +285,11 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 		reqQuery,
 		reqHeaders,
 		reqBodyID,
+		reqBodySize,
 		respStatusCode,
 		respHeaders,
 		respBodyID,
+		respBodySize,
 		timing,
 		error
 	FROM requests`
@@ -375,7 +386,8 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		reqPath,
 		reqHeaders,
 		reqQuery,
-		reqBodyID`
+		reqBodyID,
+		reqBodySize`
 	if req.req != nil {
 		args = append(args,
 			req.req.Method,
@@ -383,6 +395,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 			marshal(req.req.Header),
 			marshal(req.req.Query),
 			req.reqBodyID,
+			req.req.ContentLength,
 		)
 	} else {
 		args = append(args,
@@ -397,12 +410,14 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	query += `,
 		respStatusCode,
 		respHeaders,
-		respBodyID`
+		respBodyID,
+		respBodySize`
 	if req.resp != nil {
 		args = append(args,
 			req.resp.StatusCode,
 			marshal(req.resp.Header),
 			req.respBodyID,
+			req.resp.ContentLength,
 		)
 	} else {
 		args = append(args,
@@ -483,11 +498,14 @@ func (d *Database) WriteResponseBody(id string, writer io.Writer) error {
 func (d *Database) readBlobToWriterWithRowID(row *sql.Row, writer io.Writer) error {
 	var rowid int64
 	var length int64
-	row.Scan(&rowid, &length)
+	err := row.Scan(&rowid, &length)
+	if err != nil {
+		return fmt.Errorf("read blob to writer: scan row: %w", err)
+	}
 	writer.Write(fmt.Appendf([]byte{}, "Content-Length: %d\r\n\r\n", length))
 
 	query := `SELECT readblob('main', 'bodies', 'body', :rowid, :offset, :writer);`
-	_, err := d.Exec(query, sql.Named("rowid", rowid), sql.Named("offset", 0), sql.Named("writer", sqlite3.Pointer(writer)))
+	_, err = d.Exec(query, sql.Named("rowid", rowid), sql.Named("offset", 0), sql.Named("writer", sqlite3.Pointer(writer)))
 	if err != nil {
 		return fmt.Errorf("write request body: %w", err)
 	}

@@ -71,6 +71,7 @@ func (c *Manager) SendRequest(req *Request) {
 		"path":             req.req.Path,
 		"query":            req.req.Query,
 		"headers":          req.req.Header,
+		"bodyLength":       req.req.ContentLength,
 		"bytesTransferred": req.BytesTransferred(),
 	})
 }
@@ -80,6 +81,7 @@ func (c *Manager) SendResponse(req *Request) {
 		"id":         req.ID,
 		"statusCode": req.resp.StatusCode,
 		"headers":    req.resp.Header,
+		"bodyLength": req.resp.ContentLength,
 	})
 }
 

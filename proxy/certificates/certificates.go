@@ -34,6 +34,8 @@ type Certificates struct {
 	// (1) when the entry for a given key is only ever written once but read many times,
 	// as in caches that only grow [...]."
 	cache sync.Map
+
+	sysCertPool *x509.CertPool
 }
 
 // Init initializes the Certificates struct by reading the CA certificate from the
@@ -74,6 +76,11 @@ func (c *Certificates) Init(dirname string) error {
 	c.caKey, err = x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
 		return fmt.Errorf("parse key: %w", err)
+	}
+
+	c.sysCertPool, err = x509.SystemCertPool()
+	if err != nil {
+		return fmt.Errorf("get system cert pool (cannot make HTTPS connections): %w", err)
 	}
 
 	return nil
@@ -171,4 +178,11 @@ func (c *Certificates) TLSConn(conn net.Conn, host string) (*tls.Conn, error) {
 		Certificates:             []tls.Certificate{cert},
 	}
 	return tls.Server(conn, tlsConfig), nil
+}
+
+func (c *Certificates) SystemCertPool() (*x509.CertPool, error) {
+	if c.sysCertPool == nil {
+		return nil, fmt.Errorf("system cert pool not initialized or may have failed to initialize (help: restart certificates)")
+	}
+	return c.sysCertPool, nil
 }

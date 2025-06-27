@@ -50,7 +50,9 @@ export function RequestView(props: {
         <Collapsible
             className="border-b border-gray-300"
             open={props.open}
-            onOpenChange={(o) => props.setOpen(o)}
+            onOpenChange={(o) => {
+                props.setOpen(o);
+            }}
         >
             <CollapsibleTrigger className="w-full bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors">
                 <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
@@ -237,16 +239,26 @@ export function RequestView(props: {
                         <>
                             <BodyView
                                 request={props.request}
-                                headers={props.request.headers}
-                                body={props.request.body}
+                                isRequestBody={true}
                                 hide={false}
                                 editMode={editMode}
                                 setValue={(v: string) =>
                                     props.setRequest({
                                         ...props.request,
-                                        body: v,
+                                        tempBody: v,
                                     })
                                 }
+                                loadBody={async () => {
+                                    const body =
+                                        await props.proxy.getRequestBody(
+                                            props.request.id,
+                                        );
+                                    console.log(body);
+                                    props.setRequest({
+                                        ...props.request,
+                                        tempBody: body,
+                                    });
+                                }}
                             />
                         </>
                     )}
@@ -290,19 +302,30 @@ export function RequestView(props: {
                         <>
                             <BodyView
                                 request={props.request}
-                                headers={props.request.response?.headers}
-                                body={props.request.response?.body}
+                                isRequestBody={false}
                                 hide={false}
                                 editMode={editMode}
                                 setValue={(v: string) =>
                                     props.setRequest({
                                         ...props.request,
                                         response: {
-                                            ...props.request.response!,
-                                            body: v,
+                                            tempBody: v,
                                         },
                                     })
                                 }
+                                loadBody={async () => {
+                                    const body =
+                                        await props.proxy.getResponseBody(
+                                            props.request.id,
+                                        );
+                                    console.log(body);
+                                    props.setRequest({
+                                        ...props.request,
+                                        response: {
+                                            tempBody: body,
+                                        },
+                                    });
+                                }}
                             />
                         </>
                     )}
@@ -683,17 +706,32 @@ function ShowHideFieldView(props: {
 // NOTE: make body not in Request by default (must be loaded by call to server)
 function BodyView(props: {
     request: Request;
-    body: string | null | undefined;
-    headers?: Record<string, Array<string>>;
+    isRequestBody?: boolean;
     hide: boolean;
     editMode: boolean;
     setValue?: (v: string) => void;
+    loadBody: () => void;
 }) {
-    const bodyBytes =
-        props.body != null && props.body != undefined ? props.body.length : 0;
-    const [showBody, setShowBody] = useState<boolean>(
-        bodyBytes == 0 ? true : false,
-    );
+    const headers = props.isRequestBody
+        ? props.request.headers
+        : props.request.response?.headers;
+    const bodyBytes = props.isRequestBody
+        ? props.request.bodyLength
+        : props.request.response?.bodyLength || 0;
+    const [showBody, setShowBody] = useState<boolean>(false);
+
+    const tempBody = props.isRequestBody
+        ? props.request.tempBody
+        : props.request.response?.tempBody;
+
+    function setTempBody(v: string | undefined) {
+        if (props.isRequestBody) {
+            props.request.tempBody = v;
+        } else {
+            props.request.response!.tempBody = v;
+        }
+        props.setValue?.(v!);
+    }
 
     if (props.hide) {
         return <></>;
@@ -701,23 +739,38 @@ function BodyView(props: {
 
     return (
         <div className="mb-2 text-lg w-full">
-            <button
-                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mt-2 disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
-                disabled={!props.body}
-                onClick={() =>
-                    downloadBody(
-                        props.request.id,
-                        props.body,
-                        props.headers?.["Content-Type"]?.[0],
-                    )
-                }
-            >
-                Download Body
-            </button>
+            <div className="flex flex-row gap-6">
+                <button
+                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mt-2 disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
+                    disabled={bodyBytes == 0}
+                    onClick={() =>
+                        downloadBody(
+                            props.request.id,
+                            tempBody,
+                            headers?.["Content-Type"]?.[0],
+                        )
+                    }
+                >
+                    Download Body
+                </button>
+                <button
+                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mt-2 disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
+                    disabled={bodyBytes == 0}
+                    onClick={() => {
+                        if (tempBody) {
+                            setTempBody(undefined);
+                        } else {
+                            props.loadBody();
+                        }
+                    }}
+                >
+                    {tempBody == undefined ? "Load" : "Unload"}
+                </button>
+            </div>
             <div className="flex flex-row items-center mt-1 mb-2">
                 <b className="">Body ({bodyBytes} bytes)</b>
                 <div className="ml-4 flex flex-row">
-                    {bodyBytes != 0 ? (
+                    {tempBody ? (
                         <>
                             <button
                                 className="text-md pl-3 pr-3 bg-gray-600 dark:bg-gray-300 text-white dark:text-black mr-4"
@@ -732,8 +785,8 @@ function BodyView(props: {
                 </div>
             </div>
             <BodyContentView
-                contentType={props.headers?.["Content-Type"]?.[0]}
-                body={props.body}
+                contentType={headers?.["Content-Type"]?.[0]}
+                body={tempBody}
                 editMode={props.editMode}
                 showBody={showBody}
                 setValue={props.setValue!}
@@ -750,7 +803,6 @@ function BodyContentView(props: {
     showBody?: boolean;
     setValue: (v: string) => void;
 }) {
-    console.log(props.body);
     if (!props.body || !props.showBody) {
         return <></>;
     }

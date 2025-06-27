@@ -38,7 +38,7 @@ var (
 // proxy is the one meant for the host. The only prep we need to do is strip proxy
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
-func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
+func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certificates) error {
 	r.req = req
 	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
 		slog.Error("save request body: %w", "err", err)
@@ -48,7 +48,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	m.SendRequest(r)
 
 	// perform the request
-	resp, err := r.Perform(m)
+	resp, err := r.Perform(m, c)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -122,8 +122,13 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	m.SendRequest(r)
 	fmt.Println("performing request")
+	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
+		slog.Error("save request body: %w", "err", err)
+	} else {
+		slog.Debug("saved request body", "id", r.reqBodyID)
+	}
 
-	resp, err := r.Perform(m)
+	resp, err := r.Perform(m, c)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
@@ -132,6 +137,11 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	fmt.Println("sending response")
 	m.SendResponse(r)
+	if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
+		slog.Error("save response body: %w", "err", err)
+	} else {
+		slog.Debug("saved response body", "id", r.reqBodyID)
+	}
 
 	fmt.Println("writing response")
 	r.timing.Start(timing.TimeWriteResponse)
@@ -144,6 +154,8 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 
 	return nil
 }
+
+// NOTE: handleNoMITM is falling out of support rn, gotta fix ts
 
 // handleNoMITM handles an HTTPS connection without man-in-the-middling it. It just establishes a secure
 // tunnel.

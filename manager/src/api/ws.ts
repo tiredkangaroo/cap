@@ -96,7 +96,8 @@ export class ClientWS {
                     path: string;
                     query: Record<string, Array<string>>;
                     headers: Record<string, Array<string>>;
-                    body: string | null;
+                    bodyID: string;
+                    bodyLength: number;
                     bytesTransferred: number;
                 };
                 const requestIndex = requests.findIndex(
@@ -109,7 +110,7 @@ export class ClientWS {
                     request.path = data.path;
                     request.query = data.query;
                     request.headers = data.headers;
-                    request.body = data.body;
+                    request.bodyLength = data.bodyLength;
                     request.bytesTransferred = data.bytesTransferred;
                     requests[requestIndex] = request;
                 } else {
@@ -137,7 +138,8 @@ export class ClientWS {
                     id: string;
                     statusCode: number;
                     headers: Record<string, Array<string>>;
-                    body: string | null;
+                    bodyID: string;
+                    bodyLength: number;
                 };
                 const requestIndex = requests.findIndex(
                     (r) => r.id === data.id,
@@ -147,7 +149,7 @@ export class ClientWS {
                     request.response = {
                         statusCode: data.statusCode,
                         headers: data.headers,
-                        body: data.body,
+                        bodyLength: data.bodyLength,
                     };
                     requests[requestIndex] = request;
                 } else {
