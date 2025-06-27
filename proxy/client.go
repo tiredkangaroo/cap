@@ -14,6 +14,7 @@ import (
 	nethttp "net/http"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
+	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 	"github.com/tiredkangaroo/websocket"
 )
 
@@ -113,6 +114,8 @@ func (c *Manager) SendError(req *Request, err error) {
 // RecieveApproval waits for an approval request from the client. It blocks until the client approves or cancels the request.
 // If the client approves, it returns true, otherwise it returns false.
 func (c *Manager) RecieveApproval(req *Request) (approved bool) {
+	req.timing.Substart(timing.SubtimeWaitApproval)
+	defer req.timing.Substop()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c.approvalWaitersRWMu.Lock()

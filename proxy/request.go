@@ -88,9 +88,9 @@ type Request struct {
 	approveResponseFunc func(approved bool)
 }
 
-func (r *Request) Init(conn net.Conn, req *http.Request) error {
+func (r *Request) Init(conn net.Conn, req *http.Request, t *timing.Timing) error {
 	r.Secure = req.Method == http.MethodConnect
-	r.timing = timing.New()
+	r.timing = t
 
 	// possibly being deprecated, idk
 	if r.Secure && config.DefaultConfig.MITM {
@@ -100,9 +100,6 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 	} else {
 		r.Kind = 0 // HTTP
 	}
-
-	r.timing.Start(timing.TimeRequestInit)
-	defer r.timing.Stop()
 
 	r.Datetime = time.Now()
 
@@ -152,30 +149,27 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Response, error) {
-	// NOTE: these should be sub times where Perform is the major time
-	r.timing.Start(timing.TimePrepRequest)
-
+	r.timing.Start(timing.TimePerformRequest)
+	defer r.timing.Stop()
 	r.req.Header.Del("Proxy-Authorization")
 	r.req.Header.Del("Proxy-Connection")
 
-	r.timing.Stop()
 	if config.DefaultConfig.RequireApproval {
-		r.timing.Start(timing.TimeWaitApproval)
+		r.timing.Substart(timing.SubtimeWaitApproval)
 		if !m.RecieveApproval(r) {
 			return nil, ErrPerformStop
 		}
-		r.timing.Stop()
+		r.timing.Substop()
 	}
 
 	if config.DefaultConfig.PerformDelay != 0 {
-		r.timing.Start(timing.TimeDelayPeform)
+		r.timing.Substart(timing.SubtimeDelayPerform)
 		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
 		time.Sleep(duration)
-		r.timing.Stop()
+		r.timing.Substop()
 	}
 
-	r.timing.Start(timing.TimeDialHost)
-
+	r.timing.Substart(timing.SubtimeDialHost)
 	var hostconn net.Conn
 	var err error
 	if r.Secure {
@@ -193,16 +187,22 @@ func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Respon
 	if err != nil {
 		return nil, fmt.Errorf("dial host: %w", err)
 	}
+	r.timing.Substop()
 
-	r.timing.Stop()
-
-	r.timing.Start(timing.TimeWriteRequest)
+	r.timing.Substart(timing.SubtimeWriteRequest)
 	if err := r.req.Write(hostconn); err != nil {
 		return nil, fmt.Errorf("write request: %w", err)
 	}
-	r.timing.Stop()
+	r.timing.Substop()
 
-	return http.ReadResponse(hostconn)
+	r.timing.Substart(timing.SubtimeReadResponse)
+	resp, err := http.ReadResponse(hostconn)
+	r.timing.Substop()
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+	r.resp = resp
+	return r.resp, nil
 }
 
 func (r *Request) BytesTransferred() int64 {

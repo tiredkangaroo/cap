@@ -10,30 +10,80 @@ type Time string
 type Subtime string
 
 const (
-	TimeNone        Time = ""
+	// invalid
+	TimeNone Time = ""
+
+	// HTTP: read proxy request -> init -> save request body -> perform request -> save response body -> write response
+	// HTTPS (no MITM): read proxy request -> init -> send 200 -> wait approval -> delay perform -> tunnel
+	// HTTPS (MITM): read proxy request -> init -> send 200 -> cert gen + handshake -> read request -> save request body -> perform request -> save response body -> write response
+
+	// TimeReadProxyRequest is the time taken to read the request to the proxy. For HTTP connections, this is the only
+	// read request, since the request is sent in full to the proxy. For HTTPS connections, this is the time taken to
+	// read the CONNECT request.
+	TimeReadProxyRequest Time = "Read Proxy Request"
+	// TimeRequestInit is the time taken to initialize the proxy request.
 	TimeRequestInit Time = "Request Init"
 
-	TimePrepRequest   = "Prep Request"
-	TimeWaitApproval  = "Wait Approval"
-	TimeDelayPeform   = "Perform Delay"
-	TimeWriteRequest  = "Write Request"
-	TimeReadRequest   = "Read Response"
-	TimeWriteResponse = "Write Response"
+	// TimeSaveRequestBody is the time taken to save the request body to the database.
+	TimeSaveRequestBody Time = "Save Request Body"
+	// TimePerformRequest is the time taken to perform the request.
+	TimePerformRequest Time = "Perform Request"
+	// TimeSaveResponseBody is the time taken to save the response body to the database.
+	TimeSaveResponseBody Time = "Save Response Body"
+	// TimeWriteResponse is the time taken to write the response to the connection.
+	TimeWriteResponse Time = "Write Response"
 
-	TimeProxyResponse   = "Proxy Response"
-	TimeDialHost        = "Dial Host"
-	TimeReadWriteTunnel = "Read/Write Tunnel"
+	// TimeSendProxyResponse is the time taken to send a response to the client. This is used for HTTPS connections
+	// where the proxy sends a 200 OK response to the client before establishing a secure tunnel.
+	TimeSendProxyResponse Time = "Send Proxy Response"
 
-	TimeCertGenTLSHandshake = "Cert Gen + TLS Handshake"
-	TimeReadParseRequest    = "Read/Parse Request"
+	// TimeWaitApproval is the time taken to wait for approval from the client. This should only be used for tunnel requests
+	// since they don't call Perform.
+	TimeWaitApproval Time = "Wait Approval"
+	// TimeDelayPerform is the time taken to delay the request before performing it. This should only
+	// be used for tunnel requests since they don't call Perform.
+	TimeDelayPerform Time = "Perform Delay"
+	// TimeTunnel is the time taken in the tunnel.
+	TimeTunnel Time = "Tunnel"
+
+	// TimeCertGenTLSHandshake is the time taken to generate a certificate and perform a TLS handshake. This is used for
+	// HTTPS connections where the proxy is acting as the intended host (MITM).
+	TimeCertGenTLSHandshake Time = "Cert Gen + TLS Handshake"
+	// TimeReadRequest is the time taken to read the request from the client after the TLS handshake. This is used for HTTPS
+	// connections where the proxy is acting as the intended host (MITM).
+	TimeReadRequest Time = "Read Request"
+
+	// TimePrepRequest   = "Prep Request"
+	// TimeWaitApproval  = "Wait Approval"
+	// TimeDelayPeform   = "Perform Delay"
+	// TimeWriteRequest  = "Write Request"
+	// TimeReadRequest   = "Read Response"
+	// TimeWriteResponse = "Write Response"
+
+	// TimeProxyResponse   = "Proxy Response"
+	// TimeDialHost        = "Dial Host"
+	// TimeReadWriteTunnel = "Read/Write Tunnel"
+
+	// TimeCertGenTLSHandshake = "Cert Gen + TLS Handshake"
+	// TimeReadParseRequest    = "Read/Parse Request"
 
 	TimeTotal = "Total"
 )
 
 const (
-	SubtimeNone                 Subtime = ""
+	SubtimeNone Subtime = ""
+
+	// Init
 	SubtimeUUID                 Subtime = "UUID Generation"
 	SubtimeGetClientProcessInfo Subtime = "Client Process Info"
+
+	// Perform
+	SubtimeWaitApproval Subtime = "Wait Approval"
+	SubtimeDelayPerform Subtime = "Perform Delay"
+	// SubtimeDialHost includes the time taken to dial the host for both HTTP and HTTPS (TLS) connections.
+	SubtimeDialHost     Subtime = "Dial Host"
+	SubtimeWriteRequest Subtime = "Write Request"
+	SubtimeReadResponse Subtime = "Read Response"
 )
 
 type MinorTime struct {

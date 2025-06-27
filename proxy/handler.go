@@ -39,12 +39,19 @@ var (
 // headers. The proxy will then perform the request to the host and send the response
 // back to the client.
 func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certificates) error {
+	// HTTP requests send the full request to the proxy, so this is the request we want to perform
 	r.req = req
+
+	// save the request body to the database
+	r.timing.Start(timing.TimeSaveRequestBody)
 	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
 		slog.Error("save request body: %w", "err", err)
 	} else {
 		slog.Debug("saved request body", "id", r.reqBodyID)
 	}
+	r.timing.Stop()
+
+	// send request to live websocket connections
 	m.SendRequest(r)
 
 	// perform the request
@@ -52,15 +59,20 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certi
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
-	r.resp = resp
 
+	// send response to live websocket connections
 	m.SendResponse(r)
+
+	// save the response body to the database
+	r.timing.Start(timing.TimeSaveResponseBody)
 	if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
 		slog.Error("save response body: %w", "err", err)
 	} else {
 		slog.Debug("saved response body", "id", r.reqBodyID)
 	}
+	r.timing.Stop()
 
+	// write the response to the connection
 	r.timing.Start(timing.TimeWriteResponse)
 	err = resp.Write(r.conn) // write the response to the connection
 	r.timing.Stop()
@@ -82,7 +94,7 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certi
 // (5) The proxy sends the response back to the client.
 func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	// write a success response to the client (this is meant to be the last thing before the secure tunnel is expected)
-	r.timing.Start(timing.TimeProxyResponse)
+	r.timing.Start(timing.TimeSendProxyResponse)
 	_, err := r.conn.Write(ResponseRawSuccess)
 	r.timing.Stop()
 	if err != nil {
@@ -96,7 +108,9 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 
 	// after the success response, a handshake will occur and the user will
-	// send the ACTUAL request
+	// send the ACTUAL request.
+	// we need to perform a TLS handshake with the client using the self-signed certificate for the requested host.
+	// this will allow us to read the request from the client as if we were the host.
 
 	// NOTE: consider IPV6 square bracket and how that affects the hostname
 	r.timing.Start(timing.TimeCertGenTLSHandshake)
@@ -109,6 +123,7 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 	r.timing.Stop()
 
+	// read the request from the TLS connection (this is the ACTUAL request meant for the host, which we will perform)
 	r.timing.Start(timing.TimeReadRequest)
 	req, err := http.ReadRequest(tlsconn)
 	r.timing.Stop()
@@ -117,25 +132,34 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	}
 	r.req = req
 
+	// send the request to live websocket connections
 	m.SendRequest(r)
+
+	// save the request body to the database
+	r.timing.Start(timing.TimeSaveRequestBody)
 	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
 		slog.Error("save request body: %w", "err", err)
 	} else {
 		slog.Debug("saved request body", "id", r.reqBodyID)
 	}
+	r.timing.Stop()
 
 	resp, err := r.Perform(m, c)
 	if err != nil {
 		return fmt.Errorf("perform: %w", err)
 	}
-	r.resp = resp
 
+	// send the response to live websocket connections
 	m.SendResponse(r)
-	if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
+
+	// save the response body to the database
+	r.timing.Start(timing.TimeSaveResponseBody)
+	if err := m.db.SaveBody(r.respBodyID, resp.Body); err != nil {
 		slog.Error("save response body: %w", "err", err)
 	} else {
 		slog.Debug("saved response body", "id", r.reqBodyID)
 	}
+	r.timing.Stop()
 
 	r.timing.Start(timing.TimeWriteResponse)
 	err = r.resp.Write(tlsconn) // write the response to the TLS connection
@@ -161,23 +185,22 @@ func (r *Request) handleNoMITM(m *Manager) error {
 		r.timing.Stop()
 	}
 	if config.DefaultConfig.PerformDelay != 0 {
-		r.timing.Start(timing.TimeDelayPeform)
+		r.timing.Start(timing.TimeDelayPerform)
 		duration := time.Duration(config.DefaultConfig.PerformDelay) * time.Millisecond
 		time.Sleep(duration)
 		r.timing.Stop()
 	}
 
-	r.timing.Start(timing.TimeDialHost)
+	r.timing.Start(timing.TimeTunnel)
+	defer r.timing.Stop()
 	hconn, err := net.Dial("tcp", r.Host)
 	if err != nil {
 		return fmt.Errorf("dial host: %w", err)
 	}
-	r.timing.Stop()
 
 	// me gusta context :)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	r.timing.Start(timing.TimeReadWriteTunnel)
 	m.SendTunnel(r)
 	go func() {
 		defer cancel()
@@ -196,7 +219,6 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	}()
 
 	<-ctx.Done()
-	r.timing.Stop()
 
 	return nil
 }

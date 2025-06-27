@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
+	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -18,11 +19,13 @@ type ProxyHandler struct {
 	m           *Manager
 }
 
-func (c *ProxyHandler) ServeHTTP(conn net.Conn, r *http.Request) {
+func (c *ProxyHandler) ServeHTTP(conn net.Conn, r *http.Request, t *timing.Timing) {
 	defer conn.Close()
 
 	req := new(Request)
-	req.Init(conn, r)
+	t.Start(timing.TimeRequestInit)
+	req.Init(conn, r, t)
+	t.Stop()
 
 	c.serveAfterInit(req, r)
 }
@@ -84,18 +87,21 @@ func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
 			slog.Error("failed to accept connection", "err", err.Error())
 			continue
 		}
+		t := timing.New()
 		conn := NewCustomConn(rawconn)
 
+		t.Start(timing.TimeReadProxyRequest)
 		req, err := http.ReadRequest(conn)
 		if err != nil {
 			slog.Error("failed to read request", "err", err.Error())
 			conn.Close()
 			continue
 		}
+		t.Stop()
 
 		go func() {
 			defer req.Body.CloseBody()
-			c.ServeHTTP(conn, req)
+			c.ServeHTTP(conn, req, t)
 		}()
 	}
 }
