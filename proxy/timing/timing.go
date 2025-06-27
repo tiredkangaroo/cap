@@ -53,20 +53,6 @@ const (
 	// connections where the proxy is acting as the intended host (MITM).
 	TimeReadRequest Time = "Read Request"
 
-	// TimePrepRequest   = "Prep Request"
-	// TimeWaitApproval  = "Wait Approval"
-	// TimeDelayPeform   = "Perform Delay"
-	// TimeWriteRequest  = "Write Request"
-	// TimeReadRequest   = "Read Response"
-	// TimeWriteResponse = "Write Response"
-
-	// TimeProxyResponse   = "Proxy Response"
-	// TimeDialHost        = "Dial Host"
-	// TimeReadWriteTunnel = "Read/Write Tunnel"
-
-	// TimeCertGenTLSHandshake = "Cert Gen + TLS Handshake"
-	// TimeReadParseRequest    = "Read/Parse Request"
-
 	TimeTotal = "Total"
 )
 
