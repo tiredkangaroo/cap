@@ -253,7 +253,6 @@ export function RequestView(props: {
                                         await props.proxy.getRequestBody(
                                             props.request.id,
                                         );
-                                    console.log(body);
                                     props.setRequest({
                                         ...props.request,
                                         tempBody: body,

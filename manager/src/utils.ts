@@ -40,3 +40,15 @@ export function objectToQueryString(
         )
         .join("&");
 }
+
+export function equalArray<T extends string | number>(
+    a: Array<T>,
+    b: Array<T>,
+) {
+    if (a === b) return true; // references are the same
+    if (a == null || b == null) return false; // one of them is null or undefined
+    if (a.length !== b.length) return false; // different lengths
+
+    a.every((value, idx) => value === b[idx]);
+    return true;
+}

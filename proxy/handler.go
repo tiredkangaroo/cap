@@ -168,7 +168,7 @@ func (r *Request) handleNoMITM(m *Manager) error {
 	}
 
 	r.timing.Start(timing.TimeDialHost)
-	hconn, err := net.Dial("tcp", r.req.Host)
+	hconn, err := net.Dial("tcp", r.Host)
 	if err != nil {
 		return fmt.Errorf("dial host: %w", err)
 	}

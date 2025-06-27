@@ -218,22 +218,25 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 	return d.scanSingleRequest(row)
 }
 
-func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
-	data := make(map[string]map[string]int)
+// unilateral definition of filter selects here
 
-	clientAppCounts, err := d.uniqueValuesAndCount("clientApplication")
+// GetFilterCounts returns a map of fields to filter by to their unique values in the database.
+func (d *Database) GetFilterCounts() (map[string][]string, error) {
+	data := make(map[string][]string)
+
+	clientAppCounts, err := d.uniqueValues("clientApplication")
 	if err != nil {
 		return nil, fmt.Errorf("filter counts (clientApplication): %w", err)
 	}
 	data["clientApplication"] = clientAppCounts
 
-	hostCounts, err := d.uniqueValuesAndCount("host")
+	hostCounts, err := d.uniqueValues("host")
 	if err != nil {
 		return nil, fmt.Errorf("filter counts (host): %w", err)
 	}
 	data["host"] = hostCounts
 
-	clientIPCounts, err := d.uniqueValuesAndCount("clientIP")
+	clientIPCounts, err := d.uniqueValues("clientIP")
 	if err != nil {
 		return nil, fmt.Errorf("filter counts (host): %w", err)
 	}
@@ -243,9 +246,9 @@ func (d *Database) GetFilterCounts() (map[string]map[string]int, error) {
 }
 
 // uniqueValuesAndCount returns a map of unique values for the specified column and how many time each value appears in the requests table.
-func (d *Database) uniqueValuesAndCount(by string) (map[string]int, error) {
-	data := make(map[string]int)
-	query := fmt.Sprintf(`SELECT %s, COUNT(*) AS count FROM requests GROUP BY %s ORDER BY count DESC;`, by, by)
+func (d *Database) uniqueValues(by string) ([]string, error) {
+	data := make([]string, 0, 8)
+	query := fmt.Sprintf(`SELECT %s FROM requests GROUP BY %s;`, by, by)
 	rows, err := d.Query(query)
 	if err != nil {
 		return nil, err
@@ -253,15 +256,14 @@ func (d *Database) uniqueValuesAndCount(by string) (map[string]int, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var uvalue string
-		var count int
-		err := rows.Scan(&uvalue, &count)
+		err := rows.Scan(&uvalue)
 		if err != nil {
 			return nil, err
 		}
 		if uvalue == "" {
 			continue // skip empty values, they are not useful for filtering (also empty values are not allowed in radix ui selects)
 		}
-		data[uvalue] = count
+		data = append(data, uvalue)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -399,10 +401,12 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 		)
 	} else {
 		args = append(args,
-			"",           // Method
+			0,            // Method
 			"",           // Path
 			[]byte("{}"), // Headers
+			[]byte("{}"), // Query
 			"",           // Body ID
+			0,            // Body Size
 		)
 	}
 
@@ -424,6 +428,7 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 			0,            // StatusCode
 			[]byte("{}"), // Headers
 			"",           // Body ID
+			0,            // Body Size
 		)
 	}
 

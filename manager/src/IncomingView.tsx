@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./components/ui/select";
-import { camelCaseToCapitalSpace } from "./utils";
+import { camelCaseToCapitalSpace, equalArray } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
 
@@ -53,15 +53,43 @@ export function IncomingView(props: {
         });
     }, [props.proxy]);
 
+    const dbCurrentlyShownRequests = useRef<Array<Request>>([]);
+    const dbTotalPages = useRef<number>(0);
+    const dbTotalCount = useRef<number>(0);
+
+    useEffect(() => {
+        const h = async () => {
+            try {
+                const [dbReqs, dbCount] =
+                    await props.proxy.getRequestsWithFilter(
+                        filter,
+                        0,
+                        (pageNumber + 1) * resultsPerPage,
+                    );
+                dbCurrentlyShownRequests.current = dbReqs;
+                dbTotalCount.current = dbCount;
+                dbTotalPages.current = Math.ceil(dbCount / resultsPerPage);
+            } catch (error) {
+                console.error(
+                    "error getting db currently shown requests:",
+                    error,
+                );
+            }
+        };
+        h();
+    }, [pageNumber, resultsPerPage, filter, props.proxy]);
+
     useEffect(() => {
         const h = async () => {
             await reloadCurrentlyShownRequests(
+                dbCurrentlyShownRequests.current,
+                dbTotalPages.current,
+                dbTotalCount.current,
+
                 setCurrentlyShownRequests,
                 freeze,
-                pageNumber,
                 resultsPerPage,
                 requests,
-                props.proxy,
                 filter,
                 totalPages,
                 totalResults,
@@ -221,14 +249,16 @@ export function IncomingView(props: {
 }
 
 async function reloadCurrentlyShownRequests(
+    dbCurrentlyShownRequests: Array<Request>,
+    dbTotalPages: number,
+    dbTotalCount: number,
+
     setCurrentlyShownRequests: React.Dispatch<
         React.SetStateAction<Array<Request>>
     >,
     freeze: boolean,
-    pageNumber: number,
     resultsPerPage: number,
     requests: Array<Request>,
-    proxy: Proxy,
     filter: Record<string, string | undefined>,
     totalPages: React.RefObject<number>,
     totalResults: React.RefObject<number>,
@@ -238,10 +268,12 @@ async function reloadCurrentlyShownRequests(
         return;
     }
     const [cR, tP, tC] = await getCurrentlyShownRequests(
-        pageNumber,
+        dbCurrentlyShownRequests,
+        dbTotalPages,
+        dbTotalCount,
+
         resultsPerPage,
         requests,
-        proxy,
         filter,
     );
     setCurrentlyShownRequests(cR);
@@ -364,42 +396,48 @@ function FilterSelects(props: {
     >;
 }) {
     // [filterName: {uniqueValue: # time of appearance of unique value}]
-    const [filterUniqueValuesCounts, setFilterUniqueValuesCounts] = useState<
-        Record<string, Record<string, number>>
+    const [filterUniqueValues, setFilterUniqueValues] = useState<
+        Record<string, Array<string>>
     >({});
 
+    const filterRef = useRef(props.filter);
     useEffect(() => {
-        // NOTE: name this function something more descriptive
-        const h = async () => {
-            const result = await props.proxy.getFilterCounts();
-            setFilterUniqueValuesCounts(
-                resolveWithLocalFC(props.requests, result),
-            );
-            if (Object.keys(props.filter).length === 0) {
-                props.setFilter(
-                    Object.keys(result).reduce(
-                        (acc, key) => {
-                            acc[key] = undefined;
-                            return acc;
-                        },
-                        {} as Record<string, string | undefined>,
-                    ),
-                );
-            }
-        };
-        h();
-    }, [props.proxy, props.requests, props.currentlyShownRequests]);
+        filterRef.current = props.filter;
+    }, [props.filter]);
+    async function loadUniqueValues() {
+        const remoteFilterCounts = await props.proxy.getFilterCounts();
+        const resolved = resolveWithLocalUniqueValues(
+            props.requests,
+            remoteFilterCounts,
+        );
+        setFilterUniqueValues(resolved);
+        if (
+            !equalArray(Object.keys(filterRef.current), Object.keys(resolved))
+        ) {
+            // if the filter keys are not the same as the resolved keys, reset the filter
+            const newFilter: Record<string, string | undefined> = {};
+            Object.keys(resolved).forEach((key) => {
+                newFilter[key] = filterRef.current[key];
+            });
+            props.setFilter(newFilter);
+        }
+        setTimeout(() => {
+            loadUniqueValues();
+        }, 1000);
+    }
+    useEffect(() => {
+        loadUniqueValues();
+    }, [props.filter]);
 
     return (
         <div className="flex flex-row gap-10 items-center text-black dark:text-white">
             <p>Query</p>
             {Object.entries(props.filter).map(([key, _]) => {
                 const verboseKey = camelCaseToCapitalSpace(key);
-                const uniqueValuesAndCounts = filterUniqueValuesCounts[key]; // get the unique values and counts for the current filter key
-                if (!uniqueValuesAndCounts) {
+                const uniqueValues = filterUniqueValues[key]; // get the unique values and counts for the current filter key
+                if (!uniqueValues) {
                     return <Fragment key={key}></Fragment>;
                 }
-                const uniqueValues = Object.keys(uniqueValuesAndCounts); // unique values for the current filter key
 
                 return (
                     <div className="flex flex-row gap-1 items-center" key={key}>
@@ -426,8 +464,7 @@ function FilterSelects(props: {
                                             value={key}
                                         >
                                             <div className="justify-between flex flex-row w-full">
-                                                {key} (
-                                                {uniqueValuesAndCounts[key]})
+                                                {key}
                                             </div>
                                         </SelectItem>
                                     ))}
@@ -456,78 +493,45 @@ function FilterSelects(props: {
     );
 }
 
-function resolveWithLocalFC(
+function resolveWithLocalUniqueValues(
     requests: Array<Request>,
-    filterUniqueValuesCounts: Record<string, Record<string, number>>,
-): Record<string, Record<string, number>> {
-    Object.keys(filterUniqueValuesCounts).forEach((filterKey) => {
-        const localUniqueValuesAndCounts: Record<string, number> = {};
-
-        // Add local requests counts
-        requests.forEach((request) => {
-            const value = request[filterKey as keyof Request] as
-                | string
-                | number;
-            if (value !== undefined && value !== null && value !== "") {
-                if (localUniqueValuesAndCounts[value] === undefined) {
-                    localUniqueValuesAndCounts[value] = 0;
-                }
-                localUniqueValuesAndCounts[value] += 1;
+    filterCounts: Record<string, Array<string>>,
+): Record<string, Array<string>> {
+    Object.keys(filterCounts).forEach((key) => {
+        const uniqueValues = new Set<string>(filterCounts[key]);
+        const vKey = key as "clientIP" | "host" | "clientApplication";
+        requests.forEach((req) => {
+            if (req[vKey]) {
+                uniqueValues.add(req[vKey]!);
             }
         });
-
-        Object.keys(localUniqueValuesAndCounts).forEach((localValue) => {
-            const count = localUniqueValuesAndCounts[localValue];
-            const dbCount = filterUniqueValuesCounts[filterKey][localValue];
-            if (dbCount == undefined) {
-                filterUniqueValuesCounts[filterKey][localValue] = count;
-            } else {
-                // NOTE: this can cause inaccuracy if requests isn't 100% deviated from the db
-                filterUniqueValuesCounts[filterKey][localValue] = Math.max(
-                    dbCount,
-                    count,
-                );
-            }
-        });
+        filterCounts[key] = Array.from(uniqueValues);
     });
-
-    return filterUniqueValuesCounts;
+    return filterCounts;
 }
 
 async function getCurrentlyShownRequests(
-    pageNumber: number,
+    dbCurrentlyShownRequests: Array<Request>,
+    dbTotalPages: number,
+    dbTotalCount: number,
+
     resultsPerPage: number,
 
     requests: Array<Request>,
-    proxy: Proxy,
     filter: Record<string, string | undefined>,
     // currentlyShownRequests, totalPages, totalResults
 ): Promise<[Array<Request>, number, number]> {
+    // don't unload request and response bodies that are already loaded
     const loadedRequestBodies: Record<string, string> = {};
     const loadedResponseBodies: Record<string, string> = {};
     requests.forEach((r) => {
         if (r.tempBody) {
             loadedRequestBodies[r.id] = r.tempBody;
         }
-        if (r.response!.tempBody) {
+        if (r.response && r.response.tempBody) {
             loadedResponseBodies[r.id] = r.response!.tempBody;
         }
     });
-
-    let dbCurrentlyShownRequests: Array<Request> = [];
-    let dbTotalPages = 0;
-    let dbTotalCount = 0;
-    try {
-        [dbCurrentlyShownRequests, dbTotalCount] =
-            await proxy.getRequestsWithFilter(
-                filter,
-                0,
-                (pageNumber + 1) * resultsPerPage,
-            );
-        dbTotalPages = Math.ceil(dbTotalCount / resultsPerPage);
-    } catch (error) {
-        console.error("error getting db currently shown requests:", error);
-    }
 
     let localCurrentlyShownRequests: Array<Request> = requests;
     if (filter.clientApplication) {

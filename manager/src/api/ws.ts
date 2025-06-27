@@ -175,7 +175,6 @@ export class ClientWS {
                     request.timing_total = data.timing_total;
                     request.timing = data.timing;
                     request.error = data.error;
-                    console.log(data.timing, data.timing_total);
                     requests[requestIndex] = request;
                 } else {
                     console.warn(`Request with ID ${data.id} not found.`);

@@ -34,7 +34,7 @@ export class Proxy {
         this.loaded = true;
     }
 
-    async getFilterCounts(): Promise<Record<string, Record<string, number>>> {
+    async getFilterCounts(): Promise<Record<string, Array<string>>> {
         const response = await fetch(`${this.url}/filterCounts`);
         if (!response.ok) {
             throw new Error(
