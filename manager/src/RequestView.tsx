@@ -753,28 +753,24 @@ function BodyView(props: {
                 >
                     Download Body
                 </button>
-                <button
-                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mt-2 disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
-                    disabled={bodyBytes == 0}
-                    onClick={() => {
-                        if (tempBody) {
-                            setTempBody(undefined);
-                        } else {
-                            props.loadBody();
-                        }
-                    }}
-                >
-                    {tempBody == undefined ? "Load" : "Unload"}
-                </button>
             </div>
             <div className="flex flex-row items-center mt-1 mb-2">
                 <b className="">Body ({bodyBytes} bytes)</b>
                 <div className="ml-4 flex flex-row">
-                    {tempBody ? (
+                    {/* if no body, don't show; if not editing; show button; if editing BUT the body isn't showing; show button; */}
+                    {bodyBytes != 0 && (!props.editMode || !showBody) ? (
                         <>
                             <button
                                 className="text-md pl-3 pr-3 bg-gray-600 dark:bg-gray-300 text-white dark:text-black mr-4"
-                                onClick={() => setShowBody(!showBody)}
+                                onClick={() => {
+                                    if (!showBody) {
+                                        props.loadBody(); // loading it now
+                                    } else if (tempBody == undefined) {
+                                        // hiding it now; unload
+                                        setTempBody(undefined);
+                                    }
+                                    setShowBody(!showBody);
+                                }}
                             >
                                 {showBody ? "Hide" : "Show"}
                             </button>
