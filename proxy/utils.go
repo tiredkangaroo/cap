@@ -54,13 +54,11 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 	cmd := exec.Command("bash", "-c", fmt.Sprintf("lsof -i :%s -F c", port))
 	out, err := cmd.Output()
 	if err != nil {
-		// fmt.Println("lsof error:", err)
 		return 0, ""
 	}
 
 	lines := strings.Split(string(out), "\n")
 	if len(lines) < 4 || (len(lines)-1)%3 != 0 {
-		// fmt.Println("lsof output too short:", len(lines))
 		return 0, ""
 	}
 
@@ -76,7 +74,6 @@ func getMacLinuxProcessInfo(port string) (pid int, pname string) {
 			return pid, line[1:] // remove 'c' prefix
 		}
 	}
-	// fmt.Println("no matching process found")
 	return 0, ""
 }
 

@@ -92,7 +92,7 @@ func (d *Database) Init(dirname string) error {
 	if err != nil {
 		return fmt.Errorf("init: open: %w", err)
 	}
-	slog.Info("database open at", "dirname", dirname)
+	slog.Info("database open at cap.db", "dirname", dirname)
 
 	// not null is present everywhere for my own sanity
 	createRequestsTable := `CREATE TABLE IF NOT EXISTS requests (

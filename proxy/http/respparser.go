@@ -38,7 +38,6 @@ func ReadResponse(conn net.Conn) (*Response, error) {
 	resp := NewResponse()
 
 	conn.SetReadDeadline(time.Now().Add(time.Minute))
-	fmt.Println("reading first line")
 	data, err := buf.ReadBytes('\n')
 	if err != nil {
 		if config.DefaultConfig.Debug {
@@ -46,7 +45,6 @@ func ReadResponse(conn net.Conn) (*Response, error) {
 		}
 		return nil, ErrProtocolError
 	}
-	fmt.Println("read first line", b2s(data))
 	firstLineData := bytes.Split(data, []byte{' '})
 	if len(firstLineData) < 3 {
 		if config.DefaultConfig.Debug {
@@ -64,7 +62,6 @@ func ReadResponse(conn net.Conn) (*Response, error) {
 		}
 		return nil, ErrInvalidStatusCode
 	}
-	fmt.Println("pared data status code", resp.StatusCode)
 	if statusString(resp.StatusCode) == statusString(StatusUnknown) {
 		if config.DefaultConfig.Debug {
 			slog.Error("http parser: invalid status code", "status", b2s(firstLineData[1]))
@@ -74,19 +71,16 @@ func ReadResponse(conn net.Conn) (*Response, error) {
 
 	// NOTE: status string will not be handled for now
 
-	fmt.Println("reading headers")
 	resp.Header, err = readHeader(buf)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("read headers")
 	if err := manageSpecialResponseHeaders(resp); err != nil {
 		return nil, fmt.Errorf("special headers issue: %w", err)
 	}
 
 	conn.SetDeadline(time.Time{})
 
-	fmt.Println("79", resp.Header, resp.ContentLength)
 	resp.Body = NewBody(buf, resp.ContentLength)
 	if resp.ContentLength == 0 {
 		resp.Body.buf = nil // release at once

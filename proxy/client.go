@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
@@ -183,7 +182,6 @@ func (c *Manager) handleApprovalCancel(data []byte) {
 }
 
 func (c *Manager) handleUpdateRequest(data []byte) {
-	fmt.Println("166", string(data))
 	type updatedMessageType struct {
 		IDMessage
 		Request struct {

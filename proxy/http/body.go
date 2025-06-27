@@ -2,11 +2,9 @@ package http
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"runtime"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
@@ -23,9 +21,6 @@ type Body struct {
 
 func (buf *Body) Read(p []byte) (n int, err error) {
 	if buf.tmpCompleted {
-		if config.DefaultConfig.Debug {
-			slog.Info("http body: reading from completed temporary file", "file", buf.tmpFile.Name())
-		}
 		n, err = buf.tmpFile.ReadAt(p, buf.offset)
 		if err != nil && err != io.EOF {
 			if config.DefaultConfig.Debug {
@@ -35,9 +30,6 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 		}
 		buf.offset += int64(n)
 		if buf.offset >= buf.contentLength {
-			if config.DefaultConfig.Debug {
-				slog.Info("http body: completed reading from temporary file", "file", buf.tmpFile.Name())
-			}
 			buf.offset = 0 // reset offset for next read
 			return n, nil
 		}
@@ -55,9 +47,6 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 	maxRead := int(buf.contentLength - buf.readN)
 	if n > maxRead {
 		n = maxRead
-		if config.DefaultConfig.Debug {
-			slog.Warn("http body: read more than content length", "readN", buf.readN, "contentLength", buf.contentLength, "n", n)
-		}
 		clear(p[n:]) // clear the rest of the buffer
 	}
 	buf.readN += int64(n)
@@ -81,9 +70,6 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 	}
 	buf.offset += int64(n)
 	if buf.offset >= buf.contentLength {
-		if config.DefaultConfig.Debug {
-			slog.Info("http body: completed writing to temporary file", "file", buf.tmpFile.Name())
-		}
 		buf.tmpCompleted = true
 		buf.offset = 0
 	}
@@ -94,9 +80,6 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 // WriteTo does not enforce content length.
 func (buf *Body) WriteTo(w io.Writer) (n int64, err error) {
 	if buf.tmpCompleted {
-		if config.DefaultConfig.Debug {
-			slog.Info("http body: writing (writeto) from completed temporary file", "file", buf.tmpFile.Name())
-		}
 		return buf.tmpFile.WriteTo(w)
 	}
 	if buf.buf == nil {
@@ -110,13 +93,9 @@ func (b *Body) ContentLength() int64 {
 }
 
 // this func is named close body in order to avoid ncruces/go-sqlite3 from closing it? (that's not even documented behavior :/)
+// NOTE: instead of renaming closebody use the new utils.go NoOpCloser
 func (buf *Body) CloseBody() error {
-	fmt.Println("closing body")
-	fmt.Println(runtime.Caller(1))
 	if buf.tmpFile != nil {
-		if config.DefaultConfig.Debug {
-			slog.Info("http body: closing temporary file", "file", buf.tmpFile.Name())
-		}
 		return buf.tmpFile.Close()
 	}
 	return nil

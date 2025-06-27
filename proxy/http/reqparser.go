@@ -67,7 +67,6 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 	req.Proto = bytes.TrimSpace(firstLineData[2])
 
 	req.Header, err = readHeader(buf)
-	fmt.Println(req.Header)
 	if err != nil {
 		return nil, err
 	}

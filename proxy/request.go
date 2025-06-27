@@ -152,7 +152,6 @@ func (r *Request) Init(conn net.Conn, req *http.Request) error {
 
 // Perform performs the request and returns the raw response as a byte slice.
 func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Response, error) {
-	fmt.Println(r)
 	// NOTE: these should be sub times where Perform is the major time
 	r.timing.Start(timing.TimePrepRequest)
 
@@ -176,7 +175,6 @@ func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Respon
 	}
 
 	r.timing.Start(timing.TimeDialHost)
-	fmt.Println("dialing host", r.req.Host)
 
 	var hostconn net.Conn
 	var err error
@@ -197,17 +195,13 @@ func (r *Request) Perform(m *Manager, c *certificate.Certificates) (*http.Respon
 	}
 
 	r.timing.Stop()
-	fmt.Println("dialed host", r.req.Host)
 
-	fmt.Println("writing request to host", r.req.Host)
 	r.timing.Start(timing.TimeWriteRequest)
 	if err := r.req.Write(hostconn); err != nil {
 		return nil, fmt.Errorf("write request: %w", err)
 	}
 	r.timing.Stop()
-	fmt.Println("wrote request to host", r.req.Host)
 
-	fmt.Println("reading response")
 	return http.ReadResponse(hostconn)
 }
 
