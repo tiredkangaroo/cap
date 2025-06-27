@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -458,6 +459,39 @@ func (d *Database) SaveBody(id string, body *http.Body) error {
 	if err != nil {
 		return fmt.Errorf("save body: writeblob: %w", err)
 	}
+	return nil
+}
+
+func (d *Database) WriteRequestBody(id string, writer io.Writer) error {
+	query := `SELECT rowid, length(body) FROM bodies WHERE id = ?;`
+	row := d.QueryRow(query, id+"-req-body")
+	if row == nil {
+		return fmt.Errorf("write request body: no body found for id %s", id)
+	}
+	return d.readBlobToWriterWithRowID(row, writer)
+}
+
+func (d *Database) WriteResponseBody(id string, writer io.Writer) error {
+	query := `SELECT rowid, length(body) FROM bodies WHERE id = ?;`
+	row := d.QueryRow(query, id+"-resp-body")
+	if row == nil {
+		return fmt.Errorf("write response body: no body found for id %s", id)
+	}
+	return d.readBlobToWriterWithRowID(row, writer)
+}
+
+func (d *Database) readBlobToWriterWithRowID(row *sql.Row, writer io.Writer) error {
+	var rowid int64
+	var length int64
+	row.Scan(&rowid, &length)
+	writer.Write(fmt.Appendf([]byte{}, "Content-Length: %d\r\n\r\n", length))
+
+	query := `SELECT readblob('main', 'bodies', 'body', :rowid, :offset, :writer);`
+	_, err := d.Exec(query, sql.Named("rowid", rowid), sql.Named("offset", 0), sql.Named("writer", sqlite3.Pointer(writer)))
+	if err != nil {
+		return fmt.Errorf("write request body: %w", err)
+	}
+
 	return nil
 }
 

@@ -45,7 +45,6 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	} else {
 		slog.Debug("saved request body", "id", r.reqBodyID)
 	}
-	fmt.Println("48", string(marshal(req)))
 	m.SendRequest(r)
 
 	// perform the request
@@ -56,6 +55,11 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request) error {
 	r.resp = resp
 
 	m.SendResponse(r)
+	if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
+		slog.Error("save response body: %w", "err", err)
+	} else {
+		slog.Debug("saved response body", "id", r.reqBodyID)
+	}
 
 	r.timing.Start(timing.TimeWriteResponse)
 	err = resp.Write(r.conn) // write the response to the connection

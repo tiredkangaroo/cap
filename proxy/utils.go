@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os/exec"
@@ -90,4 +91,20 @@ func getHostname(hp string) string {
 func marshal(data any) []byte {
 	m, _ := json.Marshal(data)
 	return m
+}
+
+type NoOpCloser struct {
+	w io.Writer
+}
+
+func (n *NoOpCloser) Write(p []byte) (int, error) {
+	return n.w.Write(p)
+}
+
+func (n *NoOpCloser) Close() error {
+	return nil
+}
+
+func NewNoOpCloser(w io.Writer) *NoOpCloser {
+	return &NoOpCloser{w: w}
 }

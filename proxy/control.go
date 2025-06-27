@@ -93,9 +93,66 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		}()
 	})
 
-	// nethttp.HandleFunc("GET /response", func (w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /reqbody/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		setCORSHeaders(w)
 
-	// })
+		id := r.PathValue("id")
+		if id == "" {
+			w.WriteHeader(nethttp.StatusBadRequest)
+			w.Write([]byte("missing id parameter"))
+			return
+		}
+
+		hijacker := w.(nethttp.Hijacker)
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			w.WriteHeader(nethttp.StatusInternalServerError)
+			w.Write([]byte("failed to hijack connection"))
+			slog.Error("failed to hijack connection", "id", id, "err", err.Error())
+			return
+		}
+		defer conn.Close()
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
+		conn.Write([]byte("Content-Type: text/plain\r\n"))
+		err = m.db.WriteRequestBody(id, NewNoOpCloser(conn))
+		if err != nil {
+			w.WriteHeader(nethttp.StatusInternalServerError)
+			w.Write([]byte("failed to write request body"))
+			slog.Error("failed to write request body", "id", id, "err", err.Error())
+			return
+		}
+	})
+
+	mux.HandleFunc("GET /respbody/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		setCORSHeaders(w)
+
+		id := r.PathValue("id")
+		if id == "" {
+			w.WriteHeader(nethttp.StatusBadRequest)
+			w.Write([]byte("missing id parameter"))
+			return
+		}
+
+		hijacker := w.(nethttp.Hijacker)
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			w.WriteHeader(nethttp.StatusInternalServerError)
+			w.Write([]byte("failed to hijack connection"))
+			slog.Error("failed to hijack connection", "id", id, "err", err.Error())
+			return
+		}
+		defer conn.Close()
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
+		conn.Write([]byte("Content-Type: text/plain\r\n"))
+		err = m.db.WriteResponseBody(id, NewNoOpCloser(conn))
+		if err != nil {
+			w.WriteHeader(nethttp.StatusInternalServerError)
+			w.Write([]byte("failed to write request body"))
+			slog.Error("failed to write request body", "id", id, "err", err.Error())
+			return
+		}
+	})
+
 	mux.HandleFunc("GET /request/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 		id := r.PathValue("id")
