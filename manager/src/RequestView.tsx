@@ -242,12 +242,12 @@ export function RequestView(props: {
                                 isRequestBody={true}
                                 hide={false}
                                 editMode={editMode}
-                                setValue={(v: string) =>
+                                setValue={(v: string | undefined) => {
                                     props.setRequest({
                                         ...props.request,
                                         tempBody: v,
-                                    })
-                                }
+                                    });
+                                }}
                                 loadBody={async () => {
                                     const body =
                                         await props.proxy.getRequestBody(
@@ -304,7 +304,7 @@ export function RequestView(props: {
                                 isRequestBody={false}
                                 hide={false}
                                 editMode={editMode}
-                                setValue={(v: string) =>
+                                setValue={(v: string | undefined) =>
                                     props.setRequest({
                                         ...props.request,
                                         response: {
@@ -702,13 +702,12 @@ function ShowHideFieldView(props: {
     );
 }
 
-// NOTE: make body not in Request by default (must be loaded by call to server)
 function BodyView(props: {
     request: Request;
     isRequestBody?: boolean;
     hide: boolean;
     editMode: boolean;
-    setValue?: (v: string) => void;
+    setValue?: (v: string | undefined) => void;
     loadBody: () => void;
 }) {
     const headers = props.isRequestBody
@@ -722,15 +721,6 @@ function BodyView(props: {
     const tempBody = props.isRequestBody
         ? props.request.tempBody
         : props.request.response?.tempBody;
-
-    function setTempBody(v: string | undefined) {
-        if (props.isRequestBody) {
-            props.request.tempBody = v;
-        } else {
-            props.request.response!.tempBody = v;
-        }
-        props.setValue?.(v!);
-    }
 
     if (props.hide) {
         return <></>;
@@ -763,10 +753,11 @@ function BodyView(props: {
                                 className="text-md pl-3 pr-3 bg-gray-600 dark:bg-gray-300 text-white dark:text-black mr-4"
                                 onClick={() => {
                                     if (!showBody) {
+                                        // show it now
                                         props.loadBody(); // loading it now
-                                    } else if (tempBody == undefined) {
-                                        // hiding it now; unload
-                                        setTempBody(undefined);
+                                    } else if (tempBody != undefined) {
+                                        // hiding it now
+                                        props.setValue!(undefined);
                                     }
                                     setShowBody(!showBody);
                                 }}

@@ -1,6 +1,8 @@
 package http
 
-import "io"
+import (
+	"io"
+)
 
 type Header map[string][]string
 

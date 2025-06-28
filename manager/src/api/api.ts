@@ -165,8 +165,6 @@ export class Proxy {
         req.tempBody = newrequest.tempBody;
 
         this.clientWS.updateRequest(newrequest);
-        console.log("here?!");
-        req.tempBody = undefined;
         this.requests[reqIndex] = req;
         this.updateCB!();
     }

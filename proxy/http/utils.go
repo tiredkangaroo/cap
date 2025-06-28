@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"log/slog"
 	"net/textproto"
+	"net/url"
 	"unsafe"
 
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
@@ -45,4 +46,11 @@ func b2s(b []byte) string {
 }
 func s2b(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+func queryString(q url.Values) []byte {
+	if len(q) == 0 {
+		return []byte{}
+	}
+	return s2b("?" + q.Encode())
 }

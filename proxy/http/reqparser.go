@@ -44,7 +44,7 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 		if config.DefaultConfig.Debug {
 			slog.Error("http parser: failed to read first line", "err", err.Error())
 		}
-		return nil, ErrProtocolError
+		return nil, err
 	}
 	firstLineData := bytes.Split(data, []byte{' '})
 	if len(firstLineData) < 3 {
@@ -60,9 +60,15 @@ func ReadRequest(conn net.Conn) (*Request, error) {
 		}
 		return nil, ErrProtocolError
 	}
-	req.Path = b2s(firstLineData[1])
-	// the query is everything after the first "?" in the path
-	req.Path, req.Query = parseQuery(req.Path)
+	u, err := url.Parse(b2s(firstLineData[1]))
+	if err != nil {
+		if config.DefaultConfig.Debug {
+			slog.Error("http parser: failed to parse path", "url", b2s(firstLineData[1]), "err", err.Error())
+		}
+		return nil, fmt.Errorf("failed to parse path: %w", err)
+	}
+	req.Path = u.Path
+	req.Query = u.Query()
 
 	req.Proto = bytes.TrimSpace(firstLineData[2])
 

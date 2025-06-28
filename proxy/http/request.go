@@ -109,6 +109,7 @@ func (r *Request) Write(w io.Writer) error {
 	requestLine = append(requestLine, s2b(r.Method.String())...)
 	requestLine = append(requestLine, ' ')
 	requestLine = append(requestLine, s2b(r.Path)...)
+	requestLine = append(requestLine, queryString(r.Query)...)
 	requestLine = append(requestLine, ' ')
 	requestLine = append(requestLine, r.Proto...)
 	requestLine = append(requestLine, '\r', '\n')
@@ -133,6 +134,11 @@ func (r *Request) Write(w io.Writer) error {
 func (r *Request) Close() error {
 	if r.conn != nil {
 		return r.conn.Close()
+	}
+	if r.Body != nil {
+		if err := r.Body.CloseBody(); err != nil {
+			return fmt.Errorf("close body: %w", err)
+		}
 	}
 	return nil
 }

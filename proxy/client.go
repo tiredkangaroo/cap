@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
@@ -185,10 +186,11 @@ func (c *Manager) handleApprovalCancel(data []byte) {
 }
 
 func (c *Manager) handleUpdateRequest(data []byte) {
+	fmt.Println("166", string(data))
 	type updatedMessageType struct {
 		IDMessage
 		Request struct {
-			Body    string      `json:"body"`
+			Body    string      `json:"tempBody"`
 			Headers http.Header `json:"headers"`
 			Host    string      `json:"host"`
 			Method  string      `json:"method"`
@@ -211,17 +213,39 @@ func (c *Manager) handleUpdateRequest(data []byte) {
 		return
 	}
 	// if req.req.Body != nil {
-	// 	req.req.Body.Close() // close the old body if it exists
+	// 	req.req.Body.CloseBody() // close the old body if it exists
 	// }
 
 	req.Secure = updatedMessage.Request.Secure
+
+	fmt.Println("old method", req.req.Method.String())
+	fmt.Println("new method", updatedMessage.Request.Method)
 	req.req.Method = http.MethodFromString(updatedMessage.Request.Method)
+
+	fmt.Println("old host", req.req.Host)
+	fmt.Println("new host", updatedMessage.Request.Host)
 	req.req.Host = updatedMessage.Request.Host //
+
+	fmt.Println("old path", req.req.Path)
+	fmt.Println("new path", updatedMessage.Request.Path)
 	req.req.Path = updatedMessage.Request.Path
+
+	fmt.Println("old query", req.req.Query)
+	fmt.Println("new query", updatedMessage.Request.Query)
 	req.req.Query = updatedMessage.Request.Query
-	req.req.Header = updatedMessage.Request.Headers                 // possible nil pointer dereference if headers are not set
-	req.req.ContentLength = int64(len(updatedMessage.Request.Body)) // change content length to reflect the length of the new body
-	req.req.Body = http.NewBody(bufio.NewReader(strings.NewReader(updatedMessage.Request.Body)), int64(len(updatedMessage.Request.Body)))
+
+	fmt.Println("old headers", req.req.Header)
+	fmt.Println("new headers", updatedMessage.Request.Headers)
+	req.req.Header = updatedMessage.Request.Headers // possible nil pointer dereference if headers are not set
+
+	if updatedMessage.Request.Body != "" {
+		if req.req.Body != nil { // NOTE: should close the whole request (underlying conn where needle is at the body)
+			req.req.Body.CloseBody()
+		}
+		req.req.ContentLength = int64(len(updatedMessage.Request.Body)) // change content length to reflect the length of the new body
+		req.req.Header.Set("Content-Length", fmt.Sprintf("%d", req.req.ContentLength))
+		req.req.Body = http.NewBody(bufio.NewReader(strings.NewReader(updatedMessage.Request.Body)), int64(len(updatedMessage.Request.Body)))
+	}
 }
 
 // getApprovalWaitingRequestFromIDMessage retrieves the request associated with the given ID message with the map

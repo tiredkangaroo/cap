@@ -98,6 +98,7 @@ func (buf *Body) CloseBody() error {
 	if buf.tmpFile != nil {
 		return buf.tmpFile.Close()
 	}
+	buf.buf = nil // release the buffer
 	return nil
 }
 
