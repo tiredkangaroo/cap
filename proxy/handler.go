@@ -42,15 +42,6 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certi
 	// HTTP requests send the full request to the proxy, so this is the request we want to perform
 	r.req = req
 
-	// save the request body to the database
-	r.timing.Start(timing.TimeSaveRequestBody)
-	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
-		slog.Error("save request body: %w", "err", err)
-	} else {
-		slog.Debug("saved request body", "id", r.reqBodyID)
-	}
-	r.timing.Stop()
-
 	// send request to live websocket connections
 	m.SendRequest(r)
 
@@ -62,6 +53,15 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certi
 
 	// send response to live websocket connections
 	m.SendResponse(r)
+
+	// save the request body to the database
+	r.timing.Start(timing.TimeSaveRequestBody)
+	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
+		slog.Error("save request body: %w", "err", err)
+	} else {
+		slog.Debug("saved request body", "id", r.reqBodyID)
+	}
+	r.timing.Stop()
 
 	// save the response body to the database
 	r.timing.Start(timing.TimeSaveResponseBody)
@@ -135,6 +135,14 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 	// send the request to live websocket connections
 	m.SendRequest(r)
 
+	resp, err := r.Perform(m, c)
+	if err != nil {
+		return fmt.Errorf("perform: %w", err)
+	}
+
+	// send the response to live websocket connections
+	m.SendResponse(r)
+
 	// save the request body to the database
 	r.timing.Start(timing.TimeSaveRequestBody)
 	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
@@ -143,14 +151,6 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 		slog.Debug("saved request body", "id", r.reqBodyID)
 	}
 	r.timing.Stop()
-
-	resp, err := r.Perform(m, c)
-	if err != nil {
-		return fmt.Errorf("perform: %w", err)
-	}
-
-	// send the response to live websocket connections
-	m.SendResponse(r)
 
 	// save the response body to the database
 	r.timing.Start(timing.TimeSaveResponseBody)

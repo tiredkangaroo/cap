@@ -1,11 +1,21 @@
 export function parseURLEncoded(input: string): Record<string, string[]> {
+    if (input === "") {
+        throw new Error("not a valid URL-encoded string");
+    }
     const result: Record<string, string[]> = {};
 
     // Split input by '&' to get key=value pairs
     const pairs = input.split("&");
 
+    if (pairs[0] === "") {
+        throw new Error("not a valid URL-encoded string");
+    }
+
     for (const pair of pairs) {
         if (!pair) continue;
+        if (!pair.includes("=")) {
+            throw new Error("not a valid URL-encoded string");
+        }
 
         const [rawKey, rawValue = ""] = pair.split("=");
         const key = decodeURIComponent(rawKey.replace(/\+/g, " "));

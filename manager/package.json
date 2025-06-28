@@ -12,6 +12,9 @@
         "lint": "eslint .",
         "preview": "vite preview"
     },
+    "eslintConfig": {
+        "root": true
+    },
     "dependencies": {
         "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-collapsible": "^1.1.10",

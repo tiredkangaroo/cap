@@ -713,9 +713,16 @@ function BodyView(props: {
     const headers = props.isRequestBody
         ? props.request.headers
         : props.request.response?.headers;
-    const bodyBytes = props.isRequestBody
-        ? props.request.bodyLength
-        : props.request.response?.bodyLength || 0;
+    let bodyBytes = 0;
+    if (props.isRequestBody) {
+        bodyBytes = props.request.tempBody
+            ? props.request.tempBody.length
+            : props.request.bodyLength || 0;
+    } else {
+        bodyBytes = props.request.response?.tempBody
+            ? props.request.response.tempBody.length
+            : props.request.response?.bodyLength || 0;
+    }
     const [showBody, setShowBody] = useState<boolean>(false);
 
     const tempBody = props.isRequestBody
@@ -789,26 +796,59 @@ function BodyContentView(props: {
     showBody?: boolean;
     setValue: (v: string) => void;
 }) {
-    if (!props.body || !props.showBody) {
+    if (!props.showBody) {
         return <></>;
     }
-    switch (props.contentType) {
-        case "application/json":
+    if (!props.body) {
+        if (props.editMode) {
             return (
-                <JSONContent
-                    body={props.body}
+                <GenericContent
                     editMode={props.editMode}
-                    setBody={props.setValue}
-                />
-            );
-        case "application/x-www-form-urlencoded":
-            return (
-                <URLFormEncodedContent
-                    editMode={props.editMode}
-                    body={props.body!}
+                    body=""
                     setValue={props.setValue}
                 />
             );
+        } else {
+            return <></>;
+        }
+    }
+    switch (props.contentType) {
+        case "application/json":
+            try {
+                return (
+                    <JSONContent
+                        body={props.body}
+                        editMode={props.editMode}
+                        setBody={props.setValue}
+                    />
+                );
+            } catch {
+                return (
+                    <GenericContent
+                        editMode={props.editMode}
+                        body={props.body!}
+                        setValue={props.setValue}
+                    />
+                );
+            }
+        case "application/x-www-form-urlencoded":
+            try {
+                return (
+                    <URLFormEncodedContent
+                        editMode={props.editMode}
+                        body={props.body!}
+                        setValue={props.setValue}
+                    />
+                );
+            } catch {
+                return (
+                    <GenericContent
+                        editMode={props.editMode}
+                        body={props.body!}
+                        setValue={props.setValue}
+                    />
+                );
+            }
     }
     return (
         <GenericContent

@@ -13,9 +13,9 @@ const (
 	// invalid
 	TimeNone Time = ""
 
-	// HTTP: read proxy request -> init -> save request body -> perform request -> save response body -> write response
+	// HTTP: read proxy request -> init -> perform request -> save request body -> save response body -> write response
 	// HTTPS (no MITM): read proxy request -> init -> send 200 -> wait approval -> delay perform -> tunnel
-	// HTTPS (MITM): read proxy request -> init -> send 200 -> cert gen + handshake -> read request -> save request body -> perform request -> save response body -> write response
+	// HTTPS (MITM): read proxy request -> init -> send 200 -> cert gen + handshake -> read request -> perform request -> save request body -> save response body -> write response
 
 	// TimeReadProxyRequest is the time taken to read the request to the proxy. For HTTP connections, this is the only
 	// read request, since the request is sent in full to the proxy. For HTTPS connections, this is the time taken to
