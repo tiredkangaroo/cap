@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -114,10 +115,25 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
 		conn.Write([]byte("Content-Type: text/plain\r\n"))
 		writeRawCORSHeaders(conn)
+
+		if waiter, ok := m.approvalWaiters[id]; ok {
+			if waiter.req != nil && waiter.req.Body != nil { // jic to avoid npd panics but the second clause shoud always be true if the first one is
+				conn.Write(fmt.Appendf([]byte{}, "Content-Length: %d\r\n\r\n", waiter.req.Body.ContentLength()))
+				if _, err := waiter.req.Body.WriteTo(conn); err != nil {
+					slog.Error("failed to write request body", "id", id, "err", err.Error())
+					conn.Write([]byte("failed to write request body"))
+				} else {
+					slog.Info("wrote request body", "id", id)
+				}
+				return
+			} else {
+				conn.Write([]byte("req body unavailable"))
+				return
+			}
+		}
+
 		err = m.db.WriteRequestBody(id, NewNoOpCloser(conn))
 		if err != nil {
-			w.WriteHeader(nethttp.StatusInternalServerError)
-			w.Write([]byte("failed to write request body"))
 			slog.Error("failed to write request body", "id", id, "err", err.Error())
 			return
 		}

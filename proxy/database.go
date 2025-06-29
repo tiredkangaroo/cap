@@ -459,6 +459,8 @@ func (d *Database) SaveRequest(req *Request, err error) error {
 	return nil
 }
 
+// NOTE: combine next two last parts of func into one for wblob
+
 func (d *Database) SaveBody(id string, body *http.Body) error {
 	cl := body.ContentLength()
 	if cl == 0 {
@@ -469,6 +471,25 @@ func (d *Database) SaveBody(id string, body *http.Body) error {
 	res, err := d.Exec(query, sql.Named("id", id), sql.Named("cl", sqlite3.ZeroBlob(cl)))
 	if err != nil {
 		return fmt.Errorf("save body: %w", err)
+	}
+	rowid, _ := res.LastInsertId()
+
+	_, err = d.Exec(
+		`SELECT writeblob('main', 'bodies', 'body', :rowid, :offset, :message)`,
+		sql.Named("rowid", rowid), sql.Named("offset", 0), sql.Named("message", sqlite3.Pointer(body)),
+	)
+	if err != nil {
+		return fmt.Errorf("save body: writeblob: %w", err)
+	}
+	return nil
+}
+
+func (d *Database) UpdateBody(id string, body *http.Body) error {
+	cl := body.ContentLength()
+	query := `UPDATE bodies SET body = :cl WHERE id = :id;`
+	res, err := d.Exec(query, sql.Named("cl", sqlite3.ZeroBlob(cl)), sql.Named("id", id))
+	if err != nil {
+		return fmt.Errorf("update body: %w", err)
 	}
 	rowid, _ := res.LastInsertId()
 

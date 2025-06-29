@@ -6,14 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"time"
 
 	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 
-	"github.com/google/uuid"
 	"github.com/tiredkangaroo/bigproxy/proxy/config"
 	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 )
@@ -88,9 +86,10 @@ type Request struct {
 	approveResponseFunc func(approved bool)
 }
 
-func (r *Request) Init(conn net.Conn, req *http.Request, t *timing.Timing) error {
+func (r *Request) Init(req *http.Request) error {
 	r.Secure = req.Method == http.MethodConnect
-	r.timing = t
+	r.reqBodyID = r.ID + "-req-body"
+	r.respBodyID = r.ID + "-resp-body"
 
 	// possibly being deprecated, idk
 	if r.Secure && config.DefaultConfig.MITM {
@@ -102,21 +101,6 @@ func (r *Request) Init(conn net.Conn, req *http.Request, t *timing.Timing) error
 	}
 
 	r.Datetime = time.Now()
-
-	r.timing.Substart(timing.SubtimeUUID)
-	id, err := uuid.NewRandom()
-	if err != nil {
-		slog.Error("uuid error", "err", err.Error())
-		r.ID = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
-	}
-	r.ID = id.String()
-	r.reqBodyID = r.ID + "-req-body"
-	r.respBodyID = r.ID + "-resp-body"
-	r.timing.Substop()
-
-	r.conn = &CustomConn{
-		u: conn,
-	}
 
 	r.Host = req.Host
 	if _, _, err := net.SplitHostPort(req.Host); err != nil {

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 
+	"github.com/google/uuid"
 	"github.com/tiredkangaroo/bigproxy/proxy/http"
 	"github.com/tiredkangaroo/bigproxy/proxy/timing"
 
@@ -19,15 +20,9 @@ type ProxyHandler struct {
 	m           *Manager
 }
 
-func (c *ProxyHandler) ServeHTTP(conn net.Conn, r *http.Request, t *timing.Timing) {
-	defer conn.Close()
-
-	req := new(Request)
-	t.Start(timing.TimeRequestInit)
-	req.Init(conn, r, t)
-	t.Stop()
-
-	c.serveAfterInit(req, r)
+func (c *ProxyHandler) ServeHTTP(pr *Request, r *http.Request) {
+	pr.Init(r)
+	c.serveAfterInit(pr, r)
 }
 
 func (c *ProxyHandler) serveAfterInit(req *Request, r *http.Request) {
@@ -87,8 +82,18 @@ func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
 			slog.Error("failed to accept connection", "err", err.Error())
 			continue
 		}
-		t := timing.New()
+		r := new(Request)
+		t := timing.New(m.setStateFunc(r))
 		conn := NewCustomConn(rawconn)
+
+		r.conn = conn
+		id, err := uuid.NewRandom()
+		if err != nil {
+			slog.Error("uuid error", "err", err.Error())
+			r.ID = "75756964-7634-6765-6e65-72726f720000" // this isn't a random UUID
+		}
+		r.ID = id.String()
+		r.timing = t
 
 		t.Start(timing.TimeReadProxyRequest)
 		req, err := http.ReadRequest(conn)
@@ -101,7 +106,8 @@ func (c *ProxyHandler) ListenAndServe(m *Manager, dirname string) error {
 
 		go func() {
 			defer req.Body.CloseBody()
-			c.ServeHTTP(conn, req, t)
+			defer conn.Close()
+			c.ServeHTTP(r, req)
 		}()
 	}
 }

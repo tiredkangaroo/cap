@@ -46,6 +46,15 @@ func (c *Manager) AcceptWS(w nethttp.ResponseWriter, r *nethttp.Request) (*webso
 	return conn, nil
 }
 
+func (c *Manager) setStateFunc(req *Request) func(state string) {
+	return func(state string) {
+		c.writeJSON("STATE", map[string]any{
+			"id":    req.ID,
+			"state": state,
+		})
+	}
+}
+
 func (c *Manager) SendNew(req *Request) {
 	c.writeJSON("NEW", map[string]any{
 		"id":                  req.ID,

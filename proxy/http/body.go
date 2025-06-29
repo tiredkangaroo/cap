@@ -77,15 +77,66 @@ func (buf *Body) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// WriteTo does not enforce content length.
 func (buf *Body) WriteTo(w io.Writer) (n int64, err error) {
 	if buf.tmpCompleted {
 		return buf.tmpFile.WriteTo(w)
 	}
+
 	if buf.buf == nil {
 		return 0, nil // nothing to write
 	}
-	return io.Copy(w, io.LimitReader(buf.buf, buf.contentLength))
+
+	if buf.tmpFile == nil {
+		buf.tmpFile, err = os.CreateTemp("", "cap-http-request-body-*")
+		if err != nil {
+			if config.DefaultConfig.Debug {
+				slog.Error("http body: failed to create temporary file", "err", err.Error())
+			}
+			return 0, err
+		}
+		buf.offset = 0
+	}
+
+	// Copy from buffer to tmp file until contentLength is reached
+	tmpBuf := make([]byte, 32*1024)
+	for buf.readN < buf.contentLength {
+		maxRead := int64(len(tmpBuf))
+		if buf.contentLength-buf.readN < maxRead {
+			maxRead = buf.contentLength - buf.readN
+		}
+		readN, readErr := buf.buf.Read(tmpBuf[:maxRead])
+		if readN > 0 {
+			_, writeErr := buf.tmpFile.WriteAt(tmpBuf[:readN], buf.offset)
+			if writeErr != nil {
+				if config.DefaultConfig.Debug {
+					slog.Error("http body: failed to write to temporary file", "err", writeErr.Error())
+				}
+				return n, writeErr
+			}
+			buf.offset += int64(readN)
+			buf.readN += int64(readN)
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			return n, readErr
+		}
+	}
+
+	buf.tmpCompleted = true
+	buf.offset = 0
+	buf.buf = nil // release memory
+
+	// Reset file read pointer and write to output
+	_, err = buf.tmpFile.Seek(0, io.SeekStart)
+	if err != nil {
+		if config.DefaultConfig.Debug {
+			slog.Error("http body: failed to seek in temporary file", "err", err.Error())
+		}
+		return 0, err
+	}
+	return io.Copy(w, buf.tmpFile)
 }
 
 func (b *Body) ContentLength() int64 {

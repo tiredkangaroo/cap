@@ -75,6 +75,23 @@ export class ClientWS {
 
                 break;
             }
+            case "STATE": {
+                const data = rawdata as {
+                    id: string;
+                    state: string;
+                };
+                const requestIndex = requests.findIndex(
+                    (r) => r.id === data.id,
+                );
+                if (requestIndex !== -1) {
+                    const request = requests[requestIndex];
+                    request.state = data.state;
+                    requests[requestIndex] = request;
+                } else {
+                    console.warn(`Request with ID ${data.id} not found.`);
+                }
+                break;
+            }
             case "TUNNEL": {
                 const data = rawdata as IDMessage;
                 const requestIndex = requests.findIndex(

@@ -584,8 +584,8 @@ function StateView(props: {
             className="flex-1"
             style={{
                 color: darkMode
-                    ? darkStateColors[props.state]
-                    : stateColors[props.state],
+                    ? darkStateColors[props.state] || "#fff"
+                    : stateColors[props.state] || "#000",
             }}
         >
             {props.state}

@@ -65,14 +65,7 @@ export interface Request {
 
     bytesTransferred?: number;
 
-    state:
-        | "Created"
-        | "Processing"
-        | "Waiting Approval"
-        // | "Approval Timeout"
-        | "Canceled"
-        | "Done"
-        | "Error";
+    state: string;
 
     timing?: Timing;
     timing_total?: number;

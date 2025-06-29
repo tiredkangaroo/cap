@@ -8,6 +8,7 @@ type Order uint8
 
 type Time string
 type Subtime string
+type SetStateFuncType func(string)
 
 const (
 	// invalid
@@ -86,11 +87,14 @@ type MajorTime struct {
 }
 
 type Timing struct {
+	setStateFunc SetStateFuncType // this func will be called at the start of each major time key and minor time key with the key name
+
 	MajorTimeKeys   []Time       `json:"majorTimeKeys"`
 	MajorTimeValues []*MajorTime `json:"majorTimeValues"`
 }
 
 func (t *Timing) Start(key Time) {
+	t.setStateFunc(string(key)) // call the state function with the key name
 	t.MajorTimeKeys = append(t.MajorTimeKeys, key)
 	t.MajorTimeValues = append(t.MajorTimeValues, &MajorTime{
 		Start: time.Now(),
@@ -104,6 +108,7 @@ func (t *Timing) Stop() {
 }
 
 func (t *Timing) Substart(sub Subtime) {
+	t.setStateFunc(string(sub)) // call the state function with the sub key name
 	lastMajorIdx := len(t.MajorTimeValues) - 1
 	t.MajorTimeValues[lastMajorIdx].MinorTimeKeys = append(t.MajorTimeValues[lastMajorIdx].MinorTimeKeys, sub)
 	t.MajorTimeValues[lastMajorIdx].MinorTimeValues = append(t.MajorTimeValues[lastMajorIdx].MinorTimeValues, &MinorTime{
@@ -209,8 +214,9 @@ func (t *Timing) Total() time.Duration {
 // 	return nil
 // }
 
-func New() *Timing {
+func New(setStateFunc SetStateFuncType) *Timing {
 	t := &Timing{
+		setStateFunc:    setStateFunc,
 		MajorTimeKeys:   make([]Time, 0, 4),
 		MajorTimeValues: make([]*MajorTime, 0, 4),
 	}

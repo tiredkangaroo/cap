@@ -32,14 +32,6 @@ type Config struct {
 	// it is more resource intensive to generate and store the certificates for each host, perform a
 	// TLS handshake as well as to decrypt the traffic, reencrypt it, move requests and responses.
 	MITM bool `json:"mitm"`
-	// ProvideRequestBody is a boolean that determines whether the proxy should provide the request body.
-	// It can be useful for debugging purposes, however is very resource intensive, especially with larger
-	// bodies.
-	ProvideRequestBody bool `json:"provide_request_body"`
-	// ProvideResponseBody is a boolean that determines whether the proxy should provide the response body.
-	// It can be useful for debugging purposes, however is very resource intensive, especially with larger
-	// bodies.
-	ProvideResponseBody bool `json:"provide_response_body"`
 	// PerformDelay is the delay in milliseconds before the proxy performs the request. It must be a positive
 	// integer. This can be useful for testing purposes, such as simulating network latency, slowing down
 	// actions performed, or other debugging purposes.
@@ -60,6 +52,11 @@ type Config struct {
 	// amount of time to perform, since it requires the proxy to query the operating system by running shell
 	// commands for the process information.
 	GetClientProcessInfo bool `json:"get_client_process_info"`
+
+	// TimelineBasedStateUpdates is a boolean that determines whether the proxy should send state updates to the client
+	// based on timeline events. If true, the proxy will send updates to the client whenever a major or minor timeline event
+	// occurs.
+	TimelineBasedStateUpdates bool `json:"time_based_state_updates"`
 }
 
 func init() {
