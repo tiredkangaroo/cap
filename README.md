@@ -1,4 +1,6 @@
-# CAP
+# cap
+![made for neighborhood](https://img.shields.io/badge/made%20for%20neighborhood-bf8f73?style=for-the-badge&logo=hackclub&logoColor=ffffff)
+
 cap is a proxy server that allows you to capture, modify, and inspect HTTP and HTTPS traffic. It is designed to be easy to use and flexible, making it suitable for a wide range of use cases, from debugging web applications to testing APIs to pen testing.
 
 # Screenshots
