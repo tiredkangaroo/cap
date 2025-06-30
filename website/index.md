@@ -1,28 +1,14 @@
-# cap
+# About
 cap is a configurable proxy server that allows you to capture, modify, and inspect HTTP and HTTPS traffic.
 
-<!-- # Screenshots
-![1](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/1.png)
-A request being displayed in the UI with two filters selected.
 
-![2](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/2.png)
-A request being modified in the UI (edit mode) while also asking for approval (Wait for Approval).
-
-![3](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/3.png)
-A request's response being shown with the status code, headers, body, bytes transferred, and timing.
-
-![4](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/4.png)
-Settings menu. -->
-
-
-<!-- # Major Features
-- Capture HTTP and HTTPS traffic (with MITM support)
-- Modify requests (including the destination Host, method, headers, body, etc.)
-- See the timeline for the request from start to finish
-- Configure the behavior of the proxy server (MITM, Body Dumping, etc.)
-- Configure which fields to display in the UI
-- Persistent storage of requests
-- Filter requests by Client Application, Client IP, Host, with more filters coming soon -->
+# Features
+- fast and lightweight proxy server (HTTP and HTTPS)
+- capture proxy traffic with the client
+- retrieve and modify requests (including the destination, method, headers, body, etc.)**
+- filtering requests
+- timeline for the request
+- + more im a bit lazy rn to write all of it
 
 # Installation
 well currently the built version of the app doesn't work, so we're going to have to run it from source.
@@ -64,6 +50,13 @@ well currently the built version of the app doesn't work, so we're going to have
     ```bash
     go run make.go debug
     ```
+
+    **Build the app (MacOS only)**: If you want to build the app for MacOS, you can use the following command:
+    ```bash
+    go run make.go app
+    ```
+    The built app will be located in the working directory as `cap.app`.
+
 7. #### The proxy is now running on `http://localhost:8000`. Configure your browser, application, or system to use this proxy server for HTTP and HTTPS traffic.
 
 # Usage
@@ -72,9 +65,8 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
 1. **Configure your browser or application** to use the proxy server:
    - Set the HTTP and HTTPS proxy to `localhost:8000`.
 
-2. **Modify Proxy Behavior**:
-    - Press the settings button in the bottom right corner of the UI to configure the proxy behavior, such as enabling MITM, body dumping, etc.
-
+2. **Settings**:
+    - Open the settings menu by clicking on the gear icon in the top right corner of the UI.
 3. **Filter Requests**:
     - Use the filter options in top left of the UI to filter requests by Client Application, Client IP, Host, etc. You can select multiple filters to narrow down the displayed requests.
 
@@ -95,8 +87,16 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
 
 6. **Freeze Requests**:
     - You can freeze the UI in order to allow you to work with the UI without the requests being updated in real-time. This is useful when you want to work with the UI without being interrupted by new requests coming in. Updates that occur are kept but not shown until the unfreeze button is pressed. To freeze the UI, press the snowflake button in the bottom right corner of the UI. You can unfreeze the UI by pressing the same button again.
+
+# Issues
+If you encounter any issue or have suggestions for improvements, please open an issue on the [GitHub repository](https://tiredkangaroo.github.io/bigproxy/issues).
+
+You may also contact me via [email](mailto:ajinest6@gmail.com).
+
 # Glossory
 - **MITM** - Man in the Middle. A technique used to intercept and modify communication between two parties without their knowledge. Using man-in-the-middle, the proxy is able to intercept the full traffic between the client and the server, and provide **strong** information for HTTPS requests as well.
-- **Weak information** - The lower level of information the proxy is able to provide. This includes the host, client IP, client application, and the bytes transferred. All requests at the very least provide weak information.
 - **Strong information** - The highest level of information the proxy is able to provide. This includes all weak information but also includes the method, headers, query, path, body, etc. as well as the full response including the status code, headers, body, etc. All HTTP requests are capable of providing strong information, while HTTPS requests are only capable of providing strong information if the proxy is running with MITM enabled.
 - **Tunneling** - The technique used to connect the client with the server in HTTPS mode without MITM. This is done by establishing a tunnel that copies the encrypted bytes from the client to the server and vice versa. The proxy is not able to see the full request or response in this case, and can only provide weak information. This is the default mode for HTTPS requests.
+- **Weak information** - The lower level of information the proxy is able to provide. This includes the host, client IP, client application, and the bytes transferred. All requests at the very least provide weak information.
+
+** Requires the request to be an HTTP or an HTTPS request with MITM enabled.
