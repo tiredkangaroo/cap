@@ -11,7 +11,7 @@ import {
 } from "./components/ui/collapsible";
 
 import { useContext, useRef, useState } from "react";
-import { FaRegTrashCan } from "react-icons/fa6";
+import { FaRegStar, FaRegTrashCan, FaStar } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
 import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
 import { StatusCodes } from "./statuscodes";
@@ -56,6 +56,28 @@ export function RequestView(props: {
         >
             <CollapsibleTrigger className="w-full bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors">
                 <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
+                    <a
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            props.proxy
+                                .setRequestStarred(
+                                    props.request.id,
+                                    !props.request.starred,
+                                )
+                                .then(() => {
+                                    props.setRequest({
+                                        ...props.request,
+                                        starred: !props.request.starred,
+                                    });
+                                });
+                        }}
+                    >
+                        {props.request.starred ? (
+                            <FaStar className="w-6 text-yellow-500" />
+                        ) : (
+                            <FaRegStar className="w-6" />
+                        )}
+                    </a>
                     <ParagraphView
                         hide={props.requestsViewConfig.hideDate}
                         className="text-sm text-gray-600 dark:text-gray-500"

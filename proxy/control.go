@@ -216,6 +216,30 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.Write(marshal(counts))
 	})
 
+	mux.HandleFunc("POST /setRequestStarred/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		setCORSHeaders(w)
+
+		id := r.PathValue("id")
+
+		starred, err := strconv.ParseBool(r.URL.Query().Get("starred"))
+		if err != nil {
+			w.WriteHeader(nethttp.StatusBadRequest)
+			w.Write([]byte("invalid starred parameter"))
+			return
+		}
+
+		err = m.db.SetRequestStarred(id, starred)
+		if err != nil {
+			w.WriteHeader(nethttp.StatusBadRequest)
+			w.Write([]byte("failed to set request starred status"))
+			slog.Error("failed to set request starred status", "id", id, "err", err.Error())
+			return
+		}
+
+		w.WriteHeader(nethttp.StatusOK)
+		w.Write([]byte("request starred status updated"))
+	})
+
 	mux.HandleFunc("GET /requestsMatchingFilter", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 

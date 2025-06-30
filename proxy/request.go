@@ -63,6 +63,7 @@ type Request struct {
 	Secure bool
 
 	ID       string
+	Starred  bool
 	Datetime time.Time
 	Host     string
 
@@ -203,6 +204,7 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(map[string]any{
 		"id":                  r.ID,
+		"starred":             r.Starred,
 		"datetime":            r.Datetime.UnixMilli(), // unix milli for js
 		"secure":              r.Secure,
 		"clientIP":            r.ClientIP,

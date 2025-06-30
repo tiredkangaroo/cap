@@ -97,6 +97,7 @@ func (d *Database) Init(dirname string) error {
 	// not null is present everywhere for my own sanity
 	createRequestsTable := `CREATE TABLE IF NOT EXISTS requests (
 		id TEXT PRIMARY KEY,
+		starred BOOLEAN NOT NULL DEFAULT FALSE,
 		secure BOOLEAN NOT NULL,
 		datetime timestamp NOT NULL,
 		host TEXT NOT NULL,
@@ -146,6 +147,7 @@ func (d *Database) scanSingleRequest(row interface {
 	var errorText sql.NullString
 	err := row.Scan(
 		&req.ID,
+		&req.Starred,
 		&req.Secure,
 		sqlite3.TimeFormat4.Scanner(&req.Datetime),
 		&req.Host,
@@ -195,6 +197,7 @@ func (d *Database) scanSingleRequest(row interface {
 func (d *Database) GetRequestByID(id string) (*Request, error) {
 	query := `SELECT
 		id,
+		starred,
 		secure,
 		datetime,
 		host,
@@ -276,6 +279,7 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	// paginated query
 	queryBase := `SELECT
 		id,
+		starred,
 		secure,
 		datetime,
 		host,
@@ -519,6 +523,15 @@ func (d *Database) WriteResponseBody(id string, writer io.Writer) error {
 		return fmt.Errorf("write response body: no body found for id %s", id)
 	}
 	return d.readBlobToWriterWithRowID(row, writer)
+}
+
+func (d *Database) SetRequestStarred(id string, starred bool) error {
+	query := `UPDATE requests SET starred = ? WHERE id = ?;`
+	_, err := d.Exec(query, starred, id)
+	if err != nil {
+		return fmt.Errorf("set request starred: %w", err)
+	}
+	return nil
 }
 
 func (d *Database) readBlobToWriterWithRowID(row *sql.Row, writer io.Writer) error {

@@ -40,6 +40,7 @@ export interface Config {
 
 export interface Request {
     id: string;
+    starred: boolean;
     datetime: number;
     secure: boolean;
     clientIP: string;

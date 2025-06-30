@@ -86,6 +86,20 @@ export class Proxy {
         return [respJSON.requests, respJSON.total];
     }
 
+    async setRequestStarred(id: string, starred: boolean): Promise<void> {
+        const response = await fetch(
+            `${this.url}/setRequestStarred/${id}?starred=${starred}`,
+            {
+                method: "POST",
+            },
+        );
+        if (!response.ok) {
+            throw new Error(
+                `failed to set request starred: ${response.statusText}`,
+            );
+        }
+    }
+
     async getConfig(): Promise<Config> {
         const response = await fetch(`${this.url}/config`);
         if (!response.ok) {

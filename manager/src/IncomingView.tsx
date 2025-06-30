@@ -23,7 +23,7 @@ export function IncomingView(props: {
     requestsViewConfig: RequestsViewConfig;
     setSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-    const [requests, setRequests] = useState<Array<Request>>([]);
+    const [localRequests, setLocalRequests] = useState<Array<Request>>([]);
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>
     >([]);
@@ -49,7 +49,7 @@ export function IncomingView(props: {
     useEffect(() => {
         props.proxy.manageRequests(() => {
             const newObj = Object.assign([], props.proxy.requests);
-            setRequests(newObj);
+            setLocalRequests(newObj);
         });
     }, [props.proxy]);
 
@@ -69,6 +69,7 @@ export function IncomingView(props: {
                 dbCurrentlyShownRequests.current = dbReqs;
                 dbTotalCount.current = dbCount;
                 dbTotalPages.current = Math.ceil(dbCount / resultsPerPage);
+                // fix ts
                 reloadCurrentlyShownRequests(
                     dbCurrentlyShownRequests.current,
                     dbTotalPages.current,
@@ -76,7 +77,7 @@ export function IncomingView(props: {
                     setCurrentlyShownRequests,
                     freeze,
                     resultsPerPage,
-                    requests,
+                    localRequests,
                     filter,
                     totalPages,
                     totalResults,
@@ -101,7 +102,7 @@ export function IncomingView(props: {
                 setCurrentlyShownRequests,
                 freeze,
                 resultsPerPage,
-                requests,
+                localRequests,
                 filter,
                 totalPages,
                 totalResults,
@@ -109,7 +110,7 @@ export function IncomingView(props: {
         };
         h();
     }, [
-        requests,
+        localRequests,
         pageNumber,
         freeze,
         resultsPerPage,
@@ -119,8 +120,8 @@ export function IncomingView(props: {
     ]);
 
     useEffect(() => {
-        props.proxy.requests = requests;
-    }, [props.proxy, requests]);
+        props.proxy.requests = localRequests;
+    }, [props.proxy, localRequests]);
 
     const [currentRequestCollapsibleOpen, setCurrentRequestCollapsibleOpen] =
         useState<string | undefined>(undefined);
@@ -139,7 +140,7 @@ export function IncomingView(props: {
                 <div className="bg-gray-200 dark:bg-gray-700 rounded-xl text-black border-1 border-black p-3 flex items-center justify-between">
                     <FilterSelects
                         proxy={props.proxy}
-                        requests={requests}
+                        requests={localRequests}
                         currentlyShownRequests={currentlyShownRequests}
                         filter={filter}
                         setFilter={setFilter}
@@ -161,15 +162,26 @@ export function IncomingView(props: {
                     {totalResults.current} results
                 </div>
 
-                <div className="bg-gray-700 text-white text-sm font-medium rounded-md py-2 px-4 grid grid-cols-4 text-center sticky top-0 z-10">
-                    {!props.requestsViewConfig.hideDate && <span>Date</span>}
+                <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-gray-700 text-white text-sm font-medium rounded-md">
+                    <span className="w-6 text-center"></span>
+
+                    {!props.requestsViewConfig.hideDate && (
+                        <span className="flex-1 text-center">Date</span>
+                    )}
+
                     {!props.requestsViewConfig.hideHostCollapsed && (
-                        <span>Host</span>
+                        <span className="flex-1 text-center">Host</span>
                     )}
+
                     {!props.requestsViewConfig.hideClientApplication && (
-                        <span>Client App</span>
+                        <span className="flex-1 text-center mr-3">
+                            Client App
+                        </span>
                     )}
-                    {!props.requestsViewConfig.hideState && <span>State</span>}
+
+                    {!props.requestsViewConfig.hideState && (
+                        <span className="flex-1 text-center mr-2">State</span>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2 max-h-[calc(100vh-300px)]">
@@ -187,16 +199,43 @@ export function IncomingView(props: {
                                         props.requestsViewConfig
                                     }
                                     setRequest={(req: Request) => {
-                                        const newRequests = [...requests];
-                                        const idx = requests.findIndex(
-                                            (v) => v.id === req.id,
-                                        );
-                                        if (idx === -1) {
-                                            newRequests.push(req);
-                                        } else {
-                                            newRequests[idx] = req;
+                                        const localIDX =
+                                            localRequests.findIndex(
+                                                (r) => r.id === req.id,
+                                            );
+                                        if (localIDX !== -1) {
+                                            const newRequests = [
+                                                ...localRequests,
+                                            ];
+                                            newRequests[localIDX] = req;
+                                            setLocalRequests(newRequests);
+                                            return;
                                         }
-                                        setRequests(newRequests);
+                                        const dbIdx =
+                                            dbCurrentlyShownRequests.current.findIndex(
+                                                (r) => r.id === req.id,
+                                            );
+                                        if (dbIdx !== -1) {
+                                            const newRequests = [
+                                                ...dbCurrentlyShownRequests.current,
+                                            ];
+                                            newRequests[dbIdx] = req;
+                                            dbCurrentlyShownRequests.current =
+                                                newRequests;
+                                        }
+                                        reloadCurrentlyShownRequests(
+                                            dbCurrentlyShownRequests.current,
+                                            dbTotalPages.current,
+                                            dbTotalCount.current,
+
+                                            setCurrentlyShownRequests,
+                                            freeze,
+                                            resultsPerPage,
+                                            localRequests,
+                                            filter,
+                                            totalPages,
+                                            totalResults,
+                                        );
                                     }}
                                     open={
                                         request.id ===
@@ -215,7 +254,6 @@ export function IncomingView(props: {
 
             <div className="bg-gray-700 dark:bg-gray-900 sticky bottom-0 shadow-inner border-t mt-4 px-4 py-2 flex items-center justify-between">
                 <Pagination
-                    requests={requests}
                     currentlyShownRequests={currentlyShownRequests}
                     pageNumber={pageNumber}
                     setPageNumber={setPageNumber}
@@ -236,7 +274,7 @@ export function IncomingView(props: {
                         <SelectTrigger className="min-w-[120px] text-white border-gray-300 shadow-sm">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="text-black">
+                        <SelectContent className="text-black dark:text-white">
                             {["10", "15", "25", "50", "75", "100"].map((v) => (
                                 <SelectItem key={v} value={v}>
                                     {v}
@@ -288,7 +326,6 @@ async function reloadCurrentlyShownRequests(
         requests,
         filter,
     );
-    console.log(cR);
     setCurrentlyShownRequests(cR);
     totalPages.current = tP;
     totalResults.current = tC;
@@ -317,7 +354,6 @@ function IncomingFreezeButton(props: {
 }
 
 function Pagination(props: {
-    requests: Array<Request>;
     currentlyShownRequests: Array<Request>;
     pageNumber: number;
     setPageNumber: React.Dispatch<React.SetStateAction<number>>;
@@ -379,7 +415,7 @@ function Pagination(props: {
     return (
         <div
             className="flex flex-row gap-2 ml-4 text-white"
-            key={`${props.requests.length}-${props.pageNumber}`}
+            key={`${props.currentlyShownRequests.length}-${props.pageNumber}`}
         >
             {uniquePages.map((v, i) => {
                 let ellipses = false;
