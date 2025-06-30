@@ -75,7 +75,7 @@ export function RequestView(props: {
                         {props.request.starred ? (
                             <FaStar className="w-6 text-yellow-500" />
                         ) : (
-                            <FaRegStar className="w-6" />
+                            <FaRegStar className="w-6 text-black dark:text-white" />
                         )}
                     </a>
                     <ParagraphView

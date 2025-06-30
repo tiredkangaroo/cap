@@ -8,7 +8,7 @@ cap is a configurable proxy server that allows you to capture, modify, and inspe
 - retrieve and modify requests (including the destination, method, headers, body, etc.)**
 - filtering requests
 - timeline for the request
-- + more im a bit lazy rn to write all of it
+- more im a bit lazy rn to write all of it
 
 # Installation
 well currently the built version of the app doesn't work, so we're going to have to run it from source.

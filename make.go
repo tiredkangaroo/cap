@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
+	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -204,7 +206,52 @@ func genCA() {
 	cmd("01", fmt.Sprintf("openssl req -x509 -newkey rsa:4096 -keyout %s/ca.key -out %s/ca.crt -days 3650 -nodes -subj \"/CN=CAP\"", CERTS_DIR, CERTS_DIR))
 	fmt.Println("CA certificate and key generated in", CERTS_DIR)
 	fmt.Println("NOTE: this certificate expires in 3650 day (~10 years). You can regenerate it at any time by running this command again.")
-	fmt.Printf("NOTE: you NEED to trust this CA certificate in your system/browser for the proxy to work properly. find it in the %s directory.\n", CERTS_DIR)
+	fmt.Printf("NOTE: you NEED to trust this CA certificate in your system/browser for the proxy to work properly. prompt for trust (Y/n)? ")
+	if getYN(true) {
+		trustCA(path.Join(CERTS_DIR, "ca.crt"))
+	} else {
+		fmt.Println("Skipping CA trust prompt.")
+	}
+}
+
+func trustCA(certPath string) {
+	switch runtime.GOOS {
+	case "windows":
+		fmt.Printf("This command requires admin privileges to run. Continue? (Y/n) ")
+		if !getYN(true) {
+			fmt.Println("Skipping CA trust on Windows.")
+			return
+		}
+		cmd("02", fmt.Sprintf("certutil -addstore -f Root %s", certPath))
+	case "darwin":
+		fmt.Printf("This command will prompt you for the admin password used for sudo. Continue? (Y/n) ")
+		if !getYN(true) {
+			fmt.Println("Skipping CA trust on macOS.")
+			return
+		}
+		cmd("02", fmt.Sprintf("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s", certPath))
+	case "linux":
+		fmt.Printf("This command will prompt you for the admin password used for sudo. Continue? (Y/n) ")
+		if !getYN(true) {
+			fmt.Println("Skipping CA trust on macOS.")
+			return
+		}
+		cmd("02", fmt.Sprintf("sudo cp %s /usr/local/share/ca-certificates/my-ca.crt", certPath))
+		cmd("03", "sudo update-ca-certificates")
+	default:
+		// NOTE: we shouldn't even prompt for trust on unsupported OSes.
+		fmt.Println("Unsupported OS for CA trust:", runtime.GOOS)
+		fmt.Println("You need to trust the CA certificate manually in your system/browser for the proxy to work properly.")
+		fmt.Println("Please refer to the documentation for your OS on how to trust a CA certificate.")
+		fmt.Println("The CA certificate is located at:", certPath)
+		fmt.Println("Skipping CA trust prompt.")
+	}
+}
+
+func getYN(preselected bool) bool {
+	var response string
+	fmt.Scanln(&response)
+	return response == "Y" || response == "y" || (response == "" && preselected)
 }
 
 func handleSignals(cleanup func()) {
