@@ -204,6 +204,7 @@ func genCA() {
 	cmd("01", fmt.Sprintf("openssl req -x509 -newkey rsa:4096 -keyout %s/ca.key -out %s/ca.crt -days 3650 -nodes -subj \"/CN=CAP\"", CERTS_DIR, CERTS_DIR))
 	fmt.Println("CA certificate and key generated in", CERTS_DIR)
 	fmt.Println("NOTE: this certificate expires in 3650 day (~10 years). You can regenerate it at any time by running this command again.")
+	fmt.Printf("NOTE: you NEED to trust this CA certificate in your system/browser for the proxy to work properly. find it in the %s directory.\n", CERTS_DIR)
 }
 
 func handleSignals(cleanup func()) {

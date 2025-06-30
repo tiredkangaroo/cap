@@ -69,6 +69,18 @@ export function IncomingView(props: {
                 dbCurrentlyShownRequests.current = dbReqs;
                 dbTotalCount.current = dbCount;
                 dbTotalPages.current = Math.ceil(dbCount / resultsPerPage);
+                reloadCurrentlyShownRequests(
+                    dbCurrentlyShownRequests.current,
+                    dbTotalPages.current,
+                    dbTotalCount.current,
+                    setCurrentlyShownRequests,
+                    freeze,
+                    resultsPerPage,
+                    requests,
+                    filter,
+                    totalPages,
+                    totalResults,
+                );
             } catch (error) {
                 console.error(
                     "error getting db currently shown requests:",
@@ -276,6 +288,7 @@ async function reloadCurrentlyShownRequests(
         requests,
         filter,
     );
+    console.log(cR);
     setCurrentlyShownRequests(cR);
     totalPages.current = tP;
     totalResults.current = tC;
@@ -542,6 +555,11 @@ async function getCurrentlyShownRequests(
     if (filter.host) {
         localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
             (req) => req.host === filter.host,
+        );
+    }
+    if (filter.clientIP) {
+        localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
+            (req) => req.clientIP === filter.clientIP,
         );
     }
 
