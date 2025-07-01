@@ -117,6 +117,8 @@ export function ProxyView() {
                     proxy={proxy}
                     setSettingsDialogOpen={setSettingsOpen}
                     requestsViewConfig={requestsViewConfig}
+                    requestDialogContentProps={requestDialogContentProps}
+                    setRequestDialogContentProps={setRequestDialogContentProps}
                 />
             </RequestDialogContentPropsContext>
         </div>

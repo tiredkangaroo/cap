@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useRef, useState, useContext } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { IoMdClose } from "react-icons/io";
 
-import { Request, RequestsViewConfig } from "./types";
+import { Request, RequestContentProps, RequestsViewConfig } from "./types";
 import { Proxy } from "./api/api";
 
 import { RequestView } from "./RequestView";
@@ -17,16 +17,16 @@ import {
 import { camelCaseToCapitalSpace, equalArray } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
-import { RequestDialogContentPropsContext } from "./context/context";
 
 export function IncomingView(props: {
     proxy: Proxy;
     requestsViewConfig: RequestsViewConfig;
     setSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    requestDialogContentProps: RequestContentProps | undefined;
+    setRequestDialogContentProps: React.Dispatch<
+        React.SetStateAction<RequestContentProps | undefined>
+    >;
 }) {
-    const [requestDialogContentProps, setRequestDialogContentProps] =
-        useContext(RequestDialogContentPropsContext);
-
     const [localRequests, setLocalRequests] = useState<Array<Request>>([]);
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>
@@ -137,6 +137,13 @@ export function IncomingView(props: {
         }
     }, [pageNumber, totalPages]);
 
+    const requestDialogContentPropsRef = useRef(
+        props.requestDialogContentProps,
+    );
+    useEffect(() => {
+        requestDialogContentPropsRef.current = props.requestDialogContentProps;
+    }, [props.requestDialogContentProps]);
+
     return (
         <div className="w-full h-full flex flex-col">
             <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 dark:bg-gray-950 text-white p-4">
@@ -205,14 +212,14 @@ export function IncomingView(props: {
                                     setRequest={(req: Request) => {
                                         if (
                                             // not sure what else would trigger setRequest but not the request in the dialog but the second clause will be there for my sanity
-                                            requestDialogContentProps !==
+                                            requestDialogContentPropsRef.current !==
                                                 undefined &&
-                                            requestDialogContentProps.request
-                                                .id === req.id
+                                            requestDialogContentPropsRef.current
+                                                .request.id === req.id
                                         ) {
                                             console.log("hel");
-                                            setRequestDialogContentProps({
-                                                ...requestDialogContentProps,
+                                            props.setRequestDialogContentProps({
+                                                ...requestDialogContentPropsRef.current,
                                                 request: req,
                                             });
                                         }

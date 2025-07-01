@@ -7,6 +7,7 @@ export function RequestDialog() {
     const [contentProps, setContentProps] = useContext(
         RequestDialogContentPropsContext,
     );
+    console.log(contentProps);
     if (!contentProps) {
         // if contentProps is undefined, we don't render the dialog
         return null;
