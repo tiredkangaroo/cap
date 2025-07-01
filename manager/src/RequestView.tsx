@@ -13,9 +13,13 @@ import {
 import { useContext, useRef, useState } from "react";
 import { FaRegStar, FaRegTrashCan, FaStar } from "react-icons/fa6";
 import { Timeline } from "./Timeline";
-import { nsToReadable, pascalCaseToCapitalSpace } from "./utils";
+import {
+    cmdOrCtrlPressed,
+    nsToReadable,
+    pascalCaseToCapitalSpace,
+} from "./utils";
 import { StatusCodes } from "./statuscodes";
-import { DarkModeContext } from "./context/context";
+import { DarkModeContext, KeyboardContext } from "./context/context";
 import { encodeURLEncoded, parseURLEncoded } from "./encoding/urlencoded";
 
 const stateColors: Record<string, string> = {
@@ -46,11 +50,15 @@ export function RequestView(props: {
     setOpen: (o: boolean) => void;
 }) {
     const [editMode, setEditMode] = useState(false);
+    const keyboard = useContext(KeyboardContext);
     return (
         <Collapsible
             className="border-b border-gray-300"
             open={props.open}
             onOpenChange={(o) => {
+                if (cmdOrCtrlPressed(keyboard)) {
+                    return;
+                }
                 props.setOpen(o);
             }}
         >
@@ -111,270 +119,289 @@ export function RequestView(props: {
             </CollapsibleTrigger>
 
             <CollapsibleContent className="bg-gray-300 dark:bg-gray-900 max-h-[60vh] overflow-y-auto p-4 space-y-4 font-[monospace] text-black dark:text-white">
-                <div className="flex gap-3">
-                    <button
-                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover-blue-400 text-white font-semibold px-3 py-1 rounded shadow"
-                        onClick={() => downloadRequest(props.request)}
-                    >
-                        Download Request
-                    </button>
-                    <EditButton
-                        proxy={props.proxy}
-                        request={props.request}
-                        editMode={editMode}
-                        setEditMode={setEditMode}
-                    />
-                </div>
+                <RequestViewContent
+                    request={props.request}
+                    proxy={props.proxy}
+                    editMode={editMode}
+                    setEditMode={setEditMode}
+                    requestsViewConfig={props.requestsViewConfig}
+                    setRequest={props.setRequest}
+                />
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
 
-                {props.request.error && !props.requestsViewConfig.hideError && (
-                    <p className="text-blue-800 dark:text-blue-400">
-                        <b>Error:</b> {props.request.error}
-                    </p>
-                )}
+function RequestViewContent(props: {
+    request: Request;
+    proxy: Proxy;
+    editMode: boolean;
+    setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+    requestsViewConfig: RequestsViewConfig;
+    setRequest: (req: Request) => void;
+}) {
+    return (
+        <>
+            <div className="flex gap-3">
+                <button
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover-blue-400 text-white font-semibold px-3 py-1 rounded shadow"
+                    onClick={() => downloadRequest(props.request)}
+                >
+                    Download Request
+                </button>
+                <EditButton
+                    proxy={props.proxy}
+                    request={props.request}
+                    editMode={props.editMode}
+                    setEditMode={props.setEditMode}
+                />
+            </div>
 
-                {/* Request Info */}
-                <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3 font-[Manrope]">
-                    <div className="flex flex-row items-center gap-2">
-                        {!props.requestsViewConfig.hideMethod &&
-                        props.request.method !== undefined ? (
-                            <p
-                                className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-black dark:text-white"
-                                style={{
-                                    backgroundColor: getMethodColor(
+            {props.request.error && !props.requestsViewConfig.hideError && (
+                <p className="text-blue-800 dark:text-blue-400">
+                    <b>Error:</b> {props.request.error}
+                </p>
+            )}
+
+            {/* Request Info */}
+            <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3 font-[Manrope]">
+                <div className="flex flex-row items-center gap-2">
+                    {!props.requestsViewConfig.hideMethod &&
+                    props.request.method !== undefined ? (
+                        <p
+                            className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-black dark:text-white"
+                            style={{
+                                backgroundColor: getMethodColor(
+                                    props.request.method!,
+                                ),
+                            }}
+                            onClick={() => {
+                                if (props.editMode) {
+                                    const methods = [
+                                        "GET",
+                                        "POST",
+                                        "PUT",
+                                        "PATCH",
+                                        "DELETE",
+                                        "OPTIONS",
+                                        "HEAD",
+                                    ];
+                                    const currentIndex = methods.indexOf(
                                         props.request.method!,
-                                    ),
-                                }}
-                                onClick={() => {
-                                    if (editMode) {
-                                        const methods = [
-                                            "GET",
-                                            "POST",
-                                            "PUT",
-                                            "PATCH",
-                                            "DELETE",
-                                            "OPTIONS",
-                                            "HEAD",
-                                        ];
-                                        const currentIndex = methods.indexOf(
-                                            props.request.method!,
-                                        );
-                                        const nextIndex =
-                                            (currentIndex + 1) % methods.length;
-                                        const nextMethod = methods[nextIndex];
-                                        props.setRequest({
-                                            ...props.request,
-                                            method: nextMethod,
-                                        });
-                                    }
-                                }}
-                            >
-                                {props.request.method}
-                            </p>
-                        ) : null}
-                        <div className="flex flex-row items-center gap-2 text-2xl">
-                            {props.request.secure ? (
-                                <CiLock
-                                    className="text-green-800 dark:text-green-400"
-                                    onClick={() => {
-                                        props.setRequest({
-                                            ...props.request,
-                                            secure: false,
-                                        });
-                                    }}
-                                />
-                            ) : (
-                                <CiUnlock
-                                    className="text-red-600 dark:text-red-400"
-                                    onClick={() => {
-                                        props.setRequest({
-                                            ...props.request,
-                                            secure: true,
-                                        });
-                                    }}
-                                />
-                            )}
-                            <b>Request</b>{" "}
-                            {!props.requestsViewConfig.hideID
-                                ? props.request.id
-                                : null}{" "}
-                            {!props.requestsViewConfig.hideClientIP ? (
-                                <span>
-                                    by <b>{props.request.clientIP}</b>
-                                </span>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <FieldView
-                        name="Host"
-                        value={props.request.host}
-                        hide={props.requestsViewConfig.hideHost}
-                        editMode={editMode}
-                        setValue={(v: string) => {
-                            props.setRequest({ ...props.request, host: v });
-                        }}
-                    />
-                    <div className="mt-4"></div>
-                    <FieldView
-                        name="Client Username"
-                        value={props.request.clientAuthorizationUser}
-                        hide={props.requestsViewConfig.hideClientUser}
-                        editMode={editMode}
-                    />
-                    <ShowHideFieldView
-                        name="Client Password"
-                        value={props.request.clientAuthorizationPassword}
-                        hiddenValue="********"
-                        defaultShow={false}
-                        hide={props.requestsViewConfig.hideClientPassword}
-                        editMode={editMode}
-                    />
-                    <FieldView
-                        name="Path"
-                        value={props.request.path}
-                        hide={props.requestsViewConfig.hidePath}
-                        editMode={editMode}
-                        setValue={(v) =>
-                            props.setRequest({ ...props.request, path: v })
-                        }
-                    />
-                    <FieldView
-                        name="Query"
-                        value={props.request.query}
-                        hide={props.requestsViewConfig.hideQuery}
-                        editMode={editMode}
-                        setValue={(v) =>
-                            props.setRequest({ ...props.request, query: v })
-                        }
-                    />
-                    <FieldView
-                        name="Headers"
-                        value={props.request.headers}
-                        hide={props.requestsViewConfig.hideRequestHeaders}
-                        editMode={editMode}
-                        setValue={(v) =>
-                            props.setRequest({ ...props.request, headers: v })
-                        }
-                    />
-
-                    {!props.requestsViewConfig.hideRequestBody && (
-                        <>
-                            <BodyView
-                                request={props.request}
-                                isRequestBody={true}
-                                hide={false}
-                                editMode={editMode}
-                                setValue={(v: string | undefined) => {
+                                    );
+                                    const nextIndex =
+                                        (currentIndex + 1) % methods.length;
+                                    const nextMethod = methods[nextIndex];
                                     props.setRequest({
                                         ...props.request,
-                                        tempBody: v,
+                                        method: nextMethod,
                                     });
-                                }}
-                                loadBody={async () => {
-                                    const body =
-                                        await props.proxy.getRequestBody(
-                                            props.request.id,
-                                        );
-                                    props.setRequest({
-                                        ...props.request,
-                                        tempBody: body,
-                                    });
-                                }}
-                            />
-                        </>
-                    )}
-                </div>
-
-                {/* Response Info */}
-                <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
-                    <h2 className="text-lg font-semibold">Response</h2>
-                    <div className="flex flex-row text-lg gap-2">
-                        {props.request.response?.statusCode != undefined ? (
-                            <>
-                                <p
-                                    className="mt-auto mb-auto w-3 h-3 rounded-4xl"
-                                    style={{
-                                        backgroundColor: getStatusCodeBGColor(
-                                            props.request.response!.statusCode!,
-                                        ),
-                                    }}
-                                ></p>
-                                {props.request.response?.statusCode}{" "}
-                                {statusCodeToName(
-                                    props.request.response?.statusCode,
-                                )}
-                            </>
-                        ) : null}
-                    </div>
-                    {/* <FieldView
-                        name="Status"
-                        value={props.request.response?.statusCode}
-                        hide={props.requestsViewConfig.hideResponseStatus}
-                        editMode={editMode}
-                        disableEdits
-                    /> */}
-                    <FieldView
-                        name="Headers"
-                        value={props.request.response?.headers}
-                        hide={props.requestsViewConfig.hideResponseHeaders}
-                        editMode={editMode}
-                    />
-                    {!props.requestsViewConfig.hideResponseBody && (
-                        <>
-                            <BodyView
-                                request={props.request}
-                                isRequestBody={false}
-                                hide={false}
-                                editMode={editMode}
-                                setValue={(v: string | undefined) =>
-                                    props.setRequest({
-                                        ...props.request,
-                                        response: {
-                                            tempBody: v,
-                                        },
-                                    })
                                 }
-                                loadBody={async () => {
-                                    const body =
-                                        await props.proxy.getResponseBody(
-                                            props.request.id,
-                                        );
-                                    console.log(body);
+                            }}
+                        >
+                            {props.request.method}
+                        </p>
+                    ) : null}
+                    <div className="flex flex-row items-center gap-2 text-2xl">
+                        {props.request.secure ? (
+                            <CiLock
+                                className="text-green-800 dark:text-green-400"
+                                onClick={() => {
                                     props.setRequest({
                                         ...props.request,
-                                        response: {
-                                            tempBody: body,
-                                        },
+                                        secure: false,
                                     });
                                 }}
                             />
-                        </>
-                    )}
+                        ) : (
+                            <CiUnlock
+                                className="text-red-600 dark:text-red-400"
+                                onClick={() => {
+                                    props.setRequest({
+                                        ...props.request,
+                                        secure: true,
+                                    });
+                                }}
+                            />
+                        )}
+                        <b>Request</b>{" "}
+                        {!props.requestsViewConfig.hideID
+                            ? props.request.id
+                            : null}{" "}
+                        {!props.requestsViewConfig.hideClientIP ? (
+                            <span>
+                                by <b>{props.request.clientIP}</b>
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
 
                 <FieldView
-                    name="Bytes Transferred"
-                    hide={props.requestsViewConfig.hideBytesTransferred}
-                    value={props.request.bytesTransferred}
-                    editMode={editMode}
-                    disableEdits
+                    name="Host"
+                    value={props.request.host}
+                    hide={props.requestsViewConfig.hideHost}
+                    editMode={props.editMode}
+                    setValue={(v: string) => {
+                        props.setRequest({ ...props.request, host: v });
+                    }}
+                />
+                <div className="mt-4"></div>
+                <FieldView
+                    name="Client Username"
+                    value={props.request.clientAuthorizationUser}
+                    hide={props.requestsViewConfig.hideClientUser}
+                    editMode={props.editMode}
+                />
+                <ShowHideFieldView
+                    name="Client Password"
+                    value={props.request.clientAuthorizationPassword}
+                    hiddenValue="********"
+                    defaultShow={false}
+                    hide={props.requestsViewConfig.hideClientPassword}
+                    editMode={props.editMode}
+                />
+                <FieldView
+                    name="Path"
+                    value={props.request.path}
+                    hide={props.requestsViewConfig.hidePath}
+                    editMode={props.editMode}
+                    setValue={(v) =>
+                        props.setRequest({ ...props.request, path: v })
+                    }
+                />
+                <FieldView
+                    name="Query"
+                    value={props.request.query}
+                    hide={props.requestsViewConfig.hideQuery}
+                    editMode={props.editMode}
+                    setValue={(v) =>
+                        props.setRequest({ ...props.request, query: v })
+                    }
+                />
+                <FieldView
+                    name="Headers"
+                    value={props.request.headers}
+                    hide={props.requestsViewConfig.hideRequestHeaders}
+                    editMode={props.editMode}
+                    setValue={(v) =>
+                        props.setRequest({ ...props.request, headers: v })
+                    }
                 />
 
-                {props.request.timing && props.request.timing_total && (
-                    <div>
-                        <h2 className="text-lg font-semibold mt-4">
-                            Timeline ({nsToReadable(props.request.timing_total)}
-                            )
-                        </h2>
-                        <Timeline
-                            timing={props.request.timing}
-                            totalTime={props.request.timing_total}
-                            className="mt-2"
+                {!props.requestsViewConfig.hideRequestBody && (
+                    <>
+                        <BodyView
+                            request={props.request}
+                            isRequestBody={true}
+                            hide={false}
+                            editMode={props.editMode}
+                            setValue={(v: string | undefined) => {
+                                props.setRequest({
+                                    ...props.request,
+                                    tempBody: v,
+                                });
+                            }}
+                            loadBody={async () => {
+                                const body = await props.proxy.getRequestBody(
+                                    props.request.id,
+                                );
+                                props.setRequest({
+                                    ...props.request,
+                                    tempBody: body,
+                                });
+                            }}
                         />
-                    </div>
+                    </>
                 )}
-            </CollapsibleContent>
-        </Collapsible>
+            </div>
+
+            {/* Response Info */}
+            <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
+                <h2 className="text-lg font-semibold">Response</h2>
+                <div className="flex flex-row text-lg gap-2">
+                    {props.request.response?.statusCode != undefined ? (
+                        <>
+                            <p
+                                className="mt-auto mb-auto w-3 h-3 rounded-4xl"
+                                style={{
+                                    backgroundColor: getStatusCodeBGColor(
+                                        props.request.response!.statusCode!,
+                                    ),
+                                }}
+                            ></p>
+                            {props.request.response?.statusCode}{" "}
+                            {statusCodeToName(
+                                props.request.response?.statusCode,
+                            )}
+                        </>
+                    ) : null}
+                </div>
+                {/* <FieldView
+            name="Status"
+            value={props.request.response?.statusCode}
+            hide={props.requestsViewConfig.hideResponseStatus}
+            editMode={props.editMode}
+            disableEdits
+        /> */}
+                <FieldView
+                    name="Headers"
+                    value={props.request.response?.headers}
+                    hide={props.requestsViewConfig.hideResponseHeaders}
+                    editMode={props.editMode}
+                />
+                {!props.requestsViewConfig.hideResponseBody && (
+                    <>
+                        <BodyView
+                            request={props.request}
+                            isRequestBody={false}
+                            hide={false}
+                            editMode={props.editMode}
+                            setValue={(v: string | undefined) =>
+                                props.setRequest({
+                                    ...props.request,
+                                    response: {
+                                        tempBody: v,
+                                    },
+                                })
+                            }
+                            loadBody={async () => {
+                                const body = await props.proxy.getResponseBody(
+                                    props.request.id,
+                                );
+                                console.log(body);
+                                props.setRequest({
+                                    ...props.request,
+                                    response: {
+                                        tempBody: body,
+                                    },
+                                });
+                            }}
+                        />
+                    </>
+                )}
+            </div>
+
+            <FieldView
+                name="Bytes Transferred"
+                hide={props.requestsViewConfig.hideBytesTransferred}
+                value={props.request.bytesTransferred}
+                editMode={props.editMode}
+                disableEdits
+            />
+
+            {props.request.timing && props.request.timing_total && (
+                <div>
+                    <h2 className="text-lg font-semibold mt-4">
+                        Timeline ({nsToReadable(props.request.timing_total)})
+                    </h2>
+                    <Timeline
+                        timing={props.request.timing}
+                        totalTime={props.request.timing_total}
+                        className="mt-2"
+                    />
+                </div>
+            )}
+        </>
     );
 }
 

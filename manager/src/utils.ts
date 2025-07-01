@@ -52,3 +52,16 @@ export function equalArray<T extends string | number>(
     a.every((value, idx) => value === b[idx]);
     return true;
 }
+
+export function cmdOrCtrlPressed(keyboard: Set<string>) {
+    // sybau "'platform' is deprecated" looking ahh 🥀
+    switch (navigator.platform) {
+        // mac platforms will use the command key
+        case "MacIntel":
+        case "MacPPC":
+        case "Mac68K":
+            return keyboard.has("MetaLeft") || keyboard.has("MetaRight");
+        default: // others platform will use the control key
+            return keyboard.has("Control");
+    }
+}

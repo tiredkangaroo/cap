@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { ProxyView } from "./ProxyView.tsx";
-import { AppearanceConfigContext, DarkModeContext } from "./context/context.ts";
+import {
+    AppearanceConfigContext,
+    DarkModeContext,
+    KeyboardContext,
+} from "./context/context.ts";
 import { AppearanceConfig } from "./types.ts";
 
 function App() {
@@ -51,13 +55,24 @@ function App() {
         }
     };
 
+    // keyboard context:
+    const keyboard = new Set<string>();
+    document.addEventListener("keydown", (e) => {
+        keyboard.add(e.code);
+    });
+    document.addEventListener("keyup", (e) => {
+        keyboard.delete(e.code);
+    });
+
     return (
         <div className="flex flex-row w-full h-full">
             <DarkModeContext value={[darkMode, (v) => setDarkMode(v)]}>
                 <AppearanceConfigContext
                     value={[appearanceConfig, (v) => setAppearanceConfig(v)]}
                 >
-                    <ProxyView />
+                    <KeyboardContext value={keyboard}>
+                        <ProxyView />
+                    </KeyboardContext>
                 </AppearanceConfigContext>
             </DarkModeContext>
         </div>

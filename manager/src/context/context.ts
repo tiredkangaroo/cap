@@ -14,3 +14,12 @@ export const AppearanceConfigContext = createContext<
     },
     () => {},
 ]);
+
+export const KeyboardContext = createContext<Set<string>>(new Set());
+
+export const RequestDialogContext = createContext<
+    [
+        React.ElementType | undefined,
+        React.Dispatch<React.SetStateAction<React.ElementType | undefined>>,
+    ]
+>([undefined, () => {}]);
