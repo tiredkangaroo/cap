@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, useContext } from "react";
 import { IoMdClose } from "react-icons/io";
 
 import { Request, RequestsViewConfig } from "./types";
@@ -17,12 +17,16 @@ import {
 import { camelCaseToCapitalSpace, equalArray } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
+import { RequestDialogContentPropsContext } from "./context/context";
 
 export function IncomingView(props: {
     proxy: Proxy;
     requestsViewConfig: RequestsViewConfig;
     setSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+    const [requestDialogContentProps, setRequestDialogContentProps] =
+        useContext(RequestDialogContentPropsContext);
+
     const [localRequests, setLocalRequests] = useState<Array<Request>>([]);
     const [currentlyShownRequests, setCurrentlyShownRequests] = useState<
         Array<Request>
@@ -199,6 +203,19 @@ export function IncomingView(props: {
                                         props.requestsViewConfig
                                     }
                                     setRequest={(req: Request) => {
+                                        if (
+                                            // not sure what else would trigger setRequest but not the request in the dialog but the second clause will be there for my sanity
+                                            requestDialogContentProps !==
+                                                undefined &&
+                                            requestDialogContentProps.request
+                                                .id === req.id
+                                        ) {
+                                            console.log("hel");
+                                            setRequestDialogContentProps({
+                                                ...requestDialogContentProps,
+                                                request: req,
+                                            });
+                                        }
                                         const localIDX =
                                             localRequests.findIndex(
                                                 (r) => r.id === req.id,

@@ -1,4 +1,4 @@
-import { AppearanceConfig } from "@/types";
+import { AppearanceConfig, RequestContentProps } from "@/types";
 import { createContext } from "react";
 
 export const DarkModeContext = createContext<[boolean, (v: boolean) => void]>([
@@ -17,9 +17,9 @@ export const AppearanceConfigContext = createContext<
 
 export const KeyboardContext = createContext<Set<string>>(new Set());
 
-export const RequestDialogContext = createContext<
+export const RequestDialogContentPropsContext = createContext<
     [
-        React.ElementType | undefined,
-        React.Dispatch<React.SetStateAction<React.ElementType | undefined>>,
+        RequestContentProps | undefined,
+        React.Dispatch<React.SetStateAction<RequestContentProps | undefined>>,
     ]
 >([undefined, () => {}]);

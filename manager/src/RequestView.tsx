@@ -1,5 +1,5 @@
 import { downloadBody, downloadRequest } from "./downloadRequest";
-import { Request, RequestsViewConfig } from "./types";
+import { Request, RequestContentProps, RequestsViewConfig } from "./types";
 import { Proxy } from "./api/api";
 import { CiLock, CiUnlock } from "react-icons/ci";
 import { JsonEditor } from "json-edit-react";
@@ -19,7 +19,11 @@ import {
     pascalCaseToCapitalSpace,
 } from "./utils";
 import { StatusCodes } from "./statuscodes";
-import { DarkModeContext, KeyboardContext } from "./context/context";
+import {
+    DarkModeContext,
+    KeyboardContext,
+    RequestDialogContentPropsContext,
+} from "./context/context";
 import { encodeURLEncoded, parseURLEncoded } from "./encoding/urlencoded";
 
 const stateColors: Record<string, string> = {
@@ -51,12 +55,23 @@ export function RequestView(props: {
 }) {
     const [editMode, setEditMode] = useState(false);
     const keyboard = useContext(KeyboardContext);
+    const [requestDialogContentProps, setRequestDialogContentProps] =
+        useContext(RequestDialogContentPropsContext);
     return (
         <Collapsible
             className="border-b border-gray-300"
             open={props.open}
             onOpenChange={(o) => {
                 if (cmdOrCtrlPressed(keyboard)) {
+                    // if ctrl or cmd is pressed, open the request dialog
+                    setRequestDialogContentProps({
+                        request: props.request,
+                        proxy: props.proxy,
+                        editMode: editMode,
+                        setEditMode: setEditMode,
+                        requestsViewConfig: props.requestsViewConfig,
+                        setRequest: props.setRequest,
+                    });
                     return;
                 }
                 props.setOpen(o);
@@ -132,14 +147,7 @@ export function RequestView(props: {
     );
 }
 
-function RequestViewContent(props: {
-    request: Request;
-    proxy: Proxy;
-    editMode: boolean;
-    setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
-    requestsViewConfig: RequestsViewConfig;
-    setRequest: (req: Request) => void;
-}) {
+export function RequestViewContent(props: RequestContentProps) {
     return (
         <>
             <div className="flex gap-3">
@@ -158,7 +166,7 @@ function RequestViewContent(props: {
             </div>
 
             {props.request.error && !props.requestsViewConfig.hideError && (
-                <p className="text-blue-800 dark:text-blue-400">
+                <p className="text-red-800 dark:text-red-400">
                     <b>Error:</b> {props.request.error}
                 </p>
             )}
@@ -314,73 +322,13 @@ function RequestViewContent(props: {
                     </>
                 )}
             </div>
-
-            {/* Response Info */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
-                <h2 className="text-lg font-semibold">Response</h2>
-                <div className="flex flex-row text-lg gap-2">
-                    {props.request.response?.statusCode != undefined ? (
-                        <>
-                            <p
-                                className="mt-auto mb-auto w-3 h-3 rounded-4xl"
-                                style={{
-                                    backgroundColor: getStatusCodeBGColor(
-                                        props.request.response!.statusCode!,
-                                    ),
-                                }}
-                            ></p>
-                            {props.request.response?.statusCode}{" "}
-                            {statusCodeToName(
-                                props.request.response?.statusCode,
-                            )}
-                        </>
-                    ) : null}
-                </div>
-                {/* <FieldView
-            name="Status"
-            value={props.request.response?.statusCode}
-            hide={props.requestsViewConfig.hideResponseStatus}
-            editMode={props.editMode}
-            disableEdits
-        /> */}
-                <FieldView
-                    name="Headers"
-                    value={props.request.response?.headers}
-                    hide={props.requestsViewConfig.hideResponseHeaders}
-                    editMode={props.editMode}
-                />
-                {!props.requestsViewConfig.hideResponseBody && (
-                    <>
-                        <BodyView
-                            request={props.request}
-                            isRequestBody={false}
-                            hide={false}
-                            editMode={props.editMode}
-                            setValue={(v: string | undefined) =>
-                                props.setRequest({
-                                    ...props.request,
-                                    response: {
-                                        tempBody: v,
-                                    },
-                                })
-                            }
-                            loadBody={async () => {
-                                const body = await props.proxy.getResponseBody(
-                                    props.request.id,
-                                );
-                                console.log(body);
-                                props.setRequest({
-                                    ...props.request,
-                                    response: {
-                                        tempBody: body,
-                                    },
-                                });
-                            }}
-                        />
-                    </>
-                )}
-            </div>
-
+            <ResponseView
+                request={props.request}
+                requestsViewConfig={props.requestsViewConfig}
+                editMode={props.editMode}
+                setRequest={props.setRequest}
+                proxy={props.proxy}
+            />
             <FieldView
                 name="Bytes Transferred"
                 hide={props.requestsViewConfig.hideBytesTransferred}
@@ -388,7 +336,6 @@ function RequestViewContent(props: {
                 editMode={props.editMode}
                 disableEdits
             />
-
             {props.request.timing && props.request.timing_total && (
                 <div>
                     <h2 className="text-lg font-semibold mt-4">
@@ -402,6 +349,72 @@ function RequestViewContent(props: {
                 </div>
             )}
         </>
+    );
+}
+
+function ResponseView(props: {
+    request: Request;
+    requestsViewConfig: RequestsViewConfig;
+    editMode: boolean;
+    setRequest: (req: Request) => void;
+    proxy: Proxy;
+}) {
+    return (
+        <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
+            <h2 className="text-lg font-semibold">Response</h2>
+            <div className="flex flex-row text-lg gap-2">
+                {props.request.response?.statusCode != undefined ? (
+                    <>
+                        <p
+                            className="mt-auto mb-auto w-3 h-3 rounded-4xl"
+                            style={{
+                                backgroundColor: getStatusCodeBGColor(
+                                    props.request.response!.statusCode!,
+                                ),
+                            }}
+                        ></p>
+                        {props.request.response?.statusCode}{" "}
+                        {statusCodeToName(props.request.response?.statusCode)}
+                    </>
+                ) : null}
+            </div>
+            <FieldView
+                name="Headers"
+                value={props.request.response?.headers}
+                hide={props.requestsViewConfig.hideResponseHeaders}
+                editMode={props.editMode}
+            />
+            {!props.requestsViewConfig.hideResponseBody && (
+                <>
+                    <BodyView
+                        request={props.request}
+                        isRequestBody={false}
+                        hide={false}
+                        editMode={props.editMode}
+                        setValue={(v: string | undefined) =>
+                            props.setRequest({
+                                ...props.request,
+                                response: {
+                                    tempBody: v,
+                                },
+                            })
+                        }
+                        loadBody={async () => {
+                            const body = await props.proxy.getResponseBody(
+                                props.request.id,
+                            );
+                            console.log(body);
+                            props.setRequest({
+                                ...props.request,
+                                response: {
+                                    tempBody: body,
+                                },
+                            });
+                        }}
+                    />
+                </>
+            )}
+        </div>
     );
 }
 

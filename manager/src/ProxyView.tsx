@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { Proxy } from "./api/api";
 import { IncomingView } from "./IncomingView";
 
-import { Config, RequestsViewConfig } from "./types";
+import { Config, RequestContentProps, RequestsViewConfig } from "./types";
 import { SettingsDialog } from "./settings/SettingsDialog";
 import cap from "./assets/cap.png";
-import { RequestDialogContext } from "./context/context";
+import { RequestDialogContentPropsContext } from "./context/context";
 import { RequestDialog } from "./RequestDialog";
 
 export function ProxyView() {
@@ -15,8 +15,8 @@ export function ProxyView() {
     );
     const [proxyConfig, setProxyConfig] = useState<Config | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [requestDialogFunc, setRequestDialogFunc] = useState<
-        React.ElementType | undefined
+    const [requestDialogContentProps, setRequestDialogContentProps] = useState<
+        RequestContentProps | undefined
     >(undefined);
     const newControlURLRef = useRef<HTMLInputElement | null>(null);
     const [requestsViewConfig, setRequestsViewConfig] =
@@ -96,8 +96,11 @@ export function ProxyView() {
 
     return (
         <div className="flex flex-col w-full h-full bg-gray-100 dark:bg-gray-950">
-            <RequestDialogContext
-                value={[requestDialogFunc, setRequestDialogFunc]}
+            <RequestDialogContentPropsContext
+                value={[
+                    requestDialogContentProps,
+                    setRequestDialogContentProps,
+                ]}
             >
                 <SettingsDialog
                     proxy={proxy}
@@ -106,10 +109,7 @@ export function ProxyView() {
                     requestsViewConfig={requestsViewConfig}
                     setRequestsViewConfig={setRequestsViewConfig}
                 />
-                <RequestDialog
-                    F={requestDialogFunc}
-                    setF={setRequestDialogFunc}
-                />
+                <RequestDialog />
                 <div className="flex flex-row w-full min-h-12 text-black items-center px-4 justify-center">
                     <img src={cap} className="w-16" />
                 </div>
@@ -118,7 +118,7 @@ export function ProxyView() {
                     setSettingsDialogOpen={setSettingsOpen}
                     requestsViewConfig={requestsViewConfig}
                 />
-            </RequestDialogContext>
+            </RequestDialogContentPropsContext>
         </div>
     );
 }

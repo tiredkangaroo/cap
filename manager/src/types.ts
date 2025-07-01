@@ -1,4 +1,5 @@
 import { Timing } from "@/timing";
+import { Proxy } from "./api/api";
 // Config is the configuration for the proxy.
 export interface Config {
     // RealIPHeader is a boolean that determines whether the proxy should add the IP
@@ -99,4 +100,13 @@ export interface RequestsViewConfig {
 
 export interface AppearanceConfig {
     darkModeSystem: boolean;
+}
+
+export interface RequestContentProps {
+    request: Request;
+    proxy: Proxy;
+    editMode: boolean;
+    setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+    requestsViewConfig: RequestsViewConfig;
+    setRequest: (req: Request) => void;
 }
