@@ -395,6 +395,7 @@ function ResponseView(props: {
                             props.setRequest({
                                 ...props.request,
                                 response: {
+                                    ...props.request.response!,
                                     tempBody: v,
                                 },
                             })
@@ -403,10 +404,10 @@ function ResponseView(props: {
                             const body = await props.proxy.getResponseBody(
                                 props.request.id,
                             );
-                            console.log(body);
                             props.setRequest({
                                 ...props.request,
                                 response: {
+                                    ...props.request.response,
                                     tempBody: body,
                                 },
                             });
@@ -823,6 +824,7 @@ function BodyView(props: {
                                 onClick={() => {
                                     if (!showBody) {
                                         // show it now
+                                        console.log("loading body");
                                         props.loadBody(); // loading it now
                                     } else if (tempBody != undefined) {
                                         // hiding it now
