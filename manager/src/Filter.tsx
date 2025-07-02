@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Proxy } from "./api/api";
-import { camelCaseToCapitalSpace, equalArray } from "./utils";
+import { equalArray } from "./utils";
 import { FilterType, Request } from "./types";
 import {
     Select,
@@ -31,12 +31,15 @@ export function FilterSelects(props: {
             newFilter,
         );
         if (
-            !equalArray(Object.keys(filterRef.current), Object.keys(resolved))
+            !equalArray(
+                namesFromFilter(filterRef.current),
+                namesFromFilter(resolved),
+            )
         ) {
             // if the filter keys are not the same as the resolved keys, set the keys of filterRef.current to the resolved keys
-            const newFilter: FilterType = {};
-            Object.keys(resolved).forEach((key) => {
-                newFilter[key] = filterRef.current[key];
+            const newFilter: FilterType = [];
+            resolved.forEach((field) => {
+                newFilter.push(field);
             });
             props.setFilter(newFilter);
         }
@@ -49,38 +52,69 @@ export function FilterSelects(props: {
     }, [props.filter]);
 
     return (
-        <div className="flex flex-row gap-10 items-center text-black dark:text-white"></div>
+        <div className="flex flex-row gap-10 items-center text-black dark:text-white">
+            {props.filter.map((key, index) => {
+                if (key.type === "string") {
+                    return (
+                        <StrValueFilter
+                            key={index}
+                            filters={props.filter}
+                            index={index}
+                            setFilters={props.setFilter}
+                        />
+                    );
+                } else if (key.type === "boolean") {
+                    return (
+                        // <BooleanValueFilter
+                        //     key={index}
+                        //     verboseKey={key.verboseName}
+                        //     keyName={key.name}
+                        //     filter={props.filter}
+                        //     setFilter={props.setFilter}
+                        // />
+                        <p>bool</p>
+                    );
+                }
+                return <Fragment key={index}></Fragment>;
+            })}
+        </div>
     );
 }
 
 function StrValueFilter(props: {
-    verboseKey: string;
-    key: string;
-    filter: Record<string, string | undefined>;
-    setFilter: React.Dispatch<React.SetStateAction<FilterType>>;
+    filters: FilterType;
+    index: number;
+    setFilters: React.Dispatch<React.SetStateAction<FilterType>>;
 }) {
-    const uniqueValues = filterUniqueValues[props.key]; // get the unique values and counts for the current filter key
-    if (!uniqueValues) {
-        return <Fragment key={props.key}></Fragment>;
-    }
+    const filter = props.filters[props.index] as {
+        name: string;
+        verboseName?: string;
+        type: "string";
+        uniqueValues: string[];
+        selectedValue?: string;
+    };
+    const uniqueValues = filter.uniqueValues as string[];
+    const verboseKey = filter.verboseName || filter.name;
     return (
-        <div className="flex flex-row gap-1 items-center" key={props.key}>
+        <div className="flex flex-row gap-1 items-center" key={props.index}>
             <Select
-                key={`${props.filter}-${props.filter[props.key]}-${props.key}`}
-                value={props.filter[props.key] || undefined}
+                key={`${props.filters}-${filter}-${props.index}`}
+                value={filter.selectedValue}
                 onValueChange={(v) => {
-                    props.setFilter((prev) => ({
-                        ...prev,
-                        [props.key]: v,
-                    }));
+                    const newFilter = [...props.filters];
+                    newFilter[props.index] = {
+                        ...newFilter[props.index],
+                        selectedValue: v,
+                    };
+                    props.setFilters(newFilter);
                 }}
             >
                 <SelectTrigger className="border-1 border-black dark:border-gray-200 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white">
-                    <SelectValue placeholder={props.verboseKey} />
+                    <SelectValue placeholder={verboseKey} />
                 </SelectTrigger>
                 <SelectContent className="border-1 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
                     <SelectGroup>
-                        <SelectLabel>{props.verboseKey}</SelectLabel>
+                        <SelectLabel>{verboseKey}</SelectLabel>
                         {uniqueValues.map((key, index) => (
                             <SelectItem
                                 className="hover:bg-gray-300 hover:dark:bg-gray-600"
@@ -95,13 +129,17 @@ function StrValueFilter(props: {
                     </SelectGroup>
                 </SelectContent>
             </Select>
-            {props.filter[key] !== undefined && props.filter[key] !== "" ? (
+            {/* we could js replace ts w a non-triple equals */}
+            {filter.selectedValue !== undefined &&
+            filter.selectedValue !== "" ? (
                 <button
                     onClick={() => {
-                        props.setFilter((prev) => ({
-                            ...prev,
-                            [key]: undefined,
-                        }));
+                        const newFilter = [...props.filters];
+                        newFilter[props.index] = {
+                            ...newFilter[props.index],
+                            selectedValue: undefined,
+                        };
+                        props.setFilters(newFilter);
                     }}
                 >
                     <IoMdClose />
@@ -113,19 +151,26 @@ function StrValueFilter(props: {
     );
 }
 
-function resolveWithLocalUniqueValues(
+function resolveFilterWithLocalUniqueValues(
     requests: Array<Request>,
-    filterCounts: Record<string, Array<string>>,
-): Record<string, Array<string>> {
-    Object.keys(filterCounts).forEach((key) => {
-        const uniqueValues = new Set<string>(filterCounts[key]);
-        const vKey = key as "clientIP" | "host" | "clientApplication";
+    filter: FilterType,
+): FilterType {
+    filter.forEach((key) => {
+        if (key.type !== "string" && key.type !== "number") {
+            return;
+        }
+        const uniqueValues = new Set(key.uniqueValues as string[] | number[]);
+        const vKey = key.name as "clientIP" | "clientApplication" | "host";
         requests.forEach((req) => {
             if (req[vKey]) {
                 uniqueValues.add(req[vKey]!);
             }
         });
-        filterCounts[key] = Array.from(uniqueValues);
+        key.uniqueValues = Array.from(uniqueValues);
     });
-    return filterCounts;
+    return filter;
+}
+
+function namesFromFilter(filter: FilterType): string[] {
+    return filter.map((item) => item.name);
 }

@@ -1,5 +1,5 @@
-import { objectToQueryString } from "@/utils.ts";
-import { Config, Request } from "../types.ts";
+import { filterToObject, objectToQueryString } from "@/utils.ts";
+import { Config, FilterType, Request } from "../types.ts";
 import { ClientWS } from "./ws.ts";
 
 export class Proxy {
@@ -34,7 +34,7 @@ export class Proxy {
         this.loaded = true;
     }
 
-    async getFilter(): Promise<Record<string, Array<string>>> {
+    async getFilter(): Promise<FilterType> {
         const response = await fetch(`${this.url}/filter`);
         if (!response.ok) {
             throw new Error(
@@ -68,15 +68,15 @@ export class Proxy {
     }
 
     async getRequestsWithFilter(
-        filter: Record<string, string | boolean | undefined>,
+        filter: FilterType,
         offset: number,
         limit: number,
     ): Promise<[Array<Request>, number]> {
         const response = await fetch(
             `${this.url}/requestsMatchingFilter?${objectToQueryString({
-                ...filter,
                 offset: offset.toString(),
                 limit: limit.toString(),
+                ...filterToObject(filter),
             })}`,
         );
         if (!response.ok) {
@@ -126,7 +126,8 @@ export class Proxy {
     manageRequests(uCB: () => void) {
         // get requests from the server first
         this.updateCB = uCB;
-        this.getRequestsWithFilter({}, 0, 100)
+        this.getRequestsWithFilter([], 0, 100)
+            // NOTE: what if filter changes
             .then(() => {
                 uCB();
             })

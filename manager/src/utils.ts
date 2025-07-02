@@ -1,3 +1,5 @@
+import { FilterType } from "./types";
+
 export function camelCaseToCapitalSpace(str: string): string {
     return str
         .replace(/([a-z])([A-Z])/g, "$1 $2") // insert space before capital letters
@@ -64,4 +66,17 @@ export function cmdOrCtrlPressed(keyboard: Set<string>) {
         default: // others platform will use the control key
             return keyboard.has("Control");
     }
+}
+
+export function filterToObject(
+    filter: FilterType,
+): Record<string, string | number | boolean | undefined> {
+    const obj: Record<string, string | number | boolean | undefined> = {};
+    filter.forEach((f) => {
+        if (f.selectedValue === undefined) {
+            return; // skip if no value is selected
+        }
+        obj[f.name] = f.selectedValue;
+    });
+    return obj;
 }

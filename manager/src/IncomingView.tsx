@@ -1,6 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 
-import { Request, RequestContentProps, RequestsViewConfig } from "./types";
+import {
+    FilterType,
+    Request,
+    RequestContentProps,
+    RequestsViewConfig,
+} from "./types";
 import { Proxy } from "./api/api";
 
 import { RequestView } from "./RequestView";
@@ -32,9 +37,7 @@ export function IncomingView(props: {
     const [freeze, setFreeze] = useState<boolean>(false);
 
     // filter is used to filter the requests shown in the view.
-    const [filter, setFilter] = useState<
-        Record<string, string | boolean | undefined>
-    >({});
+    const [filter, setFilter] = useState<FilterType>([]);
 
     const [pageNumber, setPageNumber] = useState<number>(0);
     const [resultsPerPage, setResultsPerPage] = useState<number>(
@@ -156,10 +159,11 @@ export function IncomingView(props: {
                     <button
                         className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 font-medium"
                         onClick={() => {
-                            Object.keys(filter).forEach((key) => {
-                                filter[key] = undefined;
+                            const newFilter = [...filter];
+                            newFilter.forEach((f) => {
+                                f.selectedValue = undefined;
                             });
-                            setFilter({});
+                            setFilter(newFilter);
                         }}
                     >
                         Clear Filters
@@ -330,7 +334,7 @@ async function reloadCurrentlyShownRequests(
     freeze: boolean,
     resultsPerPage: number,
     requests: Array<Request>,
-    filter: Record<string, string | boolean | undefined>,
+    filter: FilterType,
     totalPages: React.RefObject<number>,
     totalResults: React.RefObject<number>,
 ) {
@@ -464,7 +468,7 @@ async function getCurrentlyShownRequests(
     resultsPerPage: number,
 
     requests: Array<Request>,
-    filter: Record<string, string | boolean | undefined>,
+    filter: FilterType,
     // currentlyShownRequests, totalPages, totalResults
 ): Promise<[Array<Request>, number, number]> {
     // don't unload request and response bodies that are already loaded
@@ -480,19 +484,22 @@ async function getCurrentlyShownRequests(
     });
 
     let localCurrentlyShownRequests: Array<Request> = requests;
-    if (filter.clientApplication) {
+    let ca = filter.find((f) => f.name === "clientApplication");
+    if (ca !== undefined && ca.selectedValue !== undefined) {
         localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
-            (req) => req.clientApplication === filter.clientApplication,
+            (req) => req.clientApplication === ca.selectedValue,
         );
     }
-    if (filter.host) {
+    let host = filter.find((f) => f.name === "clientApplication");
+    if (host !== undefined && host.selectedValue !== undefined) {
         localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
-            (req) => req.host === filter.host,
+            (req) => req.clientApplication === host.selectedValue,
         );
     }
-    if (filter.clientIP) {
+    let ci = filter.find((f) => f.name === "clientIP");
+    if (ci !== undefined && ci.selectedValue !== undefined) {
         localCurrentlyShownRequests = localCurrentlyShownRequests.filter(
-            (req) => req.clientIP === filter.clientIP,
+            (req) => req.clientIP === ci.selectedValue,
         );
     }
 
