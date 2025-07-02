@@ -200,10 +200,33 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		w.WriteHeader(nethttp.StatusNoContent)
 	})
 
-	mux.HandleFunc("GET /filterCounts", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	mux.HandleFunc("GET /filter", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		setCORSHeaders(w)
 
-		counts, err := m.db.GetFilterCounts()
+		filter := Filter{
+			FilterField{
+				Name:        "clientApplication",
+				Type:        FilterTypeString,
+				VerboseName: "Client Application",
+			},
+			FilterField{
+				Name:        "host",
+				Type:        FilterTypeString,
+				VerboseName: "Host",
+			},
+			FilterField{
+				Name:        "clientIP",
+				Type:        FilterTypeString,
+				VerboseName: "Client IP",
+			},
+			FilterField{
+				Name:        "starred",
+				Type:        FilterTypeBool,
+				VerboseName: "Starred Only",
+			},
+		}
+
+		err := m.db.GetFilterUniqueValues(filter)
 		if err != nil {
 			w.WriteHeader(nethttp.StatusInternalServerError)
 			w.Write([]byte("failed to get filter counts"))
@@ -213,7 +236,7 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(nethttp.StatusOK)
-		w.Write(marshal(counts))
+		w.Write(marshal(filter))
 	})
 
 	mux.HandleFunc("POST /setRequestStarred/{id}", func(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -266,9 +289,30 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 		}
 
 		filter := Filter{
-			ClientApplication: query.Get("clientApplication"),
-			Host:              query.Get("host"),
-			ClientIP:          query.Get("clientIP"),
+			FilterField{
+				Name:          "clientApplication",
+				Type:          FilterTypeString,
+				UniqueValues:  nil,
+				SelectedValue: query.Get("clientApplication"),
+			},
+			FilterField{
+				Name:          "host",
+				Type:          FilterTypeString,
+				UniqueValues:  nil,
+				SelectedValue: query.Get("host"),
+			},
+			FilterField{
+				Name:          "clientIP",
+				Type:          FilterTypeString,
+				UniqueValues:  nil,
+				SelectedValue: query.Get("clientIP"),
+			},
+			FilterField{
+				Name:          "starred",
+				Type:          FilterTypeBool,
+				UniqueValues:  nil,
+				SelectedValue: query.Get("starred"),
+			},
 		}
 
 		paginatedRequests, totalRequests, err := m.db.GetRequestsMatchingFilter(filter, offsetInt, limitInt)

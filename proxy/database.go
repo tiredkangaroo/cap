@@ -21,10 +21,22 @@ import (
 
 // NOTE: bytes transferred
 
-type Filter struct {
-	ClientApplication string `json:"clientApplication,omitempty"`
-	Host              string `json:"host,omitempty"`
-	ClientIP          string `json:"clientIP,omitempty"`
+type FilterType string
+
+const (
+	FilterTypeUnknown FilterType = "unknown"
+	FilterTypeString  FilterType = "string"
+	FilterTypeNumber  FilterType = "number"
+	FilterTypeBool    FilterType = "bool"
+)
+
+type Filter []FilterField
+type FilterField struct {
+	Name          string     `json:"name"`
+	VerboseName   string     `json:"verboseName"`   // human readable name
+	Type          FilterType `json:"type"`          // "string" | "int" | "bool"
+	UniqueValues  []any      `json:"uniqueValues"`  // string | int
+	SelectedValue any        `json:"selectedValue"` // string | int | bool
 }
 
 type Database struct {
@@ -224,33 +236,23 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 // unilateral definition of filter selects here
 
 // GetFilterCounts returns a map of fields to filter by to their unique values in the database.
-func (d *Database) GetFilterCounts() (map[string][]string, error) {
-	data := make(map[string][]string)
-
-	clientAppCounts, err := d.uniqueValues("clientApplication")
-	if err != nil {
-		return nil, fmt.Errorf("filter counts (clientApplication): %w", err)
+func (d *Database) GetFilterUniqueValues(filter Filter) error {
+	var err error
+	for _, f := range filter {
+		if f.Type != FilterTypeString && f.Type != FilterTypeNumber { // only string and int types are supported for unique values (bool unique values is just t/f lmao)
+			continue
+		}
+		f.UniqueValues, err = d.uniqueValues(f.Name)
+		if err != nil {
+			return fmt.Errorf("get filter unique values for %s: %w", f.Name, err)
+		}
 	}
-	data["clientApplication"] = clientAppCounts
-
-	hostCounts, err := d.uniqueValues("host")
-	if err != nil {
-		return nil, fmt.Errorf("filter counts (host): %w", err)
-	}
-	data["host"] = hostCounts
-
-	clientIPCounts, err := d.uniqueValues("clientIP")
-	if err != nil {
-		return nil, fmt.Errorf("filter counts (host): %w", err)
-	}
-	data["clientIP"] = clientIPCounts
-
-	return data, nil
+	return nil
 }
 
 // uniqueValuesAndCount returns a map of unique values for the specified column and how many time each value appears in the requests table.
-func (d *Database) uniqueValues(by string) ([]string, error) {
-	data := make([]string, 0, 8)
+func (d *Database) uniqueValues(by string) ([]any, error) {
+	data := make([]any, 0, 8)
 	query := fmt.Sprintf(`SELECT %s FROM requests GROUP BY %s;`, by, by)
 	rows, err := d.Query(query)
 	if err != nil {
@@ -258,7 +260,7 @@ func (d *Database) uniqueValues(by string) ([]string, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var uvalue string
+		var uvalue any
 		err := rows.Scan(&uvalue)
 		if err != nil {
 			return nil, err
@@ -307,20 +309,32 @@ func (d *Database) GetRequestsMatchingFilter(f Filter, offset, limit int) ([]*Re
 	args := []any{}
 	countArgs := []any{}
 
-	if f.ClientApplication != "" {
-		filtersUsed = append(filtersUsed, "clientApplication = ?")
-		args = append(args, f.ClientApplication)
-		countArgs = append(countArgs, f.ClientApplication)
-	}
-	if f.Host != "" {
-		filtersUsed = append(filtersUsed, "host = ?")
-		args = append(args, f.Host)
-		countArgs = append(countArgs, f.Host)
-	}
-	if f.ClientIP != "" {
-		filtersUsed = append(filtersUsed, "clientIP = ?")
-		args = append(args, f.ClientIP)
-		countArgs = append(countArgs, f.ClientIP)
+	for _, f := range f {
+		if f.SelectedValue == nil || f.SelectedValue == "" {
+			continue // skip empty values, they are not useful for filtering
+		}
+		switch f.Type {
+		case FilterTypeString, FilterTypeNumber:
+			filtersUsed = append(filtersUsed, fmt.Sprintf("%s = ?", f.Name))
+			args = append(args, f.SelectedValue)
+			countArgs = append(countArgs, f.SelectedValue)
+		case FilterTypeBool:
+			sv, ok := f.SelectedValue.(bool)
+			if !ok {
+				panic("unreachable: how did u get here bro :/")
+			}
+			// this can be replaced with "f.Name (true)" and "NOT(f.Name)" (false)
+			// but ts should work 🥀
+			val := 0
+			if sv {
+				val = 1
+			}
+			filtersUsed = append(filtersUsed, fmt.Sprintf("%s = ?", f.Name))
+			args = append(args, val)
+			countArgs = append(countArgs, val)
+		default:
+			return nil, 0, fmt.Errorf("get requests with matching filter: unsupported filter type %s for field %s", f.Type, f.Name)
+		}
 	}
 
 	// this where clause is used for both queries and represents the filters used

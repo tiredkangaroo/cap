@@ -110,3 +110,13 @@ export interface RequestContentProps {
     requestsViewConfig: RequestsViewConfig;
     setRequest: (req: Request) => void;
 }
+
+export interface FilterField {
+    name: string;
+    verboseName: string;
+    type: "string" | "number" | "boolean";
+    uniqueValues: string[] | number[] | boolean[]; // uniqueValues should NOT be accessed for "boolean" type filters
+    selectedValue?: string | number | boolean; // selectedValue is optional for "boolean" type filters
+}
+
+export type FilterType = FilterField[];

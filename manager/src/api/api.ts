@@ -34,8 +34,8 @@ export class Proxy {
         this.loaded = true;
     }
 
-    async getFilterCounts(): Promise<Record<string, Array<string>>> {
-        const response = await fetch(`${this.url}/filterCounts`);
+    async getFilter(): Promise<Record<string, Array<string>>> {
+        const response = await fetch(`${this.url}/filter`);
         if (!response.ok) {
             throw new Error(
                 `failed to fetch filter counts: ${response.statusText}`,
@@ -68,7 +68,7 @@ export class Proxy {
     }
 
     async getRequestsWithFilter(
-        filter: Record<string, string | undefined>,
+        filter: Record<string, string | boolean | undefined>,
         offset: number,
         limit: number,
     ): Promise<[Array<Request>, number]> {

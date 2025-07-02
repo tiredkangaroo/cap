@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { IoMdClose } from "react-icons/io";
 
 import { Request, RequestContentProps, RequestsViewConfig } from "./types";
 import { Proxy } from "./api/api";
@@ -8,15 +7,13 @@ import { RequestView } from "./RequestView";
 import {
     Select,
     SelectContent,
-    SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from "./components/ui/select";
-import { camelCaseToCapitalSpace, equalArray } from "./utils";
 import { IoSettingsSharp } from "react-icons/io5";
 import { FaSnowflake } from "react-icons/fa6";
+import { FilterSelects } from "./Filter";
 
 export function IncomingView(props: {
     proxy: Proxy;
@@ -35,9 +32,9 @@ export function IncomingView(props: {
     const [freeze, setFreeze] = useState<boolean>(false);
 
     // filter is used to filter the requests shown in the view.
-    const [filter, setFilter] = useState<Record<string, string | undefined>>(
-        {},
-    );
+    const [filter, setFilter] = useState<
+        Record<string, string | boolean | undefined>
+    >({});
 
     const [pageNumber, setPageNumber] = useState<number>(0);
     const [resultsPerPage, setResultsPerPage] = useState<number>(
@@ -148,7 +145,7 @@ export function IncomingView(props: {
         <div className="w-full h-full flex flex-col">
             <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 dark:bg-gray-950 text-white p-4">
                 {/* Filter Section */}
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-xl text-black border-1 border-black p-3 flex items-center justify-between">
+                <div className="rounded-md text-black border-1 border-black dark:border-white p-3 flex items-center justify-between">
                     <FilterSelects
                         proxy={props.proxy}
                         requests={localRequests}
@@ -333,7 +330,7 @@ async function reloadCurrentlyShownRequests(
     freeze: boolean,
     resultsPerPage: number,
     requests: Array<Request>,
-    filter: Record<string, string | undefined>,
+    filter: Record<string, string | boolean | undefined>,
     totalPages: React.RefObject<number>,
     totalResults: React.RefObject<number>,
 ) {
@@ -459,130 +456,6 @@ function Pagination(props: {
     );
 }
 
-function FilterSelects(props: {
-    proxy: Proxy;
-    requests: Array<Request>;
-    currentlyShownRequests: Array<Request>;
-    filter: Record<string, string | undefined>;
-    setFilter: React.Dispatch<
-        React.SetStateAction<Record<string, string | undefined>>
-    >;
-}) {
-    // [filterName: {uniqueValue: # time of appearance of unique value}]
-    const [filterUniqueValues, setFilterUniqueValues] = useState<
-        Record<string, Array<string>>
-    >({});
-
-    const filterRef = useRef(props.filter);
-    useEffect(() => {
-        filterRef.current = props.filter;
-    }, [props.filter]);
-    async function loadUniqueValues() {
-        const remoteFilterCounts = await props.proxy.getFilterCounts();
-        const resolved = resolveWithLocalUniqueValues(
-            props.requests,
-            remoteFilterCounts,
-        );
-        setFilterUniqueValues(resolved);
-        if (
-            !equalArray(Object.keys(filterRef.current), Object.keys(resolved))
-        ) {
-            // if the filter keys are not the same as the resolved keys, reset the filter
-            const newFilter: Record<string, string | undefined> = {};
-            Object.keys(resolved).forEach((key) => {
-                newFilter[key] = filterRef.current[key];
-            });
-            props.setFilter(newFilter);
-        }
-        setTimeout(() => {
-            loadUniqueValues();
-        }, 1000);
-    }
-    useEffect(() => {
-        loadUniqueValues();
-    }, [props.filter]);
-
-    return (
-        <div className="flex flex-row gap-10 items-center text-black dark:text-white">
-            <p>Query</p>
-            {Object.entries(props.filter).map(([key, _]) => {
-                const verboseKey = camelCaseToCapitalSpace(key);
-                const uniqueValues = filterUniqueValues[key]; // get the unique values and counts for the current filter key
-                if (!uniqueValues) {
-                    return <Fragment key={key}></Fragment>;
-                }
-
-                return (
-                    <div className="flex flex-row gap-1 items-center" key={key}>
-                        <Select
-                            key={`${props.filter}-${props.filter[key]}-${key}`}
-                            value={props.filter[key] || undefined}
-                            onValueChange={(v) => {
-                                props.setFilter((prev) => ({
-                                    ...prev,
-                                    [key]: v,
-                                }));
-                            }}
-                        >
-                            <SelectTrigger className="border-1 border-black dark:border-gray-200 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white">
-                                <SelectValue placeholder={verboseKey} />
-                            </SelectTrigger>
-                            <SelectContent className="border-1 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
-                                <SelectGroup>
-                                    <SelectLabel>{verboseKey}</SelectLabel>
-                                    {uniqueValues.map((key, index) => (
-                                        <SelectItem
-                                            className="hover:bg-gray-300 hover:dark:bg-gray-600"
-                                            key={index}
-                                            value={key}
-                                        >
-                                            <div className="justify-between flex flex-row w-full">
-                                                {key}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        {props.filter[key] !== undefined &&
-                        props.filter[key] !== "" ? (
-                            <button
-                                onClick={() => {
-                                    props.setFilter((prev) => ({
-                                        ...prev,
-                                        [key]: undefined,
-                                    }));
-                                }}
-                            >
-                                <IoMdClose />
-                            </button>
-                        ) : (
-                            <></>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-function resolveWithLocalUniqueValues(
-    requests: Array<Request>,
-    filterCounts: Record<string, Array<string>>,
-): Record<string, Array<string>> {
-    Object.keys(filterCounts).forEach((key) => {
-        const uniqueValues = new Set<string>(filterCounts[key]);
-        const vKey = key as "clientIP" | "host" | "clientApplication";
-        requests.forEach((req) => {
-            if (req[vKey]) {
-                uniqueValues.add(req[vKey]!);
-            }
-        });
-        filterCounts[key] = Array.from(uniqueValues);
-    });
-    return filterCounts;
-}
-
 async function getCurrentlyShownRequests(
     dbCurrentlyShownRequests: Array<Request>,
     dbTotalPages: number,
@@ -591,7 +464,7 @@ async function getCurrentlyShownRequests(
     resultsPerPage: number,
 
     requests: Array<Request>,
-    filter: Record<string, string | undefined>,
+    filter: Record<string, string | boolean | undefined>,
     // currentlyShownRequests, totalPages, totalResults
 ): Promise<[Array<Request>, number, number]> {
     // don't unload request and response bodies that are already loaded
