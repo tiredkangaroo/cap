@@ -139,7 +139,11 @@ function StrValueFilter(props: {
     return (
         <div className="flex flex-row gap-1 items-center" key={props.index}>
             <Select
-                key={`${props.filters}-${filter}-${props.index}`}
+                key={
+                    filter.selectedValue
+                        ? `selected-${filter.selectedValue}`
+                        : "unselected"
+                }
                 value={filter.selectedValue}
                 onValueChange={(v) => {
                     const newFilter = [...props.filters];
@@ -151,6 +155,7 @@ function StrValueFilter(props: {
                 }}
             >
                 <SelectTrigger
+                    key={`${filter}.${filter.selectedValue}`}
                     className="border-2 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white"
                     style={{
                         borderColor: filter.selectedValue
@@ -160,7 +165,10 @@ function StrValueFilter(props: {
                             : "var(--color-gray-500)",
                     }}
                 >
-                    <SelectValue placeholder={verboseName} />
+                    <SelectValue
+                        key={`${filter}.${filter.selectedValue}`}
+                        placeholder={verboseName}
+                    />
                 </SelectTrigger>
                 <SelectContent className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
                     <SelectGroup>
