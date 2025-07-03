@@ -32,11 +32,14 @@ const (
 
 type Filter []FilterField
 type FilterField struct {
-	Name          string     `json:"name"`
-	VerboseName   string     `json:"verboseName"`   // human readable name
-	Type          FilterType `json:"type"`          // "string" | "int" | "bool"
-	UniqueValues  []any      `json:"uniqueValues"`  // string | int
-	SelectedValue any        `json:"selectedValue"` // string | int | bool
+	Name        string     `json:"name"`
+	VerboseName string     `json:"verboseName"` // human readable name
+	Type        FilterType `json:"type"`        // "string" | "int" | "bool"
+
+	// omit empty is here cause omitting empty values means that the selected value is undefined instead of null
+
+	UniqueValues  []any `json:"uniqueValues,omitempty"`  // string | int
+	SelectedValue any   `json:"selectedValue,omitempty"` // string | int | bool
 }
 
 type Database struct {
@@ -238,11 +241,11 @@ func (d *Database) GetRequestByID(id string) (*Request, error) {
 // GetFilterCounts returns a map of fields to filter by to their unique values in the database.
 func (d *Database) GetFilterUniqueValues(filter Filter) error {
 	var err error
-	for _, f := range filter {
+	for i, f := range filter {
 		if f.Type != FilterTypeString && f.Type != FilterTypeNumber { // only string and int types are supported for unique values (bool unique values is just t/f lmao)
 			continue
 		}
-		f.UniqueValues, err = d.uniqueValues(f.Name)
+		filter[i].UniqueValues, err = d.uniqueValues(f.Name)
 		if err != nil {
 			return fmt.Errorf("get filter unique values for %s: %w", f.Name, err)
 		}

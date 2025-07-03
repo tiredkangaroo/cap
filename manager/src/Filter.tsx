@@ -88,13 +88,13 @@ function StrValueFilter(props: {
 }) {
     const filter = props.filters[props.index] as {
         name: string;
-        verboseName?: string;
+        verboseName: string;
         type: "string";
         uniqueValues: string[];
         selectedValue?: string;
     };
     const uniqueValues = filter.uniqueValues as string[];
-    const verboseKey = filter.verboseName || filter.name;
+    const verboseName = filter.verboseName;
     return (
         <div className="flex flex-row gap-1 items-center" key={props.index}>
             <Select
@@ -110,11 +110,11 @@ function StrValueFilter(props: {
                 }}
             >
                 <SelectTrigger className="border-1 border-black dark:border-gray-200 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white">
-                    <SelectValue placeholder={verboseKey} />
+                    <SelectValue placeholder={verboseName} />
                 </SelectTrigger>
                 <SelectContent className="border-1 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
                     <SelectGroup>
-                        <SelectLabel>{verboseKey}</SelectLabel>
+                        <SelectLabel>{verboseName}</SelectLabel>
                         {uniqueValues.map((key, index) => (
                             <SelectItem
                                 className="hover:bg-gray-300 hover:dark:bg-gray-600"
