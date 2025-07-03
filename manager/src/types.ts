@@ -114,7 +114,7 @@ export interface RequestContentProps {
 export interface FilterField {
     name: string;
     verboseName: string;
-    type: "string" | "number" | "boolean";
+    type: "string" | "number" | "bool";
     uniqueValues: string[] | number[] | boolean[]; // uniqueValues should NOT be accessed for "boolean" type filters
     selectedValue?: string | number | boolean; // selectedValue is optional for "boolean" type filters
 }

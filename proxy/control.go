@@ -307,12 +307,20 @@ func startControlServer(m *Manager, ph *ProxyHandler) {
 				UniqueValues:  nil,
 				SelectedValue: query.Get("clientIP"),
 			},
-			FilterField{
+		}
+		if query.Get("starred") != "" {
+			starred, err := strconv.ParseBool(query.Get("starred"))
+			if err != nil {
+				w.WriteHeader(nethttp.StatusBadRequest)
+				w.Write([]byte("invalid starred parameter"))
+				return
+			}
+			filter = append(filter, FilterField{
 				Name:          "starred",
 				Type:          FilterTypeBool,
 				UniqueValues:  nil,
-				SelectedValue: query.Get("starred"),
-			},
+				SelectedValue: starred,
+			})
 		}
 
 		paginatedRequests, totalRequests, err := m.db.GetRequestsMatchingFilter(filter, offsetInt, limitInt)

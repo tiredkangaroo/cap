@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useContext, useEffect, useRef } from "react";
 import { Proxy } from "./api/api";
 import { equalArray } from "./utils";
 import { FilterType, Request } from "./types";
@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from "./components/ui/select";
 import { IoMdClose } from "react-icons/io";
+import { DarkModeContext } from "./context/context";
 
 export function FilterSelects(props: {
     proxy: Proxy;
@@ -24,6 +25,7 @@ export function FilterSelects(props: {
     useEffect(() => {
         filterRef.current = props.filter;
     }, [props.filter]);
+    const [darkMode, _] = useContext(DarkModeContext);
     async function loadUniqueValues() {
         const newFilter = await props.proxy.getFilter();
         const resolved = resolveFilterWithLocalUniqueValues(
@@ -61,18 +63,18 @@ export function FilterSelects(props: {
                             filters={props.filter}
                             index={index}
                             setFilters={props.setFilter}
+                            darkMode={darkMode}
                         />
                     );
-                } else if (key.type === "boolean") {
+                } else if (key.type === "bool") {
                     return (
-                        // <BooleanValueFilter
-                        //     key={index}
-                        //     verboseKey={key.verboseName}
-                        //     keyName={key.name}
-                        //     filter={props.filter}
-                        //     setFilter={props.setFilter}
-                        // />
-                        <p>bool</p>
+                        <BooleanValueFilter
+                            key={index}
+                            index={index}
+                            filters={props.filter}
+                            setFilters={props.setFilter}
+                            darkMode={darkMode}
+                        />
                     );
                 }
                 return <Fragment key={index}></Fragment>;
@@ -81,10 +83,49 @@ export function FilterSelects(props: {
     );
 }
 
+function BooleanValueFilter(props: {
+    index: number;
+    filters: FilterType;
+    setFilters: React.Dispatch<React.SetStateAction<FilterType>>;
+    darkMode: boolean;
+}) {
+    const filter = props.filters[props.index] as {
+        name: string;
+        verboseName: string;
+        type: "bool";
+        selectedValue?: boolean;
+    };
+    const selectedValue = filter.selectedValue;
+
+    return (
+        <button
+            className="flex flex-row gap-1 items-center rounded-sm py-1 min-w-[150px] w-fit justify-center border-2"
+            style={{
+                borderColor: selectedValue
+                    ? props.darkMode
+                        ? "var(--color-blue-300)"
+                        : "var(--color-blue-700)"
+                    : "var(--color-gray-500)",
+            }}
+            onClick={() => {
+                const newFilter = [...props.filters];
+                newFilter[props.index] = {
+                    ...newFilter[props.index],
+                    selectedValue: !selectedValue,
+                };
+                props.setFilters(newFilter);
+            }}
+        >
+            {filter.verboseName}
+        </button>
+    );
+}
+
 function StrValueFilter(props: {
     filters: FilterType;
     index: number;
     setFilters: React.Dispatch<React.SetStateAction<FilterType>>;
+    darkMode: boolean;
 }) {
     const filter = props.filters[props.index] as {
         name: string;
@@ -109,10 +150,19 @@ function StrValueFilter(props: {
                     props.setFilters(newFilter);
                 }}
             >
-                <SelectTrigger className="border-1 border-black dark:border-gray-200 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white">
+                <SelectTrigger
+                    className="border-2 min-w-[150px] bg-gray-200 dark:bg-gray-500 hover:dark:bg-gray-600 text-black dark:text-white"
+                    style={{
+                        borderColor: filter.selectedValue
+                            ? props.darkMode
+                                ? "var(--color-blue-300)"
+                                : "var(--color-blue-700)"
+                            : "var(--color-gray-500)",
+                    }}
+                >
                     <SelectValue placeholder={verboseName} />
                 </SelectTrigger>
-                <SelectContent className="border-1 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
+                <SelectContent className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white">
                     <SelectGroup>
                         <SelectLabel>{verboseName}</SelectLabel>
                         {uniqueValues.map((key, index) => (
