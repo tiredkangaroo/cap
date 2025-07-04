@@ -148,7 +148,7 @@ export function IncomingView(props: {
         <div className="w-full h-full flex flex-col">
             <div className="w-full h-full flex flex-col space-y-4 bg-gray-100 dark:bg-gray-950 text-white p-4">
                 {/* Filter Section */}
-                <div className="rounded-md text-black border-1 border-black dark:border-white p-3 flex items-center justify-between">
+                <div className="rounded-md text-black border-black dark:border-white p-3 flex items-center justify-between">
                     <FilterSelects
                         proxy={props.proxy}
                         requests={localRequests}
