@@ -148,6 +148,7 @@ export function RequestView(props: {
 }
 
 export function RequestViewContent(props: RequestContentProps) {
+    console.log(props.request);
     return (
         <>
             <div className="flex gap-3">
@@ -175,7 +176,8 @@ export function RequestViewContent(props: RequestContentProps) {
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3 font-[Manrope]">
                 <div className="flex flex-row items-center gap-2">
                     {!props.requestsViewConfig.hideMethod &&
-                    props.request.method !== undefined ? (
+                    props.request.method !== undefined &&
+                    props.request.method !== "UNKNOWN" ? (
                         <p
                             className="w-16 min-w-fit px-1 h-8 items-center flex flex-row justify-center text-black dark:text-white"
                             style={{
@@ -359,6 +361,12 @@ function ResponseView(props: {
     setRequest: (req: Request) => void;
     proxy: Proxy;
 }) {
+    if (
+        props.request.response == undefined ||
+        props.request.response.statusCode === 0
+    ) {
+        return <></>;
+    }
     return (
         <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4 space-y-3">
             <h2 className="text-lg font-semibold">Response</h2>
@@ -574,8 +582,8 @@ function ValueView<
     editMode: boolean;
     disableEdits?: boolean;
 }) {
-    if (props.value == undefined || props.value === "") {
-        return <i>none or unavailable</i>;
+    if (!props.value) {
+        return <></>;
     }
     if (typeof props.value === "object") {
         return (
@@ -695,8 +703,15 @@ function FieldView<
     value: T;
     setValue?: (v: T) => void;
 }) {
-    if (props.hide) {
+    if (props.hide || (!props.value && !props.editMode)) {
         return <></>;
+    }
+    if (
+        typeof props.value === "object" &&
+        Object.keys(props.value).length === 0 &&
+        !props.editMode
+    ) {
+        return <></>; // if the value is an empty object, don't show the field
     }
     return (
         <div
@@ -733,7 +748,7 @@ function ShowHideFieldView(props: {
 
     const isValueEmpty = props.value === undefined || props.value.trim() === "";
 
-    if (props.hide) {
+    if (props.hide || (isValueEmpty && !props.editMode)) {
         return <></>;
     }
 
@@ -792,7 +807,7 @@ function BodyView(props: {
         ? props.request.tempBody
         : props.request.response?.tempBody;
 
-    if (props.hide) {
+    if (props.hide || (bodyBytes == 0 && !props.editMode)) {
         return <></>;
     }
 
