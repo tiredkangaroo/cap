@@ -19,12 +19,13 @@ Settings menu.
 
 # Major Features
 - Capture HTTP and HTTPS traffic (with MITM support)
-- Modify requests (including the destination Host, method, headers, body, etc.)
-- See the timeline for the request from start to finish
-- Configure the behavior of the proxy server (MITM, Body Dumping, etc.)
-- Configure which fields to display in the UI
-- Persistent storage of requests
-- Filter requests by Client Application, Client IP, Host, with more filters coming soon
+- Request Modification (including the destination, method, headers, body, etc.)
+- Request Timelines
+- Configurable Behavior of the Proxy (MITM, Approval, Delay)
+- Configurable UI (with dark mode)
+- Persistent storage of requests, responses, and their bodies in a sqlite db
+- Filter requests
+- Star requests
 
 # Installation
 well currently the built version of the app doesn't work, so...
