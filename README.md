@@ -114,3 +114,9 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
 - **Strong information** - The highest level of information the proxy is able to provide. This includes all weak information but also includes the method, headers, query, path, body, etc. as well as the full response including the status code, headers, body, etc. All HTTP requests are capable of providing strong information, while HTTPS requests are only capable of providing strong information if the proxy is running with MITM enabled.
 - **Tunneling** - The technique used to connect the client with the server in HTTPS mode without MITM. This is done by establishing a tunnel that copies the encrypted bytes from the client to the server and vice versa. The proxy is not able to see the full request or response in this case, and can only provide weak information. This is the default mode for HTTPS requests.
 - **Weak information** - The lower level of information the proxy is able to provide. This includes the host, client IP, client application, and the bytes transferred. All requests at the very least provide weak information.
+
+# Bugs and Feature Requests
+If you encounter any bugs or have feature requests, please [open an issue](https://github.com/tiredkangaroo/bigproxy/issues/new). It helps improve the project and your feedback is greatly appreciated!
+
+# Vulnerabilities
+If you discover a security vulnerability within this project, please report it by [emailing me](mailto:ajinest6@gmail.com). All security vulnerabilities will be promptly addressed. Thank you!
