@@ -103,6 +103,12 @@ func setConfigFromFile(file *os.File, config *Config) error {
 	}
 
 	if len(rf) == 0 {
+		slog.Info("setting default config")
+		config.CertificateLifetime = 7200
+		config.GetClientProcessInfo = true
+		config.ProvideRequestBody = true
+		config.ProvideResponseBody = true
+		config.RealIPHeader = true
 		return nil // empty config file, nothing to do
 	}
 

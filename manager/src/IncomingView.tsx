@@ -285,6 +285,7 @@ export function IncomingView(props: {
                     resultsPerPage={resultsPerPage}
                     totalPages={totalPages.current}
                 />
+                <p className="text-gray-300">proxy at localhost:8000</p>
 
                 <div className="flex items-center gap-4">
                     <span className="text-sm text-white">

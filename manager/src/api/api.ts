@@ -25,6 +25,7 @@ export class Proxy {
             perform_delay: 0,
             require_approval: false,
             get_client_process_info: false,
+            timeline_based_state_updates: false,
         };
         this.clientWS = new ClientWS();
     }

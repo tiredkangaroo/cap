@@ -217,7 +217,9 @@ function resolveFilterWithLocalUniqueValues(
         if (key.type !== "string" && key.type !== "number") {
             return;
         }
-        const uniqueValues = new Set(key.uniqueValues as string[] | number[]);
+        const uniqueValues: Set<string | number> = new Set(
+            key.uniqueValues as Iterable<string | number>,
+        );
         // excludes starred because its a boolean type
         const vKey = key.name as "clientIP" | "clientApplication" | "host";
         requests.forEach((req) => {

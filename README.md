@@ -5,17 +5,25 @@ cap is a proxy server that allows you to capture, modify, and inspect HTTP and H
 
 # Screenshots
 ![1](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/1.png)
-A request being displayed in the UI with two filters selected.
+The user interfce of the proxy. It shows captured requests.
 
 ![2](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/2.png)
-A request being modified in the UI (edit mode) while also asking for approval (Wait for Approval).
+A request being modified in the dark mode UI. The request is waiting for approval and the user is able to modify many aspets of the request.
 
 ![3](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/3.png)
-A request's response being shown with the status code, headers, body, bytes transferred, and timing.
+A request being shown in expanded mode. The body is shown with a special viewer for its content type.
 
 ![4](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/4.png)
-Settings menu.
+A response being shown in expanded mode with the body shown in a special viewer for its content type.
 
+![5](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/5.png)
+A timeline being shown with a subtime.
+
+![6](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/6.png)
+Captured requests being shown in the UI with filters applied and an adjusted requests per page.
+
+![7](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/7.png)
+The settings menu. It allows you to configure proxy behavior and appearance.
 
 # Major Features
 - Capture HTTP and HTTPS traffic (with MITM support)
@@ -89,7 +97,10 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
     5. Press the save button to apply the changes.
     6. Approve the request by pressing the "Approve" button. The request will then be sent to the server with the modifications.
 
-5. **Making non-self explanatory modifications**
+5. **Making some modifications**
+
+    **Note**: You must be in edit mode (while the request is waiting approval) to make modifications.
+
     - **Change the Method**: You can change the HTTP method (GET, POST, etc.) of the request by pressing the method and alternating through the available methods.
 
     - **Modify Body**: You can modify the body of the request. Press the show body button to view the body, if it is not already shown, and then edit it as needed. You can also change the content type of the body by setting the `Content-Type` header in the request editor. COMING SOON: You will be provided an editor to modify the body in a manner consistent with the content type. e.g JSON editor for JSON bodies, etc.

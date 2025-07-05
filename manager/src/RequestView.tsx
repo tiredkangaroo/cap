@@ -55,8 +55,9 @@ export function RequestView(props: {
 }) {
     const [editMode, setEditMode] = useState(false);
     const keyboard = useContext(KeyboardContext);
-    const [requestDialogContentProps, setRequestDialogContentProps] =
-        useContext(RequestDialogContentPropsContext);
+    const [_, setRequestDialogContentProps] = useContext(
+        RequestDialogContentPropsContext,
+    );
     return (
         <Collapsible
             className="border-b border-gray-300"
