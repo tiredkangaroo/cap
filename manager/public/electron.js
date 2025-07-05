@@ -69,7 +69,7 @@ async function createWindow() {
         // );
         win.loadFile("../dist/index.html");
     } else {
-        win.loadFile("dist/index.html");
+        win.loadFile("vitedist/index.html");
     }
 }
 

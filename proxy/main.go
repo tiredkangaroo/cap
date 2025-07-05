@@ -30,7 +30,7 @@ func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
 
 	var dirname string
-	if os.Getenv("DEBUG") != "true" {
+	if os.Getenv("BUILT") != "false" {
 		execFile, err := os.Executable()
 		if err != nil {
 			slog.Error("failed to get executable path", "err", err.Error())
