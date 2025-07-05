@@ -2,6 +2,8 @@ package timing
 
 import (
 	"time"
+
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 type Order uint8
@@ -94,7 +96,9 @@ type Timing struct {
 }
 
 func (t *Timing) Start(key Time) {
-	t.setStateFunc(string(key)) // call the state function with the key name
+	if config.DefaultConfig.TimelineBasedStateUpdates {
+		t.setStateFunc(string(key)) // call the state function with the key name
+	}
 	t.MajorTimeKeys = append(t.MajorTimeKeys, key)
 	t.MajorTimeValues = append(t.MajorTimeValues, &MajorTime{
 		Start: time.Now(),
@@ -108,7 +112,9 @@ func (t *Timing) Stop() {
 }
 
 func (t *Timing) Substart(sub Subtime) {
-	t.setStateFunc(string(sub)) // call the state function with the sub key name
+	if config.DefaultConfig.TimelineBasedStateUpdates {
+		t.setStateFunc(string(sub)) // call the state function with the sub key name
+	}
 	lastMajorIdx := len(t.MajorTimeValues) - 1
 	t.MajorTimeValues[lastMajorIdx].MinorTimeKeys = append(t.MajorTimeValues[lastMajorIdx].MinorTimeKeys, sub)
 	t.MajorTimeValues[lastMajorIdx].MinorTimeValues = append(t.MajorTimeValues[lastMajorIdx].MinorTimeValues, &MinorTime{

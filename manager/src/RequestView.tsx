@@ -153,7 +153,7 @@ export function RequestViewContent(props: RequestContentProps) {
         <>
             <div className="flex gap-3">
                 <button
-                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover-blue-400 text-white font-semibold px-3 py-1 rounded shadow"
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-300 dark:hover:bg-blue-400 text-white dark:text-black font-semibold px-3 py-1 rounded shadow"
                     onClick={() => downloadRequest(props.request)}
                 >
                     Download Request

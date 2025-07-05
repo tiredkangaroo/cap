@@ -128,6 +128,19 @@ export function ProxySettingsView(props: { proxy: Proxy }) {
                 about the client process. This information can prove to be
                 useful, however it takes a significant amount of time to gather.
             </CheckField>
+
+            <CheckField
+                name="Timeline-based State Updates"
+                defaultChecked={proxyConfig.timeline_based_state_updates}
+                onChange={(v: boolean) => {
+                    proxyConfig.timeline_based_state_updates = v;
+                    props.proxy!.setConfig(proxyConfig);
+                    setProxyConfig({ ...proxyConfig });
+                }}
+            >
+                Timeline-based state updates allows the proxy to set the state
+                of the request based on the timeline of the request.
+            </CheckField>
         </div>
     );
 }

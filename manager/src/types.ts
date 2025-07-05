@@ -35,8 +35,12 @@ export interface Config {
     require_approval: boolean;
 
     // get_client_process_info is a boolean that determines whether the proxy should provide information
-    // about the client process. Getting this information takes time.
+    // about the client process. Getting this information can take a significant amount of time.
     get_client_process_info: boolean;
+
+    // timeline_based_state_updates is a boolean that determines whether the proxy should use timeline-based
+    // state updates.
+    timeline_based_state_updates: boolean;
 }
 
 export interface Request {

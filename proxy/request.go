@@ -88,6 +88,8 @@ type Request struct {
 }
 
 func (r *Request) Init(req *http.Request) error {
+	r.timing.Start(timing.TimeRequestInit)
+	defer r.timing.Stop()
 	r.Secure = req.Method == http.MethodConnect
 	r.reqBodyID = r.ID + "-req-body"
 	r.respBodyID = r.ID + "-resp-body"

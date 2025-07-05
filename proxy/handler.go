@@ -41,6 +41,7 @@ var (
 func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certificates) error {
 	// HTTP requests send the full request to the proxy, so this is the request we want to perform
 	r.req = req
+	handleRealIPHeader(r)
 
 	// send request to live websocket connections
 	m.SendRequest(r)
@@ -54,23 +55,27 @@ func (r *Request) handleHTTP(m *Manager, req *http.Request, c *certificate.Certi
 	// send response to live websocket connections
 	m.SendResponse(r)
 
-	// save the request body to the database
-	r.timing.Start(timing.TimeSaveRequestBody)
-	if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
-		slog.Error("save request body: %w", "err", err)
-	} else {
-		slog.Debug("saved request body", "id", r.reqBodyID)
+	if config.DefaultConfig.ProvideRequestBody {
+		// save the request body to the database
+		r.timing.Start(timing.TimeSaveRequestBody)
+		if err := m.db.SaveBody(r.reqBodyID, r.req.Body); err != nil {
+			slog.Error("save request body: %w", "err", err)
+		} else {
+			slog.Debug("saved request body", "id", r.reqBodyID)
+		}
+		r.timing.Stop()
 	}
-	r.timing.Stop()
 
-	// save the response body to the database
-	r.timing.Start(timing.TimeSaveResponseBody)
-	if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
-		slog.Error("save response body: %w", "err", err)
-	} else {
-		slog.Debug("saved response body", "id", r.reqBodyID)
+	if config.DefaultConfig.ProvideResponseBody {
+		// save the response body to the database
+		r.timing.Start(timing.TimeSaveResponseBody)
+		if err := m.db.SaveBody(r.respBodyID, r.resp.Body); err != nil {
+			slog.Error("save response body: %w", "err", err)
+		} else {
+			slog.Debug("saved response body", "id", r.reqBodyID)
+		}
+		r.timing.Stop()
 	}
-	r.timing.Stop()
 
 	// write the response to the connection
 	r.timing.Start(timing.TimeWriteResponse)
@@ -131,6 +136,8 @@ func (r *Request) handleHTTPS(m *Manager, c *certificate.Certificates) error {
 		return fmt.Errorf("read mitm request: %w", err)
 	}
 	r.req = req
+
+	handleRealIPHeader(r)
 
 	// send the request to live websocket connections
 	m.SendRequest(r)

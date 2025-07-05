@@ -157,7 +157,7 @@ export function IncomingView(props: {
                         setFilter={setFilter}
                     />
                     <button
-                        className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 font-medium"
+                        className="text-sm text-red-600 dark:text-red-400 border-1 border-red-600 dark:border-red-400 hover:bg-red-600 dark:hover:bg-red-400 hover:text-white dark:hover:text-black px-3 py-1 rounded-md font-medium transition-colors duration-300 hover:duration-300"
                         onClick={() => {
                             const newFilter = [...filter];
                             newFilter.forEach((f) => {

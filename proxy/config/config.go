@@ -23,7 +23,7 @@ type Config struct {
 	// address of the client in the X-Forwarded-For header.
 	RealIPHeader bool `json:"real_ip_header"`
 	// CertificateLifetime is the lifetime of the certificate in hours. It is possible
-	// to set it to less than 0 in which any new certificates generated will not be valid.
+	// to set it to less than 0 in which any new certificates generated will NEVER be valid.
 	CertificateLifetime int `json:"certificate_lifetime"`
 	// MITM determines who is responsible for the TLS connection. If true, the responsibility
 	// is on the proxy. If false, the responsibility is on the client.
@@ -45,6 +45,9 @@ type Config struct {
 	// or for security purposes, such as ensuring that the request is safe to perform.
 	RequireApproval bool `json:"require_approval"`
 
+	ProvideRequestBody  bool `json:"provide_request_body"`
+	ProvideResponseBody bool `json:"provide_response_body"`
+
 	// GetClientProcessInfo is a boolean that determines whether the proxy should provide information about the
 	// client process that made the request. This includes the process ID and the name of the application.
 	//
@@ -56,7 +59,7 @@ type Config struct {
 	// TimelineBasedStateUpdates is a boolean that determines whether the proxy should send state updates to the client
 	// based on timeline events. If true, the proxy will send updates to the client whenever a major or minor timeline event
 	// occurs.
-	TimelineBasedStateUpdates bool `json:"time_based_state_updates"`
+	TimelineBasedStateUpdates bool `json:"timeline_based_state_updates"`
 }
 
 func init() {

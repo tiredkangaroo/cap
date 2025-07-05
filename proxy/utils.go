@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/tiredkangaroo/bigproxy/proxy/config"
 )
 
 // toURL converts a string to a URL. If the string does not start with "http://" or
@@ -104,4 +106,13 @@ func (n *NoOpCloser) Close() error {
 
 func NewNoOpCloser(w io.Writer) *NoOpCloser {
 	return &NoOpCloser{w: w}
+}
+
+func handleRealIPHeader(r *Request) {
+	if config.DefaultConfig.RealIPHeader {
+		realIP := r.conn.RemoteAddr().String()
+		if realIP != "" {
+			r.req.Header.Add("X-Forwarded-For", realIP)
+		}
+	}
 }

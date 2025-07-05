@@ -5,7 +5,6 @@ import { IncomingView } from "./IncomingView";
 
 import { Config, RequestContentProps, RequestsViewConfig } from "./types";
 import { SettingsDialog } from "./settings/SettingsDialog";
-import cap from "./assets/cap.png";
 import { RequestDialogContentPropsContext } from "./context/context";
 import { RequestDialog } from "./RequestDialog";
 
@@ -110,9 +109,6 @@ export function ProxyView() {
                     setRequestsViewConfig={setRequestsViewConfig}
                 />
                 <RequestDialog />
-                <div className="flex flex-row w-full min-h-12 text-black items-center px-4 justify-center">
-                    <img src={cap} className="w-16" />
-                </div>
                 <IncomingView
                     proxy={proxy}
                     setSettingsDialogOpen={setSettingsOpen}
