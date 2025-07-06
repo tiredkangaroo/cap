@@ -182,7 +182,7 @@ func run() {
 	pg := new(ProcessGroup)
 	handleSignals(pg.Cleanup)
 
-	proxyApp, err := startProcess("DEBUG=false ./proxy/proxy-app")
+	proxyApp, err := startProcess("DEBUG=false BUILT=false ./proxy/proxy-app")
 	if err != nil {
 		fmt.Println("error starting proxy app:", err)
 		return

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type HackHandler struct{}
@@ -39,18 +40,27 @@ func main() {
 
 	go func() {
 		if err := http.ListenAndServe(":6200", nil); err != nil {
-			log.Fatalf("http server error: %v", err)
+			log.Fatalf("http server error :6200 : %v", err)
 		}
 	}()
-	go func() {
-		if err := http.ListenAndServeTLS(":6201", "localhost.crt", "localhost.key", nil); err != nil {
-			log.Fatalf("https server error: %v", err)
-		}
-	}()
-	go func() {
-		if err := http.ListenAndServeTLS(":6202", "localhost.crt", "localhost.key", new(HackHandler)); err != nil {
-			log.Fatalf("http server error: %v", err)
-		}
-	}()
+	if _, err := os.Stat("localhost.key"); err == nil {
+		go func() {
+			if err := http.ListenAndServeTLS(":6201", "localhost.crt", "localhost.key", nil); err != nil {
+				log.Fatalf("https server error :6201 : %v", err)
+			}
+		}()
+		go func() {
+			if err := http.ListenAndServeTLS(":6202", "localhost.crt", "localhost.key", new(HackHandler)); err != nil {
+				log.Fatalf("http server error :6202 HTTPS : %v", err)
+			}
+		}()
+	} else {
+		log.Default().Printf("stat failed for localhost.key: %s (:6201 unavailable, :6202 running http only)\n", err.Error())
+		go func() {
+			if err := http.ListenAndServe(":6202", new(HackHandler)); err != nil {
+				log.Fatalf("http server error :6202 HTTP : %v", err)
+			}
+		}()
+	}
 	select {} // block forever
 }
