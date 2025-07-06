@@ -168,6 +168,7 @@ func app() {
 func compile() {
 	cmd("01", "go mod tidy")
 	cmd("02", "npm i --prefix manager")
+	cmd("03", "go build -o ./proxy/proxy-app ./proxy")
 	fmt.Printf("Generate certificates required for MITM functionality? (Y/n): ")
 	if getYN(true) {
 		genCA()
