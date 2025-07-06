@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -13,7 +14,15 @@ import (
 func getYN(preselected bool) bool {
 	var response string
 	fmt.Scanln(&response)
-	return response == "Y" || response == "y" || (response == "" && preselected)
+	if response == "" {
+		return preselected
+	}
+	v, err := strconv.ParseBool(response)
+	if err != nil {
+		fmt.Println("Invalid y/n value. Choosing default.")
+		return preselected
+	}
+	return v
 }
 
 func handleSignals(cleanup func()) {

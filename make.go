@@ -53,10 +53,10 @@ func init() {
 		command = CommandApp
 	case "gen-ca":
 		command = CommandGenCA
-	case "compile":
+	case "setup":
 		command = CommandCompile
 	default:
-		slog.Error("Invalid command. Use debug, run, compile, app, or gen-ca.")
+		slog.Error("Invalid command. Use debug, run, setup, app, or gen-ca.")
 	}
 }
 
@@ -73,7 +73,7 @@ func main() {
 	case CommandCompile:
 		compile()
 	default:
-		fmt.Println("Invalid command. Use debug, run, app, or gen-ca.")
+		fmt.Println("Invalid command. Use debug, run, app, setup, or gen-ca.")
 	}
 }
 
@@ -169,6 +169,7 @@ func compile() {
 	cmd("01", "go mod tidy")
 	cmd("02", "npm i --prefix manager")
 	cmd("03", "go build -o ./proxy/proxy-app ./proxy")
+	cmd("04", "npm run build --prefix ./manager --outDir vitedist")
 	fmt.Printf("Generate certificates required for MITM functionality? (Y/n): ")
 	if getYN(true) {
 		genCA()
