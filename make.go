@@ -207,7 +207,7 @@ func runDebug() {
 	handleSignals(group.Cleanup)
 
 	// Start proxy
-	proxy, err := startProcess("DEBUG=true go run ./proxy")
+	proxy, err := startProcess("DEBUG=true BUILT=false go run ./proxy")
 	if err != nil {
 		fmt.Println("Error starting proxy:", err)
 		return
@@ -216,7 +216,7 @@ func runDebug() {
 	defer group.Cleanup()
 
 	// Start Vite
-	vite, err := startProcess("DEBUG=true npm run dev --prefix ./manager")
+	vite, err := startProcess("DEBUG=true BUILT=false npm run dev --prefix ./manager")
 	if err != nil {
 		fmt.Println("Error starting Vite:", err)
 		return

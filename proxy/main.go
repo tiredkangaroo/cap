@@ -28,6 +28,7 @@ func init() {
 
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
+	tcaservice := NewTCAService()
 
 	var dirname string
 	if os.Getenv("BUILT") != "false" {
@@ -48,10 +49,13 @@ func main() {
 		return
 	}
 	defer db.b.Close()
+	tcaservice.db = db
 
 	m := NewManager(db)
+	tcaservice.manager = m
 
 	ph := new(ProxyHandler)
+	ph.tcaservice = tcaservice
 	go startControlServer(m, ph)
 	ph.ListenAndServe(m, dirname)
 }

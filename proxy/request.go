@@ -197,14 +197,14 @@ func (r *Request) BytesTransferred() int64 {
 	return cc.BytesTransferred()
 }
 
-func (r *Request) MarshalJSON() ([]byte, error) {
+func (r *Request) asMap() map[string]any {
 	var state string
 	if r.errorText != "" {
 		state = "Error"
 	} else {
 		state = "Done"
 	}
-	return json.Marshal(map[string]any{
+	return map[string]any{
 		"id":                  r.ID,
 		"starred":             r.Starred,
 		"datetime":            r.Datetime.UnixMilli(), // unix milli for js
@@ -232,7 +232,11 @@ func (r *Request) MarshalJSON() ([]byte, error) {
 		"error":        r.errorText,
 		"timing":       r.timing.Export(),
 		"timing_total": r.timing.Total(),
-	})
+	}
+}
+
+func (r *Request) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.asMap())
 }
 
 // func dial(host string) (net.Conn, error) {}

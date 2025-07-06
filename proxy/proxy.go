@@ -18,10 +18,12 @@ import (
 type ProxyHandler struct {
 	certifcates *certificate.Certificates
 	m           *Manager
+	tcaservice  *TCAService
 }
 
 func (c *ProxyHandler) ServeHTTP(pr *Request, r *http.Request) {
 	pr.Init(r)
+
 	c.serveAfterInit(pr, r)
 }
 

@@ -66,7 +66,7 @@ func init() {
 	DefaultConfig.Debug = os.Getenv("DEBUG") == "true"
 
 	var dirname string
-	if os.Getenv("DEBUG") != "true" {
+	if os.Getenv("BUILT") != "false" {
 		execPath, err := os.Executable()
 		if err != nil {
 			slog.Error("failed to get executable path (nonfatal)", "err", err.Error())
