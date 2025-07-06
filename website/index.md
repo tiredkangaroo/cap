@@ -13,51 +13,36 @@ cap is a configurable proxy server that allows you to capture, modify, and inspe
 # Installation
 well currently the built version of the app doesn't work, so we're going to have to run it from source.
 
-1. #### Ensure you have Go (1.24+) installed on your system. See the [Go installation guide](https://go.dev/doc/install) for instructions.
-
-2. #### Clone the repository:
+1. #### Clone the repository:
    ```bash
    git clone https://github.com/tiredkangaroo/cap.git
    ```
 
-3. #### Navigate to the project directory (change the working directory):
+2. #### Navigate to the project directory (change the working directory):
    ```bash
    cd cap
     ```
-4. #### Install the dependencies: Make sure you have Node.js and npm installed for the UI dependencies. You can download them from [Node.js official website](https://nodejs.org/).
-
-
-    Go dependencies:
-     ```bash
-   go mod tidy
+3. #### Setup.
+    Ensure you have [Go](https://go.dev/doc/install) (1.24+), [Node.js](https://nodejs.org/) installed on your system, and [npm](https://www.npmjs.com/get-npm) (Node Package Manager) installed.
+    ```bash
+    go run . setup
     ```
-    UI dependencies:
+4. #### Run the project.
     ```bash
-   npm i --prefix manager
-   ```
-5. #### Optional: If you want to utilize the Man-in-the-Middle (MITM) functionality, you will need to generate a CA certificate.
-   ```bash
-   go run make.go gen-ca
-   ```
-    This will create a CA certificate in the `certs` directory. You can then install this certificate in your system or browser to enable HTTPS traffic interception. You will need to trust this certificate in the system or browser to avoid security warnings when intercepting HTTPS traffic.
-
-
-6. #### Run the project.
-    ```bash
-    go run make.go run
+    go run . run
     ```
-    Note: If you want to run the project in debug mode, you can use:
+    If you want to run the project in debug mode, you can use:
     ```bash
-    go run make.go debug
+    go run . debug
     ```
 
     **Build the app (MacOS only)**: If you want to build the app for MacOS, you can use the following command:
     ```bash
-    go run make.go app
+    go run . app
     ```
     The built app will be located in the working directory as `cap.app`.
 
-7. #### The proxy is now running on `http://localhost:8000`. Configure your browser, application, or system to use this proxy server for HTTP and HTTPS traffic.
+5. #### The proxy is now running on `http://localhost:8000`. Configure your browser, application, or system to use this proxy server for HTTP and HTTPS traffic.
 
 # Usage
 Once the proxy server is running, you can start capturing and modifying HTTP and HTTPS traffic. Here are some instructions for some basic features:
