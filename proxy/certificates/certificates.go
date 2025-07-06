@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 // Certificates is a struct that provides services for making TLS connections.

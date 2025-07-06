@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"unsafe"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 func readHeader(buf *bufio.Reader) (Header, error) {

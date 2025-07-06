@@ -9,11 +9,11 @@ import (
 	"net"
 	"time"
 
-	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
-	"github.com/tiredkangaroo/bigproxy/proxy/http"
+	certificate "github.com/tiredkangaroo/cap/proxy/certificates"
+	"github.com/tiredkangaroo/cap/proxy/http"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
-	"github.com/tiredkangaroo/bigproxy/proxy/timing"
+	"github.com/tiredkangaroo/cap/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/timing"
 )
 
 const ThisDevice string = "This Device"

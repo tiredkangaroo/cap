@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
-	"github.com/tiredkangaroo/bigproxy/proxy/http"
-	"github.com/tiredkangaroo/bigproxy/proxy/work"
+	"github.com/tiredkangaroo/cap/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/http"
+	"github.com/tiredkangaroo/cap/proxy/work"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"

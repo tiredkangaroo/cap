@@ -11,7 +11,7 @@ import (
 	_ "net/http/pprof"
 	"strconv"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 	"github.com/tiredkangaroo/websocket"
 )
 

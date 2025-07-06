@@ -1,4 +1,4 @@
-module github.com/tiredkangaroo/bigproxy
+module github.com/tiredkangaroo/cap
 
 go 1.24.2
 

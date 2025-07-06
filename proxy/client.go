@@ -14,8 +14,8 @@ import (
 
 	nethttp "net/http"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/http"
-	"github.com/tiredkangaroo/bigproxy/proxy/timing"
+	"github.com/tiredkangaroo/cap/proxy/http"
+	"github.com/tiredkangaroo/cap/proxy/timing"
 	"github.com/tiredkangaroo/websocket"
 )
 

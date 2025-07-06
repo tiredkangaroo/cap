@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 // toURL converts a string to a URL. If the string does not start with "http://" or

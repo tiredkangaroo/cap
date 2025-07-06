@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 type Body struct {

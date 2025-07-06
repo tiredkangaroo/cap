@@ -4,25 +4,25 @@
 cap is a proxy server that allows you to capture, modify, and inspect HTTP and HTTPS traffic. It is designed to be easy to use and flexible, making it suitable for a wide range of use cases, from debugging web applications to testing APIs to pen testing.
 
 # Screenshots
-![1](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/1.png)
+![1](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/1.png)
 The user interfce of the proxy. It shows captured requests.
 
-![2](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/2.png)
+![2](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/2.png)
 A request being modified in the dark mode UI. The request is waiting for approval and the user is able to modify many aspets of the request.
 
-![3](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/3.png)
+![3](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/3.png)
 A request being shown in expanded mode. The body is shown with a special viewer for its content type.
 
-![4](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/4.png)
+![4](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/4.png)
 A response being shown in expanded mode with the body shown in a special viewer for its content type.
 
-![5](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/5.png)
+![5](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/5.png)
 A timeline being shown with a subtime.
 
-![6](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/6.png)
+![6](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/6.png)
 Captured requests being shown in the UI with filters applied and an adjusted requests per page.
 
-![7](https://raw.githubusercontent.com/tiredkangaroo/bigproxy/refs/heads/main/screenshots/7.png)
+![7](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/7.png)
 The settings menu. It allows you to configure proxy behavior and appearance.
 
 # Major Features
@@ -42,12 +42,12 @@ well currently the built version of the app doesn't work, so...
 
 2. Clone the repository:
    ```bash
-   git clone https://github.com/tiredkangaroo/bigproxy.git
+   git clone https://github.com/tiredkangaroo/cap.git
    ```
 
 3. Navigate to the project directory (change the working directory):
    ```bash
-    cd bigproxy
+    cd cap
     ```
 4. Install the dependencies: Make sure you have Node.js and npm installed for the UI dependencies. You can download them from [Node.js official website](https://nodejs.org/).
 
@@ -116,7 +116,7 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
 - **Weak information** - The lower level of information the proxy is able to provide. This includes the host, client IP, client application, and the bytes transferred. All requests at the very least provide weak information.
 
 # Bugs and Feature Requests
-If you encounter any bugs or have feature requests, please [open an issue](https://github.com/tiredkangaroo/bigproxy/issues/new). It helps improve the project and your feedback is greatly appreciated!
+If you encounter any bugs or have feature requests, please [open an issue](https://github.com/tiredkangaroo/cap/issues/new). It helps improve the project and your feedback is greatly appreciated!
 
 # Vulnerabilities
 If you discover a security vulnerability within this project, please report it by [emailing me](mailto:ajinest6@gmail.com). All security vulnerabilities will be promptly addressed. Thank you!

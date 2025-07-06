@@ -36,7 +36,7 @@ func main() {
 			slog.Error("failed to get executable path", "err", err.Error())
 			return
 		}
-		slog.Info("bigproxy running at", "dirname", filepath.Dir(execFile), "pid", myPID, "localIP", myLocalIP)
+		slog.Info("cap running at", "dirname", filepath.Dir(execFile), "pid", myPID, "localIP", myLocalIP)
 		dirname = filepath.Dir(execFile)
 	} else {
 		dirname = "."

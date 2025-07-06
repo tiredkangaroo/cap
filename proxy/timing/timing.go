@@ -3,7 +3,7 @@ package timing
 import (
 	"time"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 type Order uint8

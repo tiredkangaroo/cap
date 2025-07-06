@@ -9,10 +9,10 @@ import (
 	"net"
 	"time"
 
-	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
-	"github.com/tiredkangaroo/bigproxy/proxy/http"
-	"github.com/tiredkangaroo/bigproxy/proxy/timing"
+	certificate "github.com/tiredkangaroo/cap/proxy/certificates"
+	"github.com/tiredkangaroo/cap/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/http"
+	"github.com/tiredkangaroo/cap/proxy/timing"
 )
 
 var (

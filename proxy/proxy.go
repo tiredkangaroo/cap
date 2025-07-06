@@ -6,11 +6,11 @@ import (
 	"net"
 
 	"github.com/google/uuid"
-	"github.com/tiredkangaroo/bigproxy/proxy/http"
-	"github.com/tiredkangaroo/bigproxy/proxy/timing"
+	"github.com/tiredkangaroo/cap/proxy/http"
+	"github.com/tiredkangaroo/cap/proxy/timing"
 
-	certificate "github.com/tiredkangaroo/bigproxy/proxy/certificates"
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	certificate "github.com/tiredkangaroo/cap/proxy/certificates"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 // ProxyHandler is being used here because CONNECT requests are automatically

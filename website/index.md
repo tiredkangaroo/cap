@@ -17,12 +17,12 @@ well currently the built version of the app doesn't work, so we're going to have
 
 2. #### Clone the repository:
    ```bash
-   git clone https://github.com/tiredkangaroo/bigproxy.git
+   git clone https://github.com/tiredkangaroo/cap.git
    ```
 
 3. #### Navigate to the project directory (change the working directory):
    ```bash
-   cd bigproxy
+   cd cap
     ```
 4. #### Install the dependencies: Make sure you have Node.js and npm installed for the UI dependencies. You can download them from [Node.js official website](https://nodejs.org/).
 
@@ -89,7 +89,7 @@ Once the proxy server is running, you can start capturing and modifying HTTP and
     - You can freeze the UI in order to allow you to work with the UI without the requests being updated in real-time. This is useful when you want to work with the UI without being interrupted by new requests coming in. Updates that occur are kept but not shown until the unfreeze button is pressed. To freeze the UI, press the snowflake button in the bottom right corner of the UI. You can unfreeze the UI by pressing the same button again.
 
 # Issues
-If you encounter any issue or have suggestions for improvements, please open an issue on the [GitHub repository](https://tiredkangaroo.github.io/bigproxy/issues).
+If you encounter any issue or have suggestions for improvements, please open an issue on the [GitHub repository](https://tiredkangaroo.github.io/cap/issues).
 
 You may also contact me via [email](mailto:ajinest6@gmail.com).
 

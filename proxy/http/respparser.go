@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tiredkangaroo/bigproxy/proxy/config"
+	"github.com/tiredkangaroo/cap/proxy/config"
 )
 
 var (
