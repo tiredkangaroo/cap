@@ -55,10 +55,15 @@ well currently the built version of the app doesn't work, so we're going to have
 Here's a guide for MacOS.
 
 1. Open System Settings and press Network.
+
    ![8](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/8.png)
+
 2. Press the network you are using (e.g., Wi-Fi).
+
    ![9](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/9.png)
+
 3. Press the "Details" button next to the network name.
+
    ![10](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/10.png)
 
 4. Press the "Proxies" tab.
@@ -66,16 +71,21 @@ Here's a guide for MacOS.
    ![11](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/11.png)
 
 5. Enable the Secure Web Proxy (HTTPS) option.
+
    ![12](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/12.png)
 
 6. Fill in the host as `localhost` and the port to `8000`.
+
    ![13](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/13.png)
 
 7. Do the same for the Web Proxy (HTTP) option.
+
    ![14](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/14.png)
 
 8. Press the "OK" button to save the changes.
+
    ![15](https://raw.githubusercontent.com/tiredkangaroo/cap/refs/heads/main/screenshots/15.png)
+
 9. You may now close the System Settings window. Your proxy is now configured and running.
 
 # Usage
