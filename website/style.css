@@ -163,6 +163,8 @@ canvas,
 img {
     overflow: clip;
     overflow-clip-margin: content-box;
+    max-width: 35vw;
+    max-height: 35vw;
 }
 
 iframe,
